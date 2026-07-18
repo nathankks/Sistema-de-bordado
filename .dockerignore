@@ -1,0 +1,7 @@
+.git
+.gitignore
+dados
+uploads
+*.bordado
+node_modules
+.env

@@ -1,0 +1,1474 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <meta
+        name="description"
+        content="Sistema profissional para gerenciamento de clientes e arquivos de bordado"
+    >
+
+    <title>Sistema de Bordados</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <!--
+        Biblioteca interna de ícones SVG.
+        Os ícones podem ser utilizados pelo HTML
+        e também pelo JavaScript.
+    -->
+
+    <svg
+        class="svg-sprite"
+        aria-hidden="true"
+    >
+        <symbol
+            id="icon-home"
+            viewBox="0 0 24 24"
+        >
+            <path d="M3 11.5 12 4l9 7.5"></path>
+            <path d="M5.5 10.5V20h13v-9.5"></path>
+            <path d="M9.5 20v-6h5v6"></path>
+        </symbol>
+
+        <symbol
+            id="icon-users"
+            viewBox="0 0 24 24"
+        >
+            <path
+                d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"
+            ></path>
+
+            <circle
+                cx="9"
+                cy="7"
+                r="4"
+            ></circle>
+
+            <path
+                d="M22 21v-2a4 4 0 0 0-3-3.87"
+            ></path>
+
+            <path
+                d="M16 3.13a4 4 0 0 1 0 7.75"
+            ></path>
+        </symbol>
+
+        <symbol
+            id="icon-user-plus"
+            viewBox="0 0 24 24"
+        >
+            <path
+                d="M15 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"
+            ></path>
+
+            <circle
+                cx="8"
+                cy="7"
+                r="4"
+            ></circle>
+
+            <path d="M19 8v6"></path>
+            <path d="M16 11h6"></path>
+        </symbol>
+
+        <symbol
+            id="icon-folder"
+            viewBox="0 0 24 24"
+        >
+            <path
+                d="M3 5a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
+            ></path>
+        </symbol>
+
+        <symbol
+            id="icon-settings"
+            viewBox="0 0 24 24"
+        >
+            <circle
+                cx="12"
+                cy="12"
+                r="3"
+            ></circle>
+
+            <path
+                d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.34 1v.09a2 2 0 1 1-4 0V21a1.7 1.7 0 0 0-.34-1 1.7 1.7 0 0 0-1-.6 1.7 1.7 0 0 0-1.88.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1-.34H2.9a2 2 0 1 1 0-4H3a1.7 1.7 0 0 0 1-.34 1.7 1.7 0 0 0 .6-1 1.7 1.7 0 0 0-.34-1.88l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .34-1V2.9a2 2 0 1 1 4 0V3a1.7 1.7 0 0 0 .34 1 1.7 1.7 0 0 0 1 .6 1.7 1.7 0 0 0 1.88-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9c.14.36.36.68.64.94.27.26.61.45.98.55.17.05.35.07.53.07h.09a2 2 0 1 1 0 4h-.09c-.18 0-.36.02-.53.07-.37.1-.71.29-.98.55-.28.26-.5.58-.64.94z"
+            ></path>
+        </symbol>
+
+        <symbol
+            id="icon-moon"
+            viewBox="0 0 24 24"
+        >
+            <path
+                d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
+            ></path>
+        </symbol>
+
+        <symbol
+            id="icon-sun"
+            viewBox="0 0 24 24"
+        >
+            <circle
+                cx="12"
+                cy="12"
+                r="4"
+            ></circle>
+
+            <path d="M12 2v2"></path>
+            <path d="M12 20v2"></path>
+            <path d="m4.93 4.93 1.42 1.42"></path>
+            <path d="m17.66 17.66 1.41 1.41"></path>
+            <path d="M2 12h2"></path>
+            <path d="M20 12h2"></path>
+            <path d="m4.93 19.07 1.42-1.42"></path>
+            <path d="m17.66 6.34 1.41-1.41"></path>
+        </symbol>
+
+        <symbol
+            id="icon-search"
+            viewBox="0 0 24 24"
+        >
+            <circle
+                cx="11"
+                cy="11"
+                r="7"
+            ></circle>
+
+            <path d="m20 20-3.5-3.5"></path>
+        </symbol>
+
+        <symbol
+            id="icon-plus"
+            viewBox="0 0 24 24"
+        >
+            <path d="M12 5v14"></path>
+            <path d="M5 12h14"></path>
+        </symbol>
+
+        <symbol
+            id="icon-clock"
+            viewBox="0 0 24 24"
+        >
+            <circle
+                cx="12"
+                cy="12"
+                r="9"
+            ></circle>
+
+            <path d="M12 7v5l3 2"></path>
+        </symbol>
+
+        <symbol
+            id="icon-check-file"
+            viewBox="0 0 24 24"
+        >
+            <path
+                d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+            ></path>
+
+            <path d="M14 2v6h6"></path>
+            <path d="m9 15 2 2 4-4"></path>
+        </symbol>
+
+        <symbol
+            id="icon-arrow-right"
+            viewBox="0 0 24 24"
+        >
+            <path d="M5 12h14"></path>
+            <path d="m13 6 6 6-6 6"></path>
+        </symbol>
+
+        <symbol
+            id="icon-menu"
+            viewBox="0 0 24 24"
+        >
+            <path d="M4 7h16"></path>
+            <path d="M4 12h16"></path>
+            <path d="M4 17h16"></path>
+        </symbol>
+
+        <symbol
+            id="icon-eye"
+            viewBox="0 0 24 24"
+        >
+            <path
+                d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"
+            ></path>
+
+            <circle
+                cx="12"
+                cy="12"
+                r="2.5"
+            ></circle>
+        </symbol>
+
+        <symbol
+            id="icon-edit"
+            viewBox="0 0 24 24"
+        >
+            <path d="M12 20h9"></path>
+
+            <path
+                d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4z"
+            ></path>
+        </symbol>
+
+        <symbol
+            id="icon-trash"
+            viewBox="0 0 24 24"
+        >
+            <path d="M3 6h18"></path>
+            <path d="M8 6V4h8v2"></path>
+            <path d="M19 6l-1 14H6L5 6"></path>
+            <path d="M10 11v5"></path>
+            <path d="M14 11v5"></path>
+        </symbol>
+
+        <symbol
+            id="icon-x"
+            viewBox="0 0 24 24"
+        >
+            <path d="m6 6 12 12"></path>
+            <path d="m18 6-12 12"></path>
+        </symbol>
+
+        <symbol
+            id="icon-file"
+            viewBox="0 0 24 24"
+        >
+            <path
+                d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+            ></path>
+
+            <path d="M14 2v6h6"></path>
+        </symbol>
+
+        <symbol
+            id="icon-check"
+            viewBox="0 0 24 24"
+        >
+            <path d="m5 12 4 4L19 6"></path>
+        </symbol>
+
+        <symbol
+            id="icon-alert"
+            viewBox="0 0 24 24"
+        >
+            <path
+                d="M10.3 3.6 2.4 17.2A2 2 0 0 0 4.1 20h15.8a2 2 0 0 0 1.7-2.8L13.7 3.6a2 2 0 0 0-3.4 0z"
+            ></path>
+
+            <path d="M12 9v4"></path>
+            <path d="M12 17h.01"></path>
+        </symbol>
+    </svg>
+
+    <!-- MENU LATERAL -->
+
+<aside
+    class="sidebar"
+    id="sidebar"
+>
+    <div class="logo">
+        <div class="logo-icone">
+            B
+        </div>
+
+        <div class="logo-texto">
+            <strong>Bordado</strong>
+            <span>Gestão de clientes</span>
+        </div>
+    </div>
+
+    <nav class="menu">
+        <div class="menu-grupo">
+            <span class="menu-grupo-titulo">
+                Principal
+            </span>
+
+            <button
+                class="menu-item ativo"
+                data-secao="dashboard"
+                type="button"
+            >
+                <svg aria-hidden="true">
+                    <use href="#icon-home"></use>
+                </svg>
+
+                <span>Visão geral</span>
+            </button>
+
+            <button
+                class="menu-item"
+                data-secao="clientes"
+                type="button"
+            >
+                <svg aria-hidden="true">
+                    <use href="#icon-users"></use>
+                </svg>
+
+                <span>Clientes</span>
+            </button>
+
+            <button
+                class="menu-item"
+                data-secao="arquivos"
+                type="button"
+            >
+                <svg aria-hidden="true">
+                    <use href="#icon-folder"></use>
+                </svg>
+
+                <span>Arquivos</span>
+            </button>
+        </div>
+
+        <div class="menu-grupo menu-grupo-acao">
+            <span class="menu-grupo-titulo">
+                Cadastro
+            </span>
+
+            <button
+                class="menu-item menu-item-novo"
+                id="menuNovoCliente"
+                type="button"
+            >
+                <span class="menu-item-icone">
+                    <svg aria-hidden="true">
+                        <use href="#icon-user-plus"></use>
+                    </svg>
+                </span>
+
+                <span class="menu-item-conteudo">
+                    <strong>Novo cadastro</strong>
+                    <small>Adicionar um cliente</small>
+                </span>
+            </button>
+        </div>
+
+        <div class="menu-grupo menu-grupo-sistema">
+            <span class="menu-grupo-titulo">
+                Sistema
+            </span>
+
+            <button
+                class="menu-item menu-item-configuracoes"
+                data-secao="configuracoes"
+                type="button"
+            >
+                <svg aria-hidden="true">
+                    <use href="#icon-settings"></use>
+                </svg>
+
+                <span>Configurações</span>
+            </button>
+        </div>
+    </nav>
+
+    <div class="sidebar-conta">
+        <div class="sidebar-conta-avatar">
+            <span id="iniciaisUsuarioLogado">
+                AD
+            </span>
+        </div>
+
+        <div class="sidebar-conta-informacoes">
+            <strong id="nomeUsuarioLogado">
+                Administrador
+            </strong>
+
+            <span id="perfilUsuarioLogado">
+                Administrador
+            </span>
+        </div>
+
+        <button
+            class="sidebar-botao-sair"
+            id="botaoSair"
+            type="button"
+            title="Sair do sistema"
+            aria-label="Sair do sistema"
+        >
+            <svg
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+            >
+                <path d="M10 17l5-5-5-5"></path>
+                <path d="M15 12H3"></path>
+
+                <path
+                    d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"
+                ></path>
+            </svg>
+        </button>
+    </div>
+</aside>
+
+    <div
+        class="fundo-menu-mobile"
+        id="fundoMenuMobile"
+    ></div>
+
+    <!-- CONTEÚDO PRINCIPAL -->
+
+    <main class="conteudo-principal">
+        <header class="topo">
+            <div class="topo-titulo">
+                <button
+                    class="botao-icone botao-menu-mobile"
+                    id="botaoMenuMobile"
+                    type="button"
+                    aria-label="Abrir menu"
+                >
+                    <svg>
+                        <use href="#icon-menu"></use>
+                    </svg>
+                </button>
+
+                <div>
+                    <span class="rotulo">
+                        Painel administrativo
+                    </span>
+
+                    <h1 id="tituloPagina">
+                        Visão geral
+                    </h1>
+                </div>
+            </div>
+
+            <div class="topo-acoes">
+                <div class="campo-busca">
+                    <svg>
+                        <use href="#icon-search"></use>
+                    </svg>
+
+                    <input
+                        id="buscaGlobal"
+                        type="search"
+                        placeholder="Buscar cliente ou CPF"
+                        autocomplete="off"
+                    >
+                </div>
+            </div>
+        </header>
+
+        <div class="container">
+            <!-- VISÃO GERAL -->
+
+            <section
+                class="secao ativa"
+                id="secao-dashboard"
+            >
+                <section class="destaque">
+                    <div>
+                        <span class="rotulo">
+                            Organização profissional
+                        </span>
+
+                        <h2>
+                            Seus clientes e arquivos de bordado
+                            organizados em um só lugar.
+                        </h2>
+
+                        <p>
+                            Encontre rapidamente qualquer cadastro
+                            pelo nome, CPF, telefone ou linha utilizada.
+                        </p>
+                    </div>
+
+                    <button
+                        class="botao botao-secundario"
+                        id="botaoCadastrarDestaque"
+                        type="button"
+                    >
+                        Cadastrar cliente
+
+                        <svg>
+                            <use href="#icon-arrow-right"></use>
+                        </svg>
+                    </button>
+                </section>
+
+                <section class="cards-resumo">
+                    <article class="card-resumo">
+                        <div class="card-resumo-topo">
+                            <span>Total de clientes</span>
+
+                            <div class="icone-card">
+                                <svg>
+                                    <use href="#icon-users"></use>
+                                </svg>
+                            </div>
+                        </div>
+
+                        <strong id="totalClientes">
+                            0
+                        </strong>
+
+                        <small>
+                            Cadastros disponíveis
+                        </small>
+                    </article>
+
+                    <article class="card-resumo">
+                        <div class="card-resumo-topo">
+                            <span>
+                                Arquivos convertidos
+                            </span>
+
+                            <div class="icone-card">
+                                <svg>
+                                    <use href="#icon-check-file"></use>
+                                </svg>
+                            </div>
+                        </div>
+
+                        <strong id="totalConvertidos">
+                            0
+                        </strong>
+
+                        <small>
+                            Prontos para bordado
+                        </small>
+                    </article>
+
+                    <article class="card-resumo">
+                        <div class="card-resumo-topo">
+                            <span>
+                                Cadastros recentes
+                            </span>
+
+                            <div class="icone-card">
+                                <svg>
+                                    <use href="#icon-clock"></use>
+                                </svg>
+                            </div>
+                        </div>
+
+                        <strong id="totalRecentes">
+                            0
+                        </strong>
+
+                        <small>
+                            Últimos sete dias
+                        </small>
+                    </article>
+                </section>
+
+                <section class="grade-dashboard">
+                    <article class="painel">
+                        <div class="painel-cabecalho">
+                            <div>
+                                <span class="rotulo">
+                                    Últimos registros
+                                </span>
+
+                                <h3>
+                                    Clientes recentes
+                                </h3>
+                            </div>
+
+                            <button
+                                class="botao-texto"
+                                data-ir-para="clientes"
+                                type="button"
+                            >
+                                Ver todos
+
+                                <svg>
+                                    <use href="#icon-arrow-right"></use>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <div id="listaRecentes"></div>
+                    </article>
+
+                    <article class="painel">
+                        <div class="painel-cabecalho">
+                            <div>
+                                <span class="rotulo">
+                                    Acesso rápido
+                                </span>
+
+                                <h3>
+                                    Ações do sistema
+                                </h3>
+                            </div>
+                        </div>
+
+                        <div class="acoes-rapidas">
+                            <button
+                                class="acao-rapida"
+                                id="acaoNovoCliente"
+                                type="button"
+                            >
+                                <span class="acao-icone">
+                                    <svg>
+                                        <use href="#icon-user-plus"></use>
+                                    </svg>
+                                </span>
+
+                                <span>
+                                    <strong>
+                                        Novo cadastro
+                                    </strong>
+
+                                    <small>
+                                        Adicionar cliente e arquivos
+                                    </small>
+                                </span>
+
+                                <svg class="acao-seta">
+                                    <use href="#icon-arrow-right"></use>
+                                </svg>
+                            </button>
+
+                            <button
+                                class="acao-rapida"
+                                data-ir-para="clientes"
+                                type="button"
+                            >
+                                <span class="acao-icone">
+                                    <svg>
+                                        <use href="#icon-search"></use>
+                                    </svg>
+                                </span>
+
+                                <span>
+                                    <strong>
+                                        Localizar cliente
+                                    </strong>
+
+                                    <small>
+                                        Pesquisar por nome ou CPF
+                                    </small>
+                                </span>
+
+                                <svg class="acao-seta">
+                                    <use href="#icon-arrow-right"></use>
+                                </svg>
+                            </button>
+
+                            <button
+                                class="acao-rapida"
+                                data-ir-para="arquivos"
+                                type="button"
+                            >
+                                <span class="acao-icone">
+                                    <svg>
+                                        <use href="#icon-folder"></use>
+                                    </svg>
+                                </span>
+
+                                <span>
+                                    <strong>
+                                        Consultar arquivos
+                                    </strong>
+
+                                    <small>
+                                        Visualizar logos cadastradas
+                                    </small>
+                                </span>
+
+                                <svg class="acao-seta">
+                                    <use href="#icon-arrow-right"></use>
+                                </svg>
+                            </button>
+                        </div>
+                    </article>
+                </section>
+            </section>
+
+            <!-- CLIENTES -->
+
+            <section
+                class="secao"
+                id="secao-clientes"
+            >
+                <article class="painel">
+                    <div class="painel-cabecalho painel-clientes-topo">
+                        <div>
+                            <span class="rotulo">
+                                Base de clientes
+                            </span>
+
+                            <h2>
+                                Clientes cadastrados
+                            </h2>
+
+                            <p>
+                                Consulte, visualize, edite e exclua
+                                os clientes salvos no sistema.
+                            </p>
+                        </div>
+
+                        <button
+                            class="botao botao-principal"
+                            id="botaoNovoClienteSecao"
+                            type="button"
+                        >
+                            <svg>
+                                <use href="#icon-plus"></use>
+                            </svg>
+
+                            Novo cliente
+                        </button>
+                    </div>
+
+                    <div class="barra-tabela">
+                        <div class="campo-busca busca-tabela">
+                            <svg>
+                                <use href="#icon-search"></use>
+                            </svg>
+
+                            <input
+                                id="buscaClientes"
+                                type="search"
+                                placeholder="Nome, CPF sem pontos, telefone ou linha"
+                                autocomplete="off"
+                            >
+                        </div>
+
+                        <span id="quantidadeResultados">
+                            0 resultados
+                        </span>
+                    </div>
+
+                    <div class="tabela-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Cliente</th>
+                                    <th>CPF</th>
+                                    <th>Telefone</th>
+                                    <th>Linha</th>
+                                    <th>Arquivo convertido</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+
+                            <tbody id="corpoTabelaClientes">
+                            </tbody>
+                        </table>
+                    </div>
+                </article>
+            </section>
+
+            <!-- ARQUIVOS -->
+
+            <section
+                class="secao"
+                id="secao-arquivos"
+            >
+                <article class="painel">
+                    <div class="painel-cabecalho">
+                        <div>
+                            <span class="rotulo">
+                                Biblioteca
+                            </span>
+
+                            <h2>
+                                Arquivos de bordado
+                            </h2>
+
+                            <p>
+                                Visualize os nomes das logos originais
+                                e dos arquivos convertidos.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div
+                        class="grade-arquivos"
+                        id="gradeArquivos"
+                    ></div>
+                </article>
+            </section>
+
+            <!-- CONFIGURAÇÕES -->
+
+<section
+    class="secao"
+    id="secao-configuracoes"
+>
+
+    <div class="config-grade">
+
+        <!-- Aparência -->
+        <article class="config-card config-card-tema">
+            <header class="config-card-cabecalho">
+                <span class="config-card-icone">
+                    <svg aria-hidden="true">
+                        <use href="#icon-sun"></use>
+                    </svg>
+                </span>
+
+                <div>
+                    <span class="config-card-rotulo">
+                        Aparência
+                    </span>
+
+                    <h2>
+                        Tema do sistema
+                    </h2>
+
+                    <p>
+                        Escolha a aparência mais confortável
+                        para utilizar durante o trabalho.
+                    </p>
+                </div>
+            </header>
+
+            <div class="config-temas">
+                <button
+                    class="config-tema-opcao opcao-tema"
+                    data-tema="light"
+                    type="button"
+                >
+                    <span class="config-tema-preview config-tema-claro">
+                        <span class="config-preview-sidebar"></span>
+
+                        <span class="config-preview-conteudo">
+                            <span></span>
+                            <span></span>
+                        </span>
+                    </span>
+
+                    <span class="config-tema-informacoes">
+                        <span class="config-tema-titulo">
+                            <svg aria-hidden="true">
+                                <use href="#icon-sun"></use>
+                            </svg>
+
+                            Tema claro
+                        </span>
+
+                        <small>
+                            Visual leve e minimalista
+                        </small>
+                    </span>
+
+                    <span class="config-tema-check">
+                        <svg aria-hidden="true">
+                            <use href="#icon-check"></use>
+                        </svg>
+                    </span>
+                </button>
+
+                <button
+                    class="config-tema-opcao opcao-tema"
+                    data-tema="dark"
+                    type="button"
+                >
+                    <span class="config-tema-preview config-tema-escuro">
+                        <span class="config-preview-sidebar"></span>
+
+                        <span class="config-preview-conteudo">
+                            <span></span>
+                            <span></span>
+                        </span>
+                    </span>
+
+                    <span class="config-tema-informacoes">
+                        <span class="config-tema-titulo">
+                            <svg aria-hidden="true">
+                                <use href="#icon-moon"></use>
+                            </svg>
+
+                            Tema escuro
+                        </span>
+
+                        <small>
+                            Visual elegante e confortável
+                        </small>
+                    </span>
+
+                    <span class="config-tema-check">
+                        <svg aria-hidden="true">
+                            <use href="#icon-check"></use>
+                        </svg>
+                    </span>
+                </button>
+            </div>
+        </article>
+
+        <!-- Backup -->
+        <article class="config-card config-card-backup">
+            <header class="config-card-cabecalho">
+                <span class="config-card-icone">
+                    <svg aria-hidden="true">
+                        <use href="#icon-check-file"></use>
+                    </svg>
+                </span>
+
+                <div>
+                    <span class="config-card-rotulo">
+                        Segurança
+                    </span>
+
+                    <h2>
+                        Backup do sistema
+                    </h2>
+
+                    <p>
+                        Proteja clientes, logos originais,
+                        arquivos convertidos e o banco de dados.
+                    </p>
+                </div>
+            </header>
+
+            <div class="config-backup-status">
+                <div class="config-status-item">
+                    <span class="config-status-icone">
+                        <svg aria-hidden="true">
+                            <use href="#icon-check-file"></use>
+                        </svg>
+                    </span>
+
+                    <div>
+                        <span>
+                            Último backup
+                        </span>
+
+                        <strong id="ultimoBackup">
+                            Nenhum backup realizado
+                        </strong>
+                    </div>
+                </div>
+
+                <div class="config-status-item">
+                    <span class="config-status-icone">
+                        <svg aria-hidden="true">
+                            <use href="#icon-clock"></use>
+                        </svg>
+                    </span>
+
+                    <div>
+                        <span>
+                            Última restauração
+                        </span>
+
+                        <strong id="ultimoRestauro">
+                            Nenhuma restauração realizada
+                        </strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="config-backup-acoes">
+                <div class="config-backup-bloco">
+                    <div class="config-backup-bloco-topo">
+                        <span class="config-acao-icone">
+                            <svg aria-hidden="true">
+                                <use href="#icon-folder"></use>
+                            </svg>
+                        </span>
+
+                        <div>
+                            <strong>
+                                Criar backup
+                            </strong>
+
+                            <p>
+                                Gere uma cópia completa dos clientes,
+                                arquivos e configurações.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="config-backup-info">
+                        <svg aria-hidden="true">
+                            <use href="#icon-check"></use>
+                        </svg>
+
+                        <span>
+                            Banco SQLite e todos os uploads
+                        </span>
+                    </div>
+
+                    <button
+                        class="botao botao-principal config-botao-completo"
+                        id="botaoCriarBackup"
+                        type="button"
+                    >
+                        <svg aria-hidden="true">
+                            <use href="#icon-check-file"></use>
+                        </svg>
+
+                        <span>
+                            Criar e baixar backup
+                        </span>
+                    </button>
+                </div>
+
+                <div class="config-backup-bloco">
+                    <div class="config-backup-bloco-topo">
+                        <span class="config-acao-icone">
+                            <svg aria-hidden="true">
+                                <use href="#icon-clock"></use>
+                            </svg>
+                        </span>
+
+                        <div>
+                            <strong>
+                                Restaurar backup
+                            </strong>
+
+                            <p>
+                                Recupere uma cópia criada anteriormente.
+                            </p>
+                        </div>
+                    </div>
+
+                    <input
+                        class="config-input-arquivo"
+                        id="inputBackup"
+                        type="file"
+                        accept=".bordado"
+                    >
+
+                    <button
+                        class="config-seletor-arquivo"
+                        id="botaoSelecionarBackup"
+                        type="button"
+                    >
+                        <span class="config-seletor-icone">
+                            <svg aria-hidden="true">
+                                <use href="#icon-folder"></use>
+                            </svg>
+                        </span>
+
+                        <span class="config-seletor-texto">
+                            <strong>
+                                Selecionar arquivo
+                            </strong>
+
+                            <small id="nomeBackupSelecionado">
+                                Nenhum arquivo selecionado
+                            </small>
+                        </span>
+                    </button>
+
+                    <div class="config-alerta">
+                        <svg aria-hidden="true">
+                            <use href="#icon-alert"></use>
+                        </svg>
+
+                        <p>
+                            A restauração substituirá todos os
+                            clientes e arquivos atuais.
+                        </p>
+                    </div>
+
+                    <button
+                        class="botao config-botao-restaurar"
+                        id="botaoRestaurarBackup"
+                        type="button"
+                        disabled
+                    >
+                        <svg aria-hidden="true">
+                            <use href="#icon-clock"></use>
+                        </svg>
+
+                        <span>
+                            Restaurar backup
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </article>
+
+        <!-- Dados -->
+        <article class="config-card config-card-dados">
+            <div class="config-dados-principal">
+                <span class="config-card-icone">
+                    <svg aria-hidden="true">
+                        <use href="#icon-users"></use>
+                    </svg>
+                </span>
+
+                <div>
+                    <span class="config-card-rotulo">
+                        Armazenamento
+                    </span>
+
+                    <h2>
+                        Dados do sistema
+                    </h2>
+
+                    <p>
+                        Veja a quantidade de clientes armazenados
+                        e controle a remoção dos registros.
+                    </p>
+                </div>
+            </div>
+
+            <div class="config-dados-contador">
+                <span>
+                    Clientes salvos
+                </span>
+
+                <strong id="totalConfiguracoes">
+                    0
+                </strong>
+            </div>
+
+            <div class="config-zona-perigo">
+                <div>
+                    <strong>
+                        Zona de perigo
+                    </strong>
+
+                    <p>
+                        Essa ação exclui permanentemente todos os
+                        clientes e arquivos associados.
+                    </p>
+                </div>
+
+                <button
+                    class="botao config-botao-excluir"
+                    id="botaoApagarTudo"
+                    type="button"
+                >
+                    <svg aria-hidden="true">
+                        <use href="#icon-trash"></use>
+                    </svg>
+
+                    <span>
+                        Apagar todos os dados
+                    </span>
+                </button>
+            </div>
+        </article>
+
+    </div>
+</section>
+
+    <!-- MODAL DE CADASTRO -->
+
+    <div
+        class="modal"
+        id="modalCliente"
+        aria-hidden="true"
+    >
+        <div
+            class="modal-fundo"
+            data-fechar-modal
+        ></div>
+
+        <div
+            class="modal-conteudo"
+            role="dialog"
+            aria-modal="true"
+        >
+            <div class="modal-cabecalho">
+                <div>
+                    <span class="rotulo">
+                        Cadastro
+                    </span>
+
+                    <h2 id="tituloModalCliente">
+                        Novo cliente
+                    </h2>
+                </div>
+
+                <button
+                    class="botao-icone"
+                    id="botaoFecharModal"
+                    type="button"
+                    aria-label="Fechar"
+                >
+                    <svg>
+                        <use href="#icon-x"></use>
+                    </svg>
+                </button>
+            </div>
+
+            <form
+                id="formularioCliente"
+                novalidate
+            >
+                <input
+                    type="hidden"
+                    id="clienteId"
+                    name="clienteId"
+                >
+
+                <div class="grade-formulario">
+                    <label class="campo campo-largo">
+                        <span>Nome completo</span>
+
+                        <input
+                            id="nome"
+                            name="nome"
+                            type="text"
+                            placeholder="Nome do cliente"
+                            required
+                        >
+                    </label>
+
+                    <label class="campo">
+                        <span>CPF</span>
+
+                        <input
+                            id="cpf"
+                            name="cpf"
+                            type="text"
+                            inputmode="numeric"
+                            maxlength="14"
+                            placeholder="000.000.000-00"
+                            autocomplete="off"
+                            required
+                        >
+
+                        <small id="mensagemCpf">
+                            Digite um CPF válido.
+                        </small>
+                    </label>
+
+                    <label class="campo">
+                        <span>Telefone</span>
+
+                        <input
+                            id="telefone"
+                            name="telefone"
+                            type="text"
+                            inputmode="numeric"
+                            maxlength="15"
+                            placeholder="(00) 00000-0000"
+                            required
+                        >
+                    </label>
+
+                    <label class="campo campo-largo">
+                        <span>Linha utilizada</span>
+
+                        <input
+                            id="linha"
+                            name="linha"
+                            type="text"
+                            placeholder="Ex.: Poliéster preta número 120"
+                            required
+                        >
+                    </label>
+
+                    <label class="campo">
+                        <span>Logo original</span>
+
+                        <input
+                            id="logoOriginal"
+                            name="logoOriginal"
+                            type="file"
+                            accept=".png,.jpg,.jpeg,.webp,.svg,.pdf"
+                        >
+
+                        <small>
+                            PNG, JPG, SVG ou PDF
+                        </small>
+                    </label>
+
+                    <label class="campo">
+                        <span>Arquivo convertido</span>
+
+                        <input
+                            id="logoConvertida"
+                            name="logoConvertida"
+                            type="file"
+                            accept=".dst,.pes,.jef,.exp,.vp3,.zip"
+                        >
+
+                        <small>
+                            DST, PES, JEF, EXP, VP3 ou ZIP
+                        </small>
+                    </label>
+
+                    <label class="campo campo-largo">
+                        <span>Observações</span>
+
+                        <textarea
+                            id="observacoes"
+                            name="observacoes"
+                            rows="4"
+                            placeholder="Informações importantes sobre o bordado"
+                        ></textarea>
+                    </label>
+                </div>
+
+                <div class="modal-acoes">
+                    <button
+                        class="botao botao-secundario"
+                        data-fechar-modal
+                        type="button"
+                    >
+                        Cancelar
+                    </button>
+
+                    <button
+                        class="botao botao-principal"
+                        id="botaoSalvarCliente"
+                        type="submit"
+                    >
+                        <svg>
+                            <use href="#icon-check"></use>
+                        </svg>
+
+                        <span>
+                            Salvar cliente
+                        </span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL DE DETALHES -->
+
+    <div
+        class="modal"
+        id="modalDetalhes"
+        aria-hidden="true"
+    >
+        <div
+            class="modal-fundo"
+            data-fechar-detalhes
+        ></div>
+
+        <div
+            class="modal-conteudo modal-detalhes"
+            role="dialog"
+            aria-modal="true"
+        >
+            <div class="modal-cabecalho">
+                <div>
+                    <span class="rotulo">
+                        Cliente
+                    </span>
+
+                    <h2 id="detalhesNome">
+                        Detalhes do cliente
+                    </h2>
+                </div>
+
+                <button
+                    class="botao-icone"
+                    id="botaoFecharDetalhes"
+                    type="button"
+                    aria-label="Fechar"
+                >
+                    <svg>
+                        <use href="#icon-x"></use>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="detalhes-cliente">
+                <div
+                    class="detalhes-avatar"
+                    id="detalhesAvatar"
+                >
+                    CL
+                </div>
+
+                <div class="detalhes-grade">
+                    <div class="detalhe-item">
+                        <span>CPF</span>
+
+                        <strong id="detalhesCpf">
+                            —
+                        </strong>
+                    </div>
+
+                    <div class="detalhe-item">
+                        <span>Telefone</span>
+
+                        <strong id="detalhesTelefone">
+                            —
+                        </strong>
+                    </div>
+
+                    <div class="detalhe-item">
+                        <span>Linha utilizada</span>
+
+                        <strong id="detalhesLinha">
+                            —
+                        </strong>
+                    </div>
+
+                    <div class="detalhe-item">
+                        <span>Data do cadastro</span>
+
+                        <strong id="detalhesData">
+                            —
+                        </strong>
+                    </div>
+
+                    <div class="detalhe-item detalhe-largo">
+                        <span>Logo original</span>
+
+                        <strong id="detalhesOriginal">
+                            Não enviado
+                        </strong>
+                    </div>
+
+                    <div class="detalhe-item detalhe-largo">
+                        <span>Arquivo convertido</span>
+
+                        <strong id="detalhesConvertido">
+                            Não enviado
+                        </strong>
+                    </div>
+
+                    <div class="detalhe-item detalhe-largo">
+                        <span>Observações</span>
+
+                        <strong id="detalhesObservacoes">
+                            Nenhuma observação.
+                        </strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-acoes">
+                <button
+                    class="botao botao-secundario"
+                    data-fechar-detalhes
+                    type="button"
+                >
+                    Fechar
+                </button>
+
+                <button
+                    class="botao botao-principal"
+                    id="botaoEditarDetalhes"
+                    type="button"
+                >
+                    <svg>
+                        <use href="#icon-edit"></use>
+                    </svg>
+
+                    Editar cliente
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NOTIFICAÇÕES -->
+
+<div
+    id="notificacoes"
+    aria-live="polite"
+    aria-atomic="false"
+></div>
+
+    <script src="app.js"></script>
+</body>
+</html>

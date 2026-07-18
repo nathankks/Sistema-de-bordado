@@ -1,0 +1,12 @@
+{
+    "name": "sistema-de-bordados",
+    "version": "1.0.0",
+    "private": true,
+    "description": "Sistema de gerenciamento de clientes e arquivos de bordado",
+    "scripts": {
+        "start": "node server.js"
+    },
+    "engines": {
+        "node": ">=24"
+    }
+}

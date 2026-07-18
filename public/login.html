@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <meta
+        name="description"
+        content="Acesso ao Sistema de Bordados"
+    >
+
+    <title>
+        Acesso | Sistema de Bordados
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="/login.css"
+    >
+</head>
+
+<body>
+    <main class="pagina-login">
+
+        <section class="login-apresentacao">
+            <div class="login-marca">
+                <span class="login-marca-icone">
+                    <svg
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                    >
+                        <path
+                            d="M4 7.5A3.5 3.5 0 0 1 7.5 4h9A3.5 3.5 0 0 1 20 7.5v9a3.5 3.5 0 0 1-3.5 3.5h-9A3.5 3.5 0 0 1 4 16.5z"
+                        ></path>
+
+                        <path
+                            d="M8 8h8v8H8z"
+                        ></path>
+
+                        <path
+                            d="M8 2v4M12 2v4M16 2v4M8 18v4M12 18v4M16 18v4M2 8h4M2 12h4M2 16h4M18 8h4M18 12h4M18 16h4"
+                        ></path>
+                    </svg>
+                </span>
+
+                <div>
+                    <strong>
+                        Sistema de Bordados
+                    </strong>
+
+                    <span>
+                        Gestão de clientes e arquivos
+                    </span>
+                </div>
+            </div>
+
+            <div class="login-apresentacao-conteudo">
+                <span class="login-etiqueta">
+                    Plataforma administrativa
+                </span>
+
+                <h1>
+                    Seus clientes e arquivos organizados em um só lugar.
+                </h1>
+
+                <p>
+                    Consulte cadastros, encontre logos pelo CPF,
+                    armazene arquivos convertidos e mantenha os
+                    dados protegidos.
+                </p>
+
+                <div class="login-recursos">
+                    <article>
+                        <span>
+                            <svg
+                                viewBox="0 0 24 24"
+                                aria-hidden="true"
+                            >
+                                <path d="m5 12 4 4L19 6"></path>
+                            </svg>
+                        </span>
+
+                        <div>
+                            <strong>
+                                Acesso protegido
+                            </strong>
+
+                            <p>
+                                Sessões privadas e senhas armazenadas com segurança.
+                            </p>
+                        </div>
+                    </article>
+
+                    <article>
+                        <span>
+                            <svg
+                                viewBox="0 0 24 24"
+                                aria-hidden="true"
+                            >
+                                <path d="M4 7h16v13H4z"></path>
+                                <path d="M8 7V4h8v3"></path>
+                                <path d="M9 12h6"></path>
+                            </svg>
+                        </span>
+
+                        <div>
+                            <strong>
+                                Arquivos centralizados
+                            </strong>
+
+                            <p>
+                                Logos originais e bordados convertidos por cliente.
+                            </p>
+                        </div>
+                    </article>
+
+                    <article>
+                        <span>
+                            <svg
+                                viewBox="0 0 24 24"
+                                aria-hidden="true"
+                            >
+                                <path d="M12 3v18"></path>
+                                <path d="m7 8 5-5 5 5"></path>
+                                <path d="M5 13v7h14v-7"></path>
+                            </svg>
+                        </span>
+
+                        <div>
+                            <strong>
+                                Backup completo
+                            </strong>
+
+                            <p>
+                                Proteção do banco de dados e de todos os uploads.
+                            </p>
+                        </div>
+                    </article>
+                </div>
+            </div>
+
+            <footer class="login-apresentacao-rodape">
+                Uso interno da empresa
+            </footer>
+        </section>
+
+        <section class="login-area">
+            <div
+                class="login-carregando"
+                id="loginCarregando"
+            >
+                <span class="login-spinner"></span>
+
+                <strong>
+                    Verificando o sistema
+                </strong>
+
+                <p>
+                    Aguarde alguns instantes.
+                </p>
+            </div>
+
+            <div
+                class="login-card escondido"
+                id="loginCard"
+            >
+                <header class="login-card-cabecalho">
+                    <span
+                        class="login-card-icone"
+                        id="loginCardIcone"
+                    >
+                        <svg
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                        >
+                            <path d="M7 10V8a5 5 0 0 1 10 0v2"></path>
+                            <path d="M5 10h14v11H5z"></path>
+                            <path d="M12 14v3"></path>
+                        </svg>
+                    </span>
+
+                    <div>
+                        <span
+                            class="login-card-etiqueta"
+                            id="loginEtiqueta"
+                        >
+                            Acesso seguro
+                        </span>
+
+                        <h2 id="loginTitulo">
+                            Entrar no sistema
+                        </h2>
+
+                        <p id="loginDescricao">
+                            Informe seus dados para acessar o painel.
+                        </p>
+                    </div>
+                </header>
+
+                <!-- Formulário de login -->
+                <form
+                    class="login-formulario"
+                    id="formularioLogin"
+                    novalidate
+                >
+                    <div class="login-campo">
+                        <label for="loginUsuario">
+                            Usuário
+                        </label>
+
+                        <div class="login-input-container">
+                            <span class="login-input-icone">
+                                <svg
+                                    viewBox="0 0 24 24"
+                                    aria-hidden="true"
+                                >
+                                    <circle
+                                        cx="12"
+                                        cy="8"
+                                        r="4"
+                                    ></circle>
+
+                                    <path d="M4 21a8 8 0 0 1 16 0"></path>
+                                </svg>
+                            </span>
+
+                            <input
+                                id="loginUsuario"
+                                name="usuario"
+                                type="text"
+                                minlength="3"
+                                maxlength="40"
+                                autocomplete="username"
+                                autocapitalize="none"
+                                spellcheck="false"
+                                placeholder="Digite seu usuário"
+                                required
+                            >
+                        </div>
+                    </div>
+
+                    <div class="login-campo">
+                        <div class="login-label-linha">
+                            <label for="loginSenha">
+                                Senha
+                            </label>
+                        </div>
+
+                        <div class="login-input-container">
+                            <span class="login-input-icone">
+                                <svg
+                                    viewBox="0 0 24 24"
+                                    aria-hidden="true"
+                                >
+                                    <path d="M7 10V8a5 5 0 0 1 10 0v2"></path>
+                                    <path d="M5 10h14v11H5z"></path>
+                                </svg>
+                            </span>
+
+                            <input
+                                id="loginSenha"
+                                name="senha"
+                                type="password"
+                                maxlength="128"
+                                autocomplete="current-password"
+                                placeholder="Digite sua senha"
+                                required
+                            >
+
+                            <button
+                                class="login-mostrar-senha"
+                                type="button"
+                                data-alternar-senha="loginSenha"
+                                aria-label="Mostrar senha"
+                                title="Mostrar senha"
+                            >
+                                <svg
+                                    viewBox="0 0 24 24"
+                                    aria-hidden="true"
+                                >
+                                    <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6"></path>
+                                    <circle
+                                        cx="12"
+                                        cy="12"
+                                        r="2.5"
+                                    ></circle>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <button
+                        class="login-botao-principal"
+                        id="botaoEntrar"
+                        type="submit"
+                    >
+                        <span>
+                            Entrar no sistema
+                        </span>
+
+                        <svg
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                        >
+                            <path d="M5 12h14"></path>
+                            <path d="m14 7 5 5-5 5"></path>
+                        </svg>
+                    </button>
+                </form>
+
+                <!-- Primeiro acesso -->
+                <form
+                    class="login-formulario escondido"
+                    id="formularioConfiguracao"
+                    novalidate
+                >
+                    <div class="login-campo">
+                        <label for="configNome">
+                            Nome do administrador
+                        </label>
+
+                        <div class="login-input-container">
+                            <span class="login-input-icone">
+                                <svg
+                                    viewBox="0 0 24 24"
+                                    aria-hidden="true"
+                                >
+                                    <circle
+                                        cx="12"
+                                        cy="8"
+                                        r="4"
+                                    ></circle>
+
+                                    <path d="M4 21a8 8 0 0 1 16 0"></path>
+                                </svg>
+                            </span>
+
+                            <input
+                                id="configNome"
+                                name="nome"
+                                type="text"
+                                minlength="3"
+                                maxlength="100"
+                                autocomplete="name"
+                                placeholder="Ex.: Nathalia Souza"
+                                required
+                            >
+                        </div>
+                    </div>
+
+                    <div class="login-campo">
+                        <label for="configUsuario">
+                            Usuário de acesso
+                        </label>
+
+                        <div class="login-input-container">
+                            <span class="login-input-icone">
+                                <svg
+                                    viewBox="0 0 24 24"
+                                    aria-hidden="true"
+                                >
+                                    <circle
+                                        cx="12"
+                                        cy="8"
+                                        r="4"
+                                    ></circle>
+
+                                    <path d="M4 21a8 8 0 0 1 16 0"></path>
+                                </svg>
+                            </span>
+
+                            <input
+                                id="configUsuario"
+                                name="usuario"
+                                type="text"
+                                minlength="3"
+                                maxlength="40"
+                                autocomplete="username"
+                                autocapitalize="none"
+                                spellcheck="false"
+                                placeholder="Ex.: administrador"
+                                required
+                            >
+                        </div>
+
+                        <small>
+                            Use letras sem acento, números, ponto,
+                            hífen ou underline.
+                        </small>
+                    </div>
+
+                    <div class="login-grade-senhas">
+                        <div class="login-campo">
+                            <label for="configSenha">
+                                Senha
+                            </label>
+
+                            <div class="login-input-container">
+                                <span class="login-input-icone">
+                                    <svg
+                                        viewBox="0 0 24 24"
+                                        aria-hidden="true"
+                                    >
+                                        <path d="M7 10V8a5 5 0 0 1 10 0v2"></path>
+                                        <path d="M5 10h14v11H5z"></path>
+                                    </svg>
+                                </span>
+
+                                <input
+                                    id="configSenha"
+                                    name="senha"
+                                    type="password"
+                                    minlength="10"
+                                    maxlength="128"
+                                    autocomplete="new-password"
+                                    placeholder="Crie uma senha"
+                                    required
+                                >
+
+                                <button
+                                    class="login-mostrar-senha"
+                                    type="button"
+                                    data-alternar-senha="configSenha"
+                                    aria-label="Mostrar senha"
+                                    title="Mostrar senha"
+                                >
+                                    <svg
+                                        viewBox="0 0 24 24"
+                                        aria-hidden="true"
+                                    >
+                                        <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6"></path>
+                                        <circle
+                                            cx="12"
+                                            cy="12"
+                                            r="2.5"
+                                        ></circle>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="login-campo">
+                            <label for="configConfirmarSenha">
+                                Confirmar senha
+                            </label>
+
+                            <div class="login-input-container">
+                                <span class="login-input-icone">
+                                    <svg
+                                        viewBox="0 0 24 24"
+                                        aria-hidden="true"
+                                    >
+                                        <path d="M7 10V8a5 5 0 0 1 10 0v2"></path>
+                                        <path d="M5 10h14v11H5z"></path>
+                                    </svg>
+                                </span>
+
+                                <input
+                                    id="configConfirmarSenha"
+                                    name="confirmarSenha"
+                                    type="password"
+                                    minlength="10"
+                                    maxlength="128"
+                                    autocomplete="new-password"
+                                    placeholder="Repita a senha"
+                                    required
+                                >
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="login-requisitos">
+                        <span id="requisitoTamanho">
+                            Pelo menos 10 caracteres
+                        </span>
+
+                        <span id="requisitoLetra">
+                            Pelo menos uma letra
+                        </span>
+
+                        <span id="requisitoNumero">
+                            Pelo menos um número
+                        </span>
+
+                        <span id="requisitoConfirmacao">
+                            As senhas precisam ser iguais
+                        </span>
+                    </div>
+
+                    <button
+                        class="login-botao-principal"
+                        id="botaoConfigurar"
+                        type="submit"
+                    >
+                        <span>
+                            Criar administrador
+                        </span>
+
+                        <svg
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                        >
+                            <path d="M5 12h14"></path>
+                            <path d="m14 7 5 5-5 5"></path>
+                        </svg>
+                    </button>
+                </form>
+
+                <div
+                    class="login-mensagem escondido"
+                    id="loginMensagem"
+                    role="alert"
+                >
+                    <span>
+                        <svg
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                        >
+                            <path d="M12 9v4"></path>
+                            <path d="M12 17h.01"></path>
+                            <path d="m10.3 3.7-8 14A2 2 0 0 0 4 20h16a2 2 0 0 0 1.7-2.3l-8-14a2 2 0 0 0-3.4 0z"></path>
+                        </svg>
+                    </span>
+
+                    <p id="loginMensagemTexto"></p>
+                </div>
+
+                <footer class="login-card-rodape">
+                    <span>
+                        <svg
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                        >
+                            <path d="M12 3 4 7v5c0 5 3.4 8.5 8 9 4.6-.5 8-4 8-9V7z"></path>
+                            <path d="m9 12 2 2 4-4"></path>
+                        </svg>
+                    </span>
+
+                    Seus dados são transmitidos apenas para o servidor local.
+                </footer>
+            </div>
+        </section>
+    </main>
+
+    <script src="/login.js"></script>
+</body>
+</html>

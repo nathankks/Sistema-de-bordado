@@ -1,0 +1,5 @@
+dados/
+uploads/
+*.bordado
+node_modules/
+.env
