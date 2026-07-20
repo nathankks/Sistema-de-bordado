@@ -16,6 +16,11 @@
     <title>Sistema de Bordados</title>
 
     <link rel="stylesheet" href="style.css">
+    <link
+    rel="icon"
+    type="image/png"
+    href="/imagens/favicon.png"
+>
 </head>
 
 <body>
@@ -86,6 +91,18 @@
             <path
                 d="M3 5a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
             ></path>
+        </symbol>
+
+        <symbol
+            id="icon-linha"
+            viewBox="0 0 24 24"
+        >
+            <path d="M8 3h8l-1 3H9L8 3Z"></path>
+            <path d="M9 6h6v12H9V6Z"></path>
+            <path d="M9 18h6l1 3H8l1-3Z"></path>
+            <path d="M9 9h6"></path>
+            <path d="M9 12h6"></path>
+            <path d="M9 15h6"></path>
         </symbol>
 
         <symbol
@@ -271,194 +288,239 @@
         </symbol>
     </svg>
 
-    <!-- MENU LATERAL -->
+<!-- NAVEGAÇÃO SUPERIOR -->
 
-<aside
-    class="sidebar"
+<header
+    class="sidebar barra-superior"
     id="sidebar"
 >
-    <div class="logo">
-        <div class="logo-icone">
-            B
-        </div>
-
-        <div class="logo-texto">
-            <strong>Bordado</strong>
-            <span>Gestão de clientes</span>
-        </div>
-    </div>
-
-    <nav class="menu">
-        <div class="menu-grupo">
-            <span class="menu-grupo-titulo">
-                Principal
-            </span>
-
-            <button
-                class="menu-item ativo"
-                data-secao="dashboard"
-                type="button"
-            >
-                <svg aria-hidden="true">
-                    <use href="#icon-home"></use>
-                </svg>
-
-                <span>Visão geral</span>
-            </button>
-
-            <button
-                class="menu-item"
-                data-secao="clientes"
-                type="button"
-            >
-                <svg aria-hidden="true">
-                    <use href="#icon-users"></use>
-                </svg>
-
-                <span>Clientes</span>
-            </button>
-
-            <button
-                class="menu-item"
-                data-secao="arquivos"
-                type="button"
-            >
-                <svg aria-hidden="true">
-                    <use href="#icon-folder"></use>
-                </svg>
-
-                <span>Arquivos</span>
-            </button>
-        </div>
-
-        <div class="menu-grupo menu-grupo-acao">
-            <span class="menu-grupo-titulo">
-                Cadastro
-            </span>
-
-            <button
-                class="menu-item menu-item-novo"
-                id="menuNovoCliente"
-                type="button"
-            >
-                <span class="menu-item-icone">
-                    <svg aria-hidden="true">
-                        <use href="#icon-user-plus"></use>
-                    </svg>
-                </span>
-
-                <span class="menu-item-conteudo">
-                    <strong>Novo cadastro</strong>
-                    <small>Adicionar um cliente</small>
-                </span>
-            </button>
-        </div>
-
-        <div class="menu-grupo menu-grupo-sistema">
-            <span class="menu-grupo-titulo">
-                Sistema
-            </span>
-
-            <button
-                class="menu-item menu-item-configuracoes"
-                data-secao="configuracoes"
-                type="button"
-            >
-                <svg aria-hidden="true">
-                    <use href="#icon-settings"></use>
-                </svg>
-
-                <span>Configurações</span>
-            </button>
-        </div>
-    </nav>
-
-    <div class="sidebar-conta">
-        <div class="sidebar-conta-avatar">
-            <span id="iniciaisUsuarioLogado">
-                AD
-            </span>
-        </div>
-
-        <div class="sidebar-conta-informacoes">
-            <strong id="nomeUsuarioLogado">
-                Administrador
-            </strong>
-
-            <span id="perfilUsuarioLogado">
-                Administrador
-            </span>
-        </div>
-
+    <div class="barra-superior-conteudo">
         <button
-            class="sidebar-botao-sair"
-            id="botaoSair"
+            class="botao-icone botao-menu-mobile"
+            id="botaoMenuMobile"
             type="button"
-            title="Sair do sistema"
-            aria-label="Sair do sistema"
+            aria-label="Abrir menu"
+            aria-expanded="false"
+            aria-controls="menuSuperior"
         >
-            <svg
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-            >
-                <path d="M10 17l5-5-5-5"></path>
-                <path d="M15 12H3"></path>
-
-                <path
-                    d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"
-                ></path>
+            <svg aria-hidden="true">
+                <use href="#icon-menu"></use>
             </svg>
         </button>
-    </div>
-</aside>
 
-    <div
-        class="fundo-menu-mobile"
-        id="fundoMenuMobile"
-    ></div>
+        <div class="logo">
+            <div class="logo-icone">
+                AV
+            </div>
+
+            <div class="logo-texto">
+                <strong>AVENZZO</strong>
+                <span>Gestão de bordados</span>
+            </div>
+        </div>
+
+        <nav
+            class="menu menu-superior"
+            id="menuSuperior"
+            aria-label="Navegação principal"
+        >
+            <div class="menu-grupo menu-grupo-principal">
+                <span class="menu-grupo-titulo">
+                    Navegação
+                </span>
+
+                <button
+                    class="menu-item ativo"
+                    data-secao="dashboard"
+                    type="button"
+                >
+                    <svg aria-hidden="true">
+                        <use href="#icon-home"></use>
+                    </svg>
+
+                    <span>Visão geral</span>
+                </button>
+
+                <button
+                    class="menu-item"
+                    data-secao="clientes"
+                    data-permissao-exigida="clientes.visualizar"
+                    type="button"
+                >
+                    <svg aria-hidden="true">
+                        <use href="#icon-users"></use>
+                    </svg>
+
+                    <span>Clientes</span>
+                </button>
+
+                <button
+                    class="menu-item"
+                    data-secao="ordens"
+                    data-permissao-exigida="ordens.visualizar"
+                    type="button"
+                >
+                    <svg aria-hidden="true">
+                        <use href="#icon-check-file"></use>
+                    </svg>
+
+                    <span>Ordens</span>
+                </button>
+
+                <button
+                    class="menu-item"
+                    data-secao="linhas"
+                    data-permissao-exigida="linhas.visualizar"
+                    type="button"
+                >
+                    <svg aria-hidden="true">
+                        <use href="#icon-linha"></use>
+                    </svg>
+
+                    <span>Linhas</span>
+                </button>
+
+                <button
+                    class="menu-item"
+                    data-secao="arquivos"
+                    data-permissao-exigida="arquivos.baixar"
+                    type="button"
+                >
+                    <svg aria-hidden="true">
+                        <use href="#icon-folder"></use>
+                    </svg>
+
+                    <span>Arquivos</span>
+                </button>
+            </div>
+
+            <div class="menu-grupo menu-grupo-sistema">
+    <span class="menu-grupo-titulo">
+        Administração
+    </span>
+
+    <button
+        class="menu-item"
+        id="menuUsuarios"
+        data-secao="usuarios"
+        data-permissao-exigida="usuarios.gerenciar"
+        type="button"
+    >
+        <svg aria-hidden="true">
+            <use href="#icon-users"></use>
+        </svg>
+
+        <span>Usuários</span>
+    </button>
+</div>
+        </nav>
+
+        <div class="barra-superior-acoes">
+    <button
+        class="botao botao-principal botao-novo-topo"
+        id="menuNovoCliente"
+        data-permissao-exigida="clientes.criar"
+        type="button"
+    >
+        <svg aria-hidden="true">
+            <use href="#icon-plus"></use>
+        </svg>
+
+        <span>
+            Novo cliente
+        </span>
+    </button>
+
+    <button
+        class="menu-item botao-configuracoes-topo"
+        data-secao="configuracoes"
+        type="button"
+        title="Configurações"
+        aria-label="Abrir configurações"
+    >
+        <svg aria-hidden="true">
+            <use href="#icon-settings"></use>
+        </svg>
+    </button>
+
+    <div class="sidebar-conta">
+                <div class="sidebar-conta-avatar">
+                    <span id="iniciaisUsuarioLogado">
+                        AD
+                    </span>
+                </div>
+
+                <div class="sidebar-conta-informacoes">
+                    <strong id="nomeUsuarioLogado">
+                        Administrador
+                    </strong>
+
+                    <span id="perfilUsuarioLogado">
+                        Administrador
+                    </span>
+                </div>
+
+                <button
+                    class="sidebar-botao-sair"
+                    id="botaoSair"
+                    type="button"
+                    title="Sair do sistema"
+                    aria-label="Sair do sistema"
+                >
+                    <svg
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                    >
+                        <path d="M10 17l5-5-5-5"></path>
+                        <path d="M15 12H3"></path>
+
+                        <path
+                            d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"
+                        ></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+</header>
+
+<div
+    class="fundo-menu-mobile"
+    id="fundoMenuMobile"
+></div>
 
     <!-- CONTEÚDO PRINCIPAL -->
 
     <main class="conteudo-principal">
-        <header class="topo">
-            <div class="topo-titulo">
-                <button
-                    class="botao-icone botao-menu-mobile"
-                    id="botaoMenuMobile"
-                    type="button"
-                    aria-label="Abrir menu"
-                >
-                    <svg>
-                        <use href="#icon-menu"></use>
-                    </svg>
-                </button>
 
-                <div>
-                    <span class="rotulo">
-                        Painel administrativo
-                    </span>
+<header class="topo topo-pagina">
+    <div class="topo-titulo">
+        <div>
+            <span class="rotulo">
+                Painel administrativo
+            </span>
 
-                    <h1 id="tituloPagina">
-                        Visão geral
-                    </h1>
-                </div>
-            </div>
+            <h1 id="tituloPagina">
+                Visão geral
+            </h1>
+        </div>
+    </div>
 
-            <div class="topo-acoes">
-                <div class="campo-busca">
-                    <svg>
-                        <use href="#icon-search"></use>
-                    </svg>
+    <div class="topo-acoes">
+        <div class="campo-busca">
+            <svg aria-hidden="true">
+                <use href="#icon-search"></use>
+            </svg>
 
-                    <input
-                        id="buscaGlobal"
-                        type="search"
-                        placeholder="Buscar cliente ou CPF"
-                        autocomplete="off"
-                    >
-                </div>
-            </div>
-        </header>
+            <input
+                id="buscaGlobal"
+                type="search"
+                placeholder="Buscar cliente por nome, CPF ou CNPJ"
+                autocomplete="off"
+            >
+        </div>
+    </div>
+</header>
 
         <div class="container">
             <!-- VISÃO GERAL -->
@@ -474,8 +536,7 @@
                         </span>
 
                         <h2>
-                            Seus clientes e arquivos de bordado
-                            organizados em um só lugar.
+                            Elevando o padrão através dos detalhes. ✨
                         </h2>
 
                         <p>
@@ -484,11 +545,12 @@
                         </p>
                     </div>
 
-                    <button
-                        class="botao botao-secundario"
-                        id="botaoCadastrarDestaque"
-                        type="button"
-                    >
+<button
+    class="botao botao-secundario"
+    id="botaoCadastrarDestaque"
+    data-permissao-exigida="clientes.criar"
+    type="button"
+>
                         Cadastrar cliente
 
                         <svg>
@@ -496,6 +558,102 @@
                         </svg>
                     </button>
                 </section>
+
+                <!-- RESUMO DAS ORDENS -->
+
+<div class="resumo-ordens-dashboard">
+    <article class="cartao-resumo-ordem">
+        <span>Ordens abertas</span>
+
+        <strong id="totalOrdensAbertas">
+            0
+        </strong>
+
+        <small>
+            Serviços ainda em andamento
+        </small>
+    </article>
+
+    <article class="cartao-resumo-ordem">
+        <span>Em produção</span>
+
+        <strong id="totalOrdensProducao">
+            0
+        </strong>
+
+        <small>
+            Bordados sendo produzidos
+        </small>
+    </article>
+
+    <article
+    class="cartao-resumo-ordem"
+    id="cartaoOrdensAtrasadas"
+    >
+        <span>Ordens atrasadas</span>
+
+        <strong id="totalOrdensAtrasadas">
+            0
+        </strong>
+
+        <small>
+            Prazo de entrega vencido
+        </small>
+    </article>
+
+    <article class="cartao-resumo-ordem">
+        <span>Concluídas no mês</span>
+
+        <strong id="totalOrdensConcluidasMes">
+            0
+        </strong>
+
+        <small>
+            Finalizadas neste mês
+        </small>
+    </article>
+</div>
+
+<article class="painel painel-ordens-atrasadas">
+    <div class="painel-cabecalho">
+        <div>
+            <span class="rotulo">
+                Atenção
+            </span>
+
+            <h2>
+                Ordens atrasadas
+            </h2>
+
+            <p>
+                Serviços que ultrapassaram o prazo de entrega.
+            </p>
+        </div>
+
+        <button
+            class="botao botao-secundario"
+            id="botaoVerOrdensDashboard"
+            type="button"
+        >
+            Ver todas as ordens
+        </button>
+    </div>
+
+    <div
+        class="lista-ordens-atrasadas"
+        id="listaOrdensAtrasadasDashboard"
+    >
+        <div class="estado-vazio estado-vazio-compacto">
+            <p>
+                Nenhuma ordem atrasada
+            </p>
+
+            <small>
+                Os serviços estão dentro do prazo.
+            </small>
+        </div>
+    </div>
+</article>
 
                 <section class="cards-resumo">
                     <article class="card-resumo">
@@ -579,6 +737,7 @@
                             <button
                                 class="botao-texto"
                                 data-ir-para="clientes"
+                                data-permissao-exigida="clientes.visualizar"
                                 type="button"
                             >
                                 Ver todos
@@ -606,11 +765,12 @@
                         </div>
 
                         <div class="acoes-rapidas">
-                            <button
-                                class="acao-rapida"
-                                id="acaoNovoCliente"
-                                type="button"
-                            >
+<button
+    class="acao-rapida"
+    id="acaoNovoCliente"
+    data-permissao-exigida="clientes.criar"
+    type="button"
+>
                                 <span class="acao-icone">
                                     <svg>
                                         <use href="#icon-user-plus"></use>
@@ -634,6 +794,7 @@
 
                             <button
                                 class="acao-rapida"
+                                data-permissao-exigida="clientes.visualizar"
                                 data-ir-para="clientes"
                                 type="button"
                             >
@@ -661,6 +822,7 @@
                             <button
                                 class="acao-rapida"
                                 data-ir-para="arquivos"
+                                data-permissao-exigida="arquivos.baixar"
                                 type="button"
                             >
                                 <span class="acao-icone">
@@ -711,11 +873,12 @@
                             </p>
                         </div>
 
-                        <button
-                            class="botao botao-principal"
-                            id="botaoNovoClienteSecao"
-                            type="button"
-                        >
+<button
+    class="botao botao-principal"
+    id="botaoNovoClienteSecao"
+    data-permissao-exigida="clientes.criar"
+    type="button"
+>
                             <svg>
                                 <use href="#icon-plus"></use>
                             </svg>
@@ -724,44 +887,434 @@
                         </button>
                     </div>
 
-                    <div class="barra-tabela">
-                        <div class="campo-busca busca-tabela">
-                            <svg>
-                                <use href="#icon-search"></use>
-                            </svg>
+<div class="barra-tabela">
+<div class="controles-clientes">
+<div class="filtro-cliente filtro-cliente-busca">
+    <span>Pesquisar</span>
 
-                            <input
-                                id="buscaClientes"
-                                type="search"
-                                placeholder="Nome, CPF sem pontos, telefone ou linha"
-                                autocomplete="off"
-                            >
-                        </div>
+    <div class="campo-busca busca-tabela">
+        <svg aria-hidden="true">
+            <use href="#icon-search"></use>
+        </svg>
 
-                        <span id="quantidadeResultados">
-                            0 resultados
-                        </span>
-                    </div>
+        <input
+            id="buscaClientes"
+            type="search"
+            placeholder="Buscar por nome, CPF ou CNPJ"
+            autocomplete="off"
+        >
+    </div>
+</div>
 
-                    <div class="tabela-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Cliente</th>
-                                    <th>CPF</th>
-                                    <th>Telefone</th>
-                                    <th>Linha</th>
-                                    <th>Arquivo convertido</th>
-                                    <th>Ações</th>
-                                </tr>
-                            </thead>
+        <div class="filtros-clientes">
+            <label class="filtro-cliente">
+                <span>Status</span>
 
-                            <tbody id="corpoTabelaClientes">
-                            </tbody>
-                        </table>
-                    </div>
+                <select id="filtroStatusCliente">
+                    <option value="todos">
+                        Todos os clientes
+                    </option>
+
+                    <option value="convertidos">
+                        Arquivo convertido
+                    </option>
+
+                    <option value="pendentes">
+                        Aguardando conversão
+                    </option>
+
+                    <option value="com-original">
+                        Com logo original
+                    </option>
+
+                    <option value="sem-arquivos">
+                        Sem arquivos
+                    </option>
+                </select>
+            </label>
+
+            <label class="filtro-cliente">
+                <span>Ordenar por</span>
+
+                <select id="ordenacaoClientes">
+                    <option value="recentes">
+                        Mais recentes
+                    </option>
+
+                    <option value="antigos">
+                        Mais antigos
+                    </option>
+
+                    <option value="nome-az">
+                        Nome: A–Z
+                    </option>
+
+                    <option value="nome-za">
+                        Nome: Z–A
+                    </option>
+                </select>
+            </label>
+
+<button
+    class="botao botao-secundario"
+    id="botaoExportarClientes"
+    data-permissao-exigida="clientes.dados_pessoais"
+    type="button"
+>
+                <svg aria-hidden="true">
+                    <use href="#icon-file"></use>
+                </svg>
+
+                <span>Exportar CSV</span>
+            </button>
+            <span id="quantidadeResultados">
+                0 resultados
+            </span>
+        </div>
+    </div>
+</div>
+
+<div class="tabela-container">
+    <table class="tabela-clientes">
+        <thead>
+            <tr>
+                <th class="coluna-cliente-clientes">
+                    Cliente
+                </th>
+
+                <th
+                    class="coluna-telefone-clientes"
+                    data-permissao-exigida="clientes.dados_pessoais"
+                >
+                    Telefone
+                </th>
+
+                <th
+                    class="coluna-linha-clientes"
+                    data-permissao-exigida="clientes.dados_pessoais"
+                >
+                    Linha
+                </th>
+
+                <th
+                    class="coluna-arquivo-clientes"
+                    data-permissao-exigida="clientes.dados_pessoais,arquivos.baixar"
+                >
+                    Arquivo convertido
+                </th>
+
+                <th class="coluna-acoes-clientes">
+                    Ações
+                </th>
+            </tr>
+        </thead>
+
+                <tbody id="corpoTabelaClientes"></tbody>
+    </table>
+</div>
+
                 </article>
             </section>
+
+<!-- ORDENS DE BORDADO -->
+
+<section
+    class="secao"
+    id="secao-ordens"
+>
+    <article class="painel">
+        <div class="painel-cabecalho painel-clientes-topo">
+            <div>
+                <span class="rotulo">
+                    Produção
+                </span>
+
+                <h2>
+                    Ordens de bordado
+                </h2>
+
+                <p>
+                    Acompanhe os serviços desde o recebimento
+                    até a conclusão e entrega.
+                </p>
+            </div>
+
+<button
+    class="botao botao-principal"
+    id="botaoNovaOrdem"
+    data-permissao-exigida="ordens.criar"
+    type="button"
+>
+                <svg aria-hidden="true">
+                    <use href="#icon-plus"></use>
+                </svg>
+                Nova ordem
+            </button>
+        </div>
+
+        <div class="controles-ordens">
+            <div class="campo-busca busca-ordens">
+                <svg aria-hidden="true">
+                    <use href="#icon-search"></use>
+                </svg>
+
+                <input
+                    id="buscaOrdens"
+                    type="search"
+                    placeholder="Buscar número, cliente, CPF/CNPJ ou serviço"
+                    autocomplete="off"
+                >
+            </div>
+
+            <label class="filtro-ordens">
+                <span>Status</span>
+
+                <select id="filtroStatusOrdens">
+                    <option value="todos">
+                        Todos os status
+                    </option>
+
+                    <option value="aguardando-arquivo">
+                        Aguardando arquivo
+                    </option>
+
+                    <option value="aguardando-aprovacao">
+                        Aguardando aprovação
+                    </option>
+
+                    <option value="pronto-producao">
+                        Pronto para produzir
+                    </option>
+
+                    <option value="em-producao">
+                        Em produção
+                    </option>
+
+                    <option value="concluido">
+                        Concluído
+                    </option>
+
+                    <option value="entregue">
+                        Entregue
+                    </option>
+
+                    <option value="cancelado">
+                        Cancelado
+                    </option>
+                </select>
+            </label>
+
+            <span id="quantidadeOrdens">
+                0 ordens
+            </span>
+        </div>
+
+<div class="tabela-container">
+    <table class="tabela-ordens">
+        <thead>
+            <tr>
+                <th>Ordem</th>
+                <th>Cliente</th>
+                <th>Serviço</th>
+                <th>Prazo</th>
+                <th>Status</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+
+        <tbody id="corpoTabelaOrdens"></tbody>
+    </table>
+</div>
+
+    </article>
+</section>
+
+<!-- CATÁLOGO DE LINHAS -->
+
+<section
+    class="secao"
+    id="secao-linhas"
+>
+    <div class="resumo-catalogo-linhas">
+        <article class="cartao-resumo-linha">
+            <span>Linhas ativas</span>
+
+            <strong id="totalLinhasAtivas">
+                0
+            </strong>
+
+            <small>
+                Cores disponíveis no catálogo
+            </small>
+        </article>
+
+        <article class="cartao-resumo-linha">
+            <span>Estoque disponível</span>
+
+            <strong id="totalLinhasDisponiveis">
+                0
+            </strong>
+
+            <small>
+                Acima do estoque mínimo
+            </small>
+        </article>
+
+        <article class="cartao-resumo-linha alerta">
+            <span>Estoque baixo</span>
+
+            <strong id="totalLinhasEstoqueBaixo">
+                0
+            </strong>
+
+            <small>
+                Precisam de reposição
+            </small>
+        </article>
+
+        <article class="cartao-resumo-linha perigo">
+            <span>Estoque zerado</span>
+
+            <strong id="totalLinhasZeradas">
+                0
+            </strong>
+
+            <small>
+                Linhas indisponíveis
+            </small>
+        </article>
+    </div>
+
+    <article class="painel">
+        <div class="painel-cabecalho painel-clientes-topo">
+            <div>
+                <span class="rotulo">
+                    Estoque
+                </span>
+
+                <h2>
+                    Catálogo de linhas
+                </h2>
+
+                <p>
+                    Cadastre as cores utilizadas e acompanhe
+                    a quantidade disponível.
+                </p>
+            </div>
+
+<button
+    class="botao botao-principal"
+    id="botaoNovaLinha"
+    data-permissao-exigida="linhas.criar"
+    type="button"
+>
+                <svg aria-hidden="true">
+                    <use href="#icon-plus"></use>
+                </svg>
+
+                Nova linha
+            </button>
+        </div>
+
+        <div class="controles-catalogo-linhas">
+            <div class="campo-busca busca-catalogo-linhas">
+                <svg aria-hidden="true">
+                    <use href="#icon-search"></use>
+                </svg>
+
+                <input
+                    id="buscaCatalogoLinhas"
+                    type="search"
+                    placeholder="Buscar marca, código ou nome da cor"
+                    autocomplete="off"
+                >
+            </div>
+
+            <label class="filtro-catalogo-linha">
+                <span>Estoque</span>
+
+                <select id="filtroEstoqueLinhas">
+                    <option value="todos">
+                        Todos
+                    </option>
+
+                    <option value="disponivel">
+                        Disponível
+                    </option>
+
+                    <option value="baixo">
+                        Estoque baixo
+                    </option>
+
+                    <option value="zerado">
+                        Estoque zerado
+                    </option>
+                </select>
+            </label>
+
+            <label class="filtro-catalogo-linha">
+                <span>Situação</span>
+
+                <select id="filtroAtivoLinhas">
+                    <option value="todos">
+                        Todas
+                    </option>
+
+                    <option value="ativos">
+                        Ativas
+                    </option>
+
+                    <option value="inativos">
+                        Inativas
+                    </option>
+                </select>
+            </label>
+
+            <span id="quantidadeLinhasCatalogo">
+                0 linhas
+            </span>
+        </div>
+
+        <div class="tabela-container">
+            <table class="tabela-catalogo-linhas">
+                <thead>
+                    <tr>
+                        <th>Cor</th>
+                        <th>Linha</th>
+                        <th>Código</th>
+                        <th>Estoque</th>
+                        <th>Status</th>
+                        <th>Atualização</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+
+                <tbody id="corpoTabelaLinhas">
+                    <tr>
+                        <td colspan="7">
+                            <div class="estado-vazio">
+                                <div class="estado-vazio-icone">
+                                    <svg aria-hidden="true">
+                                        <use href="#icon-linha"></use>
+                                    </svg>
+                                </div>
+
+                                <p>
+                                    Nenhuma linha cadastrada
+                                </p>
+
+                                <small>
+                                    Clique em “Nova linha” para
+                                    cadastrar a primeira cor.
+                                </small>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </article>
+</section>
 
             <!-- ARQUIVOS -->
 
@@ -794,6 +1347,185 @@
                 </article>
             </section>
 
+<!-- GERENCIAMENTO DE USUÁRIOS -->
+
+<section
+    class="secao"
+    id="secao-usuarios"
+>
+    <article class="painel">
+        <div class="painel-cabecalho painel-usuarios-topo">
+            <div>
+                <span class="rotulo">
+                    Administração
+                </span>
+
+                <h2>
+                    Gerenciamento de usuários
+                </h2>
+
+                <p>
+                    Crie contas, controle permissões,
+                    redefina senhas e gerencie o acesso ao sistema.
+                </p>
+            </div>
+
+<button
+    class="botao botao-principal"
+    id="botaoNovoUsuario"
+    data-permissao-exigida="usuarios.gerenciar"
+    type="button"
+>
+                <svg aria-hidden="true">
+                    <use href="#icon-user-plus"></use>
+                </svg>
+
+                <span>
+                    Novo usuário
+                </span>
+            </button>
+        </div>
+
+        <div class="resumo-usuarios">
+            <article class="resumo-usuario-card">
+                <span class="resumo-usuario-icone">
+                    <svg aria-hidden="true">
+                        <use href="#icon-users"></use>
+                    </svg>
+                </span>
+
+                <div>
+                    <span>Total de usuários</span>
+
+                    <strong id="totalUsuarios">
+                        0
+                    </strong>
+                </div>
+            </article>
+
+            <article class="resumo-usuario-card">
+                <span class="resumo-usuario-icone">
+                    <svg aria-hidden="true">
+                        <use href="#icon-check"></use>
+                    </svg>
+                </span>
+
+                <div>
+                    <span>Usuários ativos</span>
+
+                    <strong id="totalUsuariosAtivos">
+                        0
+                    </strong>
+                </div>
+            </article>
+
+            <article class="resumo-usuario-card">
+                <span class="resumo-usuario-icone">
+                    <svg aria-hidden="true">
+                        <use href="#icon-settings"></use>
+                    </svg>
+                </span>
+
+                <div>
+                    <span>Administradores</span>
+
+                    <strong id="totalAdministradores">
+                        0
+                    </strong>
+                </div>
+            </article>
+        </div>
+
+        <div class="controles-usuarios">
+            <div class="campo-busca busca-usuarios">
+                <svg aria-hidden="true">
+                    <use href="#icon-search"></use>
+                </svg>
+
+                <input
+                    id="buscaUsuarios"
+                    type="search"
+                    placeholder="Buscar por nome ou usuário"
+                    autocomplete="off"
+                >
+            </div>
+
+            <label class="filtro-usuarios">
+                <span>Perfil</span>
+
+                <select id="filtroPerfilUsuarios">
+                    <option value="todos">
+                        Todos os perfis
+                    </option>
+
+                    <option value="administrador">
+                        Administradores
+                    </option>
+
+                    <option value="operador">
+                        Operadores
+                    </option>
+                </select>
+            </label>
+
+            <label class="filtro-usuarios">
+                <span>Situação</span>
+
+                <select id="filtroSituacaoUsuarios">
+                    <option value="todos">
+                        Todos
+                    </option>
+
+                    <option value="ativos">
+                        Ativos
+                    </option>
+
+                    <option value="inativos">
+                        Inativos
+                    </option>
+                </select>
+            </label>
+
+            <span id="quantidadeUsuarios">
+                0 usuários
+            </span>
+        </div>
+
+        <div class="tabela-container">
+            <table class="tabela-usuarios">
+                <thead>
+                    <tr>
+                        <th>Usuário</th>
+                        <th>Acesso</th>
+                        <th>Perfil</th>
+                        <th>Situação</th>
+                        <th>Último acesso</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+
+                <tbody id="corpoTabelaUsuarios">
+                    <tr>
+                        <td colspan="6">
+                            <div class="estado-vazio">
+                                <div class="estado-vazio-icone">
+                                    <svg aria-hidden="true">
+                                        <use href="#icon-users"></use>
+                                    </svg>
+                                </div>
+
+                                <p>
+                                    Carregando usuários...
+                                </p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </article>
+</section>
+
             <!-- CONFIGURAÇÕES -->
 
 <section
@@ -802,6 +1534,229 @@
 >
 
     <div class="config-grade">
+
+        <!-- Minha conta -->
+<article class="config-card config-card-conta">
+    <header class="config-card-cabecalho">
+        <span class="config-card-icone">
+            <svg aria-hidden="true">
+                <use href="#icon-users"></use>
+            </svg>
+        </span>
+
+        <div>
+            <span class="config-card-rotulo">
+                Conta
+            </span>
+
+            <h2>
+                Minha conta
+            </h2>
+
+            <p>
+                Atualize o nome exibido no sistema,
+                o usuário de acesso e sua senha.
+            </p>
+        </div>
+    </header>
+
+    <div class="config-conta-grade">
+        <!-- Dados da conta -->
+        <form
+            class="config-conta-formulario"
+            id="formularioPerfil"
+            novalidate
+        >
+            <div class="config-formulario-topo">
+                <span class="config-acao-icone">
+                    <svg aria-hidden="true">
+                        <use href="#icon-edit"></use>
+                    </svg>
+                </span>
+
+                <div>
+                    <strong>
+                        Dados da conta
+                    </strong>
+
+                    <p>
+                        Altere o nome mostrado na barra lateral
+                        e o usuário utilizado no login.
+                    </p>
+                </div>
+            </div>
+
+            <div class="config-campos">
+                <label class="config-campo">
+                    <span>
+                        Nome de exibição
+                    </span>
+
+                    <input
+                        id="nomeConta"
+                        name="nome"
+                        type="text"
+                        minlength="3"
+                        maxlength="100"
+                        autocomplete="name"
+                        placeholder="Nome do administrador"
+                        required
+                    >
+
+                    <small>
+                        Esse nome aparecerá na barra lateral.
+                    </small>
+                </label>
+
+                <label class="config-campo">
+                    <span>
+                        Usuário de acesso
+                    </span>
+
+                    <input
+                        id="usuarioConta"
+                        name="usuario"
+                        type="text"
+                        minlength="3"
+                        maxlength="40"
+                        pattern="[a-zA-Z0-9._-]+"
+                        autocomplete="username"
+                        autocapitalize="none"
+                        spellcheck="false"
+                        placeholder="administrador"
+                        required
+                    >
+
+                    <small>
+                        Use letras sem acento, números, ponto,
+                        hífen ou underline.
+                    </small>
+                </label>
+            </div>
+
+            <button
+                class="botao botao-principal config-botao-conta"
+                id="botaoSalvarPerfil"
+                type="submit"
+            >
+                <svg aria-hidden="true">
+                    <use href="#icon-check"></use>
+                </svg>
+
+                <span>
+                    Salvar dados da conta
+                </span>
+            </button>
+        </form>
+
+        <!-- Alteração da senha -->
+        <form
+            class="config-conta-formulario"
+            id="formularioSenha"
+            novalidate
+        >
+            <div class="config-formulario-topo">
+                <span class="config-acao-icone">
+                    <svg aria-hidden="true">
+                        <use href="#icon-check-file"></use>
+                    </svg>
+                </span>
+
+                <div>
+                    <strong>
+                        Alterar senha
+                    </strong>
+
+                    <p>
+                        Confirme sua senha atual antes de definir
+                        uma nova senha de acesso.
+                    </p>
+                </div>
+            </div>
+
+            <div class="config-campos">
+                <label class="config-campo">
+                    <span>
+                        Senha atual
+                    </span>
+
+                    <input
+                        id="senhaAtualConta"
+                        name="senhaAtual"
+                        type="password"
+                        autocomplete="current-password"
+                        placeholder="Digite sua senha atual"
+                        required
+                    >
+                </label>
+
+                <label class="config-campo">
+                    <span>
+                        Nova senha
+                    </span>
+
+                    <input
+                        id="novaSenhaConta"
+                        name="novaSenha"
+                        type="password"
+                        minlength="10"
+                        maxlength="128"
+                        autocomplete="new-password"
+                        placeholder="Crie uma nova senha"
+                        required
+                    >
+
+                    <small>
+                        Use pelo menos 10 caracteres,
+                        contendo uma letra e um número.
+                    </small>
+                </label>
+
+                <label class="config-campo">
+                    <span>
+                        Confirmar nova senha
+                    </span>
+
+                    <input
+                        id="confirmarNovaSenhaConta"
+                        name="confirmarNovaSenha"
+                        type="password"
+                        minlength="10"
+                        maxlength="128"
+                        autocomplete="new-password"
+                        placeholder="Digite novamente a nova senha"
+                        required
+                    >
+                </label>
+            </div>
+
+            <div class="config-aviso-senha">
+                <svg aria-hidden="true">
+                    <use href="#icon-alert"></use>
+                </svg>
+
+                <p>
+                    Ao trocar a senha, as sessões abertas em
+                    outros dispositivos serão encerradas.
+                </p>
+            </div>
+
+            <button
+                class="botao botao-principal config-botao-conta"
+                id="botaoSalvarSenha"
+                type="submit"
+            >
+                <svg aria-hidden="true">
+                    <use href="#icon-check"></use>
+                </svg>
+
+                <span>
+                    Alterar minha senha
+                </span>
+            </button>
+        </form>
+    </div>
+</article>
 
         <!-- Aparência -->
         <article class="config-card config-card-tema">
@@ -902,7 +1857,11 @@
         </article>
 
         <!-- Backup -->
-        <article class="config-card config-card-backup">
+        <article
+    class="config-card config-card-backup"
+    data-permissao-exigida="backup.criar,backup.restaurar"
+    data-permissao-modo="alguma"
+>
             <header class="config-card-cabecalho">
                 <span class="config-card-icone">
                     <svg aria-hidden="true">
@@ -965,7 +1924,10 @@
             </div>
 
             <div class="config-backup-acoes">
-                <div class="config-backup-bloco">
+                <div
+    class="config-backup-bloco"
+    data-permissao-exigida="backup.criar"
+>
                     <div class="config-backup-bloco-topo">
                         <span class="config-acao-icone">
                             <svg aria-hidden="true">
@@ -1010,7 +1972,10 @@
                     </button>
                 </div>
 
-                <div class="config-backup-bloco">
+                <div
+    class="config-backup-bloco"
+    data-permissao-exigida="backup.restaurar"
+>
                     <div class="config-backup-bloco-topo">
                         <span class="config-acao-icone">
                             <svg aria-hidden="true">
@@ -1134,11 +2099,12 @@
                     </p>
                 </div>
 
-                <button
-                    class="botao config-botao-excluir"
-                    id="botaoApagarTudo"
-                    type="button"
-                >
+<button
+    class="botao config-botao-excluir"
+    id="botaoApagarTudo"
+    data-permissao-exigida="clientes.excluir"
+    type="button"
+>
                     <svg aria-hidden="true">
                         <use href="#icon-trash"></use>
                     </svg>
@@ -1150,8 +2116,394 @@
             </div>
         </article>
 
-    </div>
+        </div>
 </section>
+
+        </div>
+    </main>
+
+<!-- MODAL DE ORDEM -->
+
+<div
+    class="modal"
+    id="modalOrdem"
+    aria-hidden="true"
+>
+    <div
+        class="modal-fundo"
+        data-fechar-ordem
+    ></div>
+
+    <div
+        class="modal-conteudo modal-ordem"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="tituloModalOrdem"
+    >
+        <div class="modal-cabecalho">
+            <div>
+                <span class="rotulo">
+                    Produção
+                </span>
+
+                <h2 id="tituloModalOrdem">
+                    Nova ordem
+                </h2>
+            </div>
+
+            <button
+                class="botao-icone"
+                data-fechar-ordem
+                type="button"
+                aria-label="Fechar"
+            >
+                <svg aria-hidden="true">
+                    <use href="#icon-x"></use>
+                </svg>
+            </button>
+        </div>
+
+        <form
+            id="formularioOrdem"
+            novalidate
+        >
+            <input
+                id="ordemId"
+                type="hidden"
+            >
+
+           <div class="grade-formulario">
+<label class="campo campo-largo">
+    <span>Cliente</span>
+
+    <div
+        class="seletor-linha-cliente"
+        id="seletorClienteOrdem"
+    >
+        <input
+            id="ordemCliente"
+            type="hidden"
+        >
+
+        <button
+            class="botao-seletor-linha"
+            id="botaoClienteOrdem"
+            type="button"
+            aria-haspopup="listbox"
+            aria-expanded="false"
+            aria-controls="menuClienteOrdem"
+        >
+            <span
+                class="avatar-cliente avatar-cliente-ordem"
+                id="avatarClienteOrdem"
+                hidden
+            >
+                CL
+            </span>
+
+            <span class="resumo-linha-selecionada">
+                <strong id="textoClienteOrdem">
+                    Selecione um cliente
+                </strong>
+
+                <span id="subtextoClienteOrdem">
+                    Pesquise pelo nome do cliente
+                </span>
+            </span>
+
+            <svg
+                class="icone-seta-seletor-linha"
+                aria-hidden="true"
+            >
+                <use href="#icon-arrow-right"></use>
+            </svg>
+        </button>
+
+        <div
+            class="menu-linha-cliente"
+            id="menuClienteOrdem"
+            hidden
+        >
+            <div class="busca-menu-linha">
+                <svg aria-hidden="true">
+                    <use href="#icon-search"></use>
+                </svg>
+
+                <input
+                    id="buscaClienteOrdem"
+                    type="search"
+                    placeholder="Digite o nome do cliente"
+                    autocomplete="off"
+                >
+            </div>
+
+            <div
+                class="lista-menu-linhas"
+                id="listaClientesOrdem"
+                role="listbox"
+                aria-label="Clientes cadastrados"
+            ></div>
+        </div>
+    </div>
+
+    <small id="mensagemClienteOrdem">
+        Selecione o cliente vinculado à ordem.
+    </small>
+</label>
+
+    <label class="campo campo-largo">
+        <span>Descrição do serviço</span>
+
+        <input
+            id="ordemDescricao"
+            type="text"
+            minlength="3"
+            maxlength="200"
+            placeholder="Ex: Bordado em 30 camisetas"
+            required
+        >
+    </label>
+
+    <label class="campo">
+        <span>Quantidade</span>
+
+        <input
+            id="ordemQuantidade"
+            type="number"
+            min="1"
+            max="100000"
+            value="1"
+            required
+        >
+    </label>
+
+    <div class="campo campo-largo campo-logo-ordem">
+    <div class="campo-logo-ordem-cabecalho">
+        <span>
+            Logo do cliente
+        </span>
+
+        <small>
+            Carregada automaticamente do cadastro
+        </small>
+    </div>
+
+    <div
+        class="logo-cliente-ordem logo-cliente-ordem-vazia"
+        id="logoClienteOrdem"
+    >
+        <span class="logo-cliente-ordem-icone">
+            <svg aria-hidden="true">
+                <use href="#icon-file"></use>
+            </svg>
+        </span>
+
+        <div class="logo-cliente-ordem-mensagem">
+            <strong>
+                Selecione um cliente
+            </strong>
+
+            <span>
+                A logo cadastrada aparecerá aqui.
+            </span>
+        </div>
+    </div>
+</div>
+
+<div class="campo campo-largo">
+    <span>
+        Linhas utilizadas
+    </span>
+
+    <div
+        class="seletor-linha-cliente seletor-linhas-multiplas"
+        id="seletorLinhaOrdem"
+    >
+        <input
+            id="ordemLinha"
+            type="hidden"
+        >
+
+        <button
+            class="botao-seletor-linha"
+            id="botaoLinhaOrdem"
+            type="button"
+            aria-haspopup="listbox"
+            aria-expanded="false"
+            aria-controls="menuLinhaOrdem"
+        >
+            <span
+                class="amostra-linha-selecionada"
+                id="amostraLinhaOrdem"
+                hidden
+            ></span>
+
+            <span class="resumo-linha-selecionada">
+                <strong id="textoLinhaOrdem">
+                    Selecione uma ou mais linhas
+                </strong>
+
+                <span id="subtextoLinhaOrdem">
+                    Pesquise e clique nas linhas desejadas
+                </span>
+            </span>
+
+            <svg
+                class="icone-seta-seletor-linha"
+                aria-hidden="true"
+            >
+                <use href="#icon-arrow-right"></use>
+            </svg>
+        </button>
+
+        <div
+            class="menu-linha-cliente"
+            id="menuLinhaOrdem"
+            hidden
+        >
+            <div class="busca-menu-linha">
+                <svg aria-hidden="true">
+                    <use href="#icon-search"></use>
+                </svg>
+
+                <input
+                    id="buscaLinhaOrdem"
+                    type="search"
+                    placeholder="Digite código, marca ou nome da cor"
+                    autocomplete="off"
+                >
+            </div>
+
+            <div
+                class="lista-menu-linhas"
+                id="listaLinhasOrdem"
+                role="listbox"
+                aria-label="Linhas da ordem"
+                aria-multiselectable="true"
+            ></div>
+
+            <div class="rodape-menu-linhas-ordem">
+                <span id="quantidadeLinhasSelecionadasOrdem">
+                    0 linhas selecionadas
+                </span>
+
+                <div>
+                    <button
+                        class="botao-limpar-linhas-ordem"
+                        id="botaoLimparLinhasOrdem"
+                        type="button"
+                    >
+                        Limpar
+                    </button>
+
+                    <button
+                        class="botao-concluir-linhas-ordem"
+                        id="botaoConcluirLinhasOrdem"
+                        type="button"
+                    >
+                        Concluir
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div
+        class="linhas-selecionadas-ordem"
+        id="linhasSelecionadasOrdem"
+        hidden
+    ></div>
+
+    <small id="mensagemLinhaOrdem">
+        Selecione pelo menos uma linha para a ordem.
+    </small>
+</div>
+
+    <label class="campo">
+        <span>Prazo de entrega</span>
+
+        <input
+            id="ordemPrazo"
+            type="date"
+            required
+        >
+    </label>
+
+    <label class="campo campo-largo">
+        <span>Status</span>
+
+        <select
+            id="ordemStatus"
+            required
+        >
+            <option value="aguardando-arquivo">
+                Aguardando arquivo
+            </option>
+
+            <option value="aguardando-aprovacao">
+                Aguardando aprovação
+            </option>
+
+            <option value="pronto-producao">
+                Pronto para produzir
+            </option>
+
+            <option value="em-producao">
+                Em produção
+            </option>
+
+            <option value="concluido">
+                Concluído
+            </option>
+
+            <option value="entregue">
+                Entregue
+            </option>
+
+            <option value="cancelado">
+                Cancelado
+            </option>
+        </select>
+    </label>
+
+    <label class="campo campo-largo">
+        <span>Observações</span>
+
+        <textarea
+            id="ordemObservacoes"
+            rows="4"
+            maxlength="2000"
+            placeholder="Informações importantes sobre a produção"
+        ></textarea>
+    </label>
+</div>
+
+            <div class="modal-acoes">
+                <button
+                    class="botao botao-secundario"
+                    data-fechar-ordem
+                    type="button"
+                >
+                    Cancelar
+                </button>
+
+                <button
+                    class="botao botao-principal"
+                    id="botaoSalvarOrdem"
+                    type="submit"
+                >
+                    <svg aria-hidden="true">
+                        <use href="#icon-check"></use>
+                    </svg>
+
+                    <span>
+                        Criar ordem
+                    </span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
 
     <!-- MODAL DE CADASTRO -->
 
@@ -1216,24 +2568,71 @@
                         >
                     </label>
 
-                    <label class="campo">
-                        <span>CPF</span>
+<div class="campo campo-largo tipo-cadastro-cliente">
+    <input
+        id="tipoPessoaCliente"
+        name="tipoPessoa"
+        type="hidden"
+        value="fisica"
+    >
 
-                        <input
-                            id="cpf"
-                            name="cpf"
-                            type="text"
-                            inputmode="numeric"
-                            maxlength="14"
-                            placeholder="000.000.000-00"
-                            autocomplete="off"
-                            required
-                        >
+    <div class="tipo-cadastro-informacoes">
+        <span>
+            Tipo de cadastro
+        </span>
 
-                        <small id="mensagemCpf">
-                            Digite um CPF válido.
-                        </small>
-                    </label>
+        <small>
+            Selecione o tipo de cliente.
+        </small>
+    </div>
+
+    <div
+        class="tipo-pessoa-controle"
+        role="group"
+        aria-label="Tipo de pessoa"
+    >
+        <button
+            class="tipo-pessoa-botao ativo"
+            data-tipo-pessoa="fisica"
+            type="button"
+            aria-pressed="true"
+        >
+            Pessoa física
+        </button>
+
+        <button
+            class="tipo-pessoa-botao"
+            data-tipo-pessoa="juridica"
+            type="button"
+            aria-pressed="false"
+        >
+            Pessoa jurídica
+        </button>
+    </div>
+</div>
+
+<label class="campo documento-campo">
+    <span id="rotuloDocumentoCliente">
+        CPF
+    </span>
+
+    <input
+        id="cpf"
+        name="cpf"
+        type="text"
+        inputmode="numeric"
+        maxlength="14"
+        placeholder="000.000.000-00"
+        autocomplete="off"
+        autocapitalize="off"
+        spellcheck="false"
+        required
+    >
+
+    <small id="mensagemCpf">
+        Digite um CPF válido.
+    </small>
+</label>
 
                     <label class="campo">
                         <span>Telefone</span>
@@ -1249,17 +2648,119 @@
                         >
                     </label>
 
-                    <label class="campo campo-largo">
-                        <span>Linha utilizada</span>
+<div class="campo campo-largo">
+    <span>
+        Linhas utilizadas
 
-                        <input
-                            id="linha"
-                            name="linha"
-                            type="text"
-                            placeholder="Ex.: Poliéster preta número 120"
-                            required
-                        >
-                    </label>
+        <small class="campo-opcional">
+            Opcional
+        </small>
+    </span>
+
+    <div
+        class="seletor-linha-cliente seletor-linhas-multiplas"
+        id="seletorLinhaCliente"
+    >
+        <input
+            id="linha"
+            name="linha"
+            type="hidden"
+        >
+
+        <button
+            class="botao-seletor-linha"
+            id="botaoLinhaCliente"
+            type="button"
+            aria-haspopup="listbox"
+            aria-expanded="false"
+            aria-controls="menuLinhaCliente"
+        >
+            <span
+                class="amostra-linha-selecionada"
+                id="amostraLinhaCliente"
+                hidden
+            ></span>
+
+            <span class="resumo-linha-selecionada">
+                <strong id="textoLinhaCliente">
+                    Nenhuma linha selecionada
+                </strong>
+
+                <span id="subtextoLinhaCliente">
+                    Campo opcional — clique para selecionar
+                </span>
+            </span>
+
+            <svg
+                class="icone-seta-seletor-linha"
+                aria-hidden="true"
+            >
+                <use href="#icon-arrow-right"></use>
+            </svg>
+        </button>
+
+        <div
+            class="menu-linha-cliente"
+            id="menuLinhaCliente"
+            hidden
+        >
+            <div class="busca-menu-linha">
+                <svg aria-hidden="true">
+                    <use href="#icon-search"></use>
+                </svg>
+
+                <input
+                    id="buscaLinhaCliente"
+                    type="search"
+                    placeholder="Digite código, marca ou nome da cor"
+                    autocomplete="off"
+                >
+            </div>
+
+            <div
+                class="lista-menu-linhas"
+                id="listaLinhasCliente"
+                role="listbox"
+                aria-label="Linhas cadastradas"
+                aria-multiselectable="true"
+            ></div>
+
+            <div class="rodape-menu-linhas-ordem">
+                <span id="quantidadeLinhasSelecionadasCliente">
+                    0 linhas selecionadas
+                </span>
+
+                <div>
+                    <button
+                        class="botao-limpar-linhas-ordem"
+                        id="botaoLimparLinhasCliente"
+                        type="button"
+                    >
+                        Limpar
+                    </button>
+
+                    <button
+                        class="botao-concluir-linhas-ordem"
+                        id="botaoConcluirLinhasCliente"
+                        type="button"
+                    >
+                        Concluir
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div
+        class="linhas-selecionadas-ordem"
+        id="linhasSelecionadasCliente"
+        hidden
+    ></div>
+
+    <small id="mensagemLinhaCliente">
+        Você pode selecionar várias linhas ou concluir sem nenhuma.
+    </small>
+</div>
 
                     <label class="campo">
                         <span>Logo original</span>
@@ -1380,7 +2881,7 @@
 
                 <div class="detalhes-grade">
                     <div class="detalhe-item">
-                        <span>CPF</span>
+                        <span>CPF/CNPJ</span>
 
                         <strong id="detalhesCpf">
                             —
@@ -1396,7 +2897,7 @@
                     </div>
 
                     <div class="detalhe-item">
-                        <span>Linha utilizada</span>
+                        <span>Linhas utilizadas</span>
 
                         <strong id="detalhesLinha">
                             —
@@ -1469,6 +2970,1094 @@
     aria-atomic="false"
 ></div>
 
-    <script src="app.js"></script>
+<!-- MODAL DE CONFIRMAÇÃO -->
+
+<div
+    class="confirmacao-modal"
+    id="modalConfirmacao"
+    aria-hidden="true"
+>
+    <div
+        class="confirmacao-fundo"
+        data-cancelar-confirmacao
+    ></div>
+
+    <div
+        class="confirmacao-conteudo"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="tituloConfirmacao"
+        aria-describedby="mensagemConfirmacao"
+    >
+<div
+    class="confirmacao-icone"
+    id="iconeConfirmacao"
+>
+    <svg aria-hidden="true">
+        <use
+            id="iconeConfirmacaoUse"
+            href="#icon-trash"
+        ></use>
+    </svg>
+</div>
+
+        <div class="confirmacao-texto">
+            <span class="rotulo">
+                Confirmação
+            </span>
+
+            <h2 id="tituloConfirmacao">
+                Excluir cadastro?
+            </h2>
+
+            <p id="mensagemConfirmacao">
+                Esta ação não poderá ser desfeita.
+            </p>
+        </div>
+
+        <div class="confirmacao-acoes">
+            <button
+                class="botao botao-secundario"
+                id="botaoCancelarConfirmacao"
+                type="button"
+            >
+                Cancelar
+            </button>
+
+            <button
+                class="botao botao-perigo"
+                id="botaoConfirmarAcao"
+                type="button"
+            >
+                Excluir
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL DO CATÁLOGO DE LINHAS -->
+
+<div
+    class="modal"
+    id="modalLinhaCatalogo"
+    aria-hidden="true"
+>
+    <div
+        class="modal-fundo"
+        data-fechar-modal-linha
+    ></div>
+
+    <div
+        class="modal-conteudo modal-linha-catalogo"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="tituloModalLinhaCatalogo"
+    >
+        <div class="modal-cabecalho">
+            <div>
+                <span class="rotulo">
+                    Estoque
+                </span>
+
+                <h2 id="tituloModalLinhaCatalogo">
+                    Nova linha
+                </h2>
+            </div>
+
+            <button
+                class="botao-icone"
+                data-fechar-modal-linha
+                type="button"
+                aria-label="Fechar"
+            >
+                <svg aria-hidden="true">
+                    <use href="#icon-x"></use>
+                </svg>
+            </button>
+        </div>
+
+        <form
+            id="formularioLinhaCatalogo"
+            novalidate
+        >
+            <input
+                id="linhaCatalogoId"
+                type="hidden"
+            >
+
+            <div class="grade-formulario">
+                <label class="campo">
+                    <span>Marca</span>
+
+                    <input
+                        id="linhaMarca"
+                        type="text"
+                        minlength="2"
+                        maxlength="80"
+                        placeholder="Ex: Setta"
+                        required
+                    >
+                </label>
+
+                <label class="campo">
+                    <span>Código</span>
+
+                    <input
+                        id="linhaCodigo"
+                        type="text"
+                        maxlength="50"
+                        placeholder="Ex: 1001"
+                        required
+                    >
+                </label>
+
+<label class="campo campo-largo">
+    <span>Nome da cor</span>
+
+    <input
+        id="linhaNome"
+        type="text"
+        minlength="2"
+        maxlength="100"
+        placeholder="Ex: Preto intenso"
+        required
+    >
+</label>
+
+<label class="campo">
+    <span>
+        Fornecedor
+
+        <small class="campo-opcional">
+            Opcional
+        </small>
+    </span>
+
+    <input
+        id="linhaFornecedor"
+        type="text"
+        maxlength="120"
+        placeholder="Ex: Distribuidora Central"
+        autocomplete="organization"
+    >
+</label>
+
+<label class="campo">
+    <span>
+        Valor
+
+        <small class="campo-opcional">
+            Opcional
+        </small>
+    </span>
+
+    <div class="campo-valor-linha">
+        <span aria-hidden="true">
+            R$
+        </span>
+
+        <input
+            id="linhaValor"
+            type="text"
+            inputmode="decimal"
+            maxlength="15"
+            placeholder="0,00"
+            autocomplete="off"
+        >
+    </div>
+
+    <small>
+        Valor por cone, carretel, metro ou unidade.
+    </small>
+</label>
+
+                <label class="campo">
+                    <span>Cor visual</span>
+
+                    <div class="campo-cor-linha">
+                        <input
+                            id="linhaCor"
+                            type="color"
+                            value="#000000"
+                        >
+
+                        <span id="textoCorLinha">
+                            #000000
+                        </span>
+                    </div>
+                </label>
+
+                <label class="campo">
+                    <span>Unidade</span>
+
+                    <select
+                        id="linhaUnidade"
+                        required
+                    >
+                        <option value="cone">
+                            Cone
+                        </option>
+
+                        <option value="carretel">
+                            Carretel
+                        </option>
+
+                        <option value="metro">
+                            Metro
+                        </option>
+
+                        <option value="unidade">
+                            Unidade
+                        </option>
+                    </select>
+                </label>
+
+                <label class="campo">
+                    <span>Estoque atual</span>
+
+                    <input
+                        id="linhaEstoque"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value="0"
+                        required
+                    >
+                </label>
+
+                <label class="campo">
+                    <span>Estoque mínimo</span>
+
+                    <input
+                        id="linhaEstoqueMinimo"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value="0"
+                        required
+                    >
+                </label>
+
+                <label class="campo-checkbox-linha campo-largo">
+                    <input
+                        id="linhaAtiva"
+                        type="checkbox"
+                        checked
+                    >
+
+                    <span>
+                        Linha ativa e disponível para uso
+                    </span>
+                </label>
+
+                <label class="campo campo-largo">
+                    <span>Observações</span>
+
+                    <textarea
+                        id="linhaObservacoes"
+                        rows="4"
+                        maxlength="1000"
+                        placeholder="Lote, aplicação recomendada ou outras informações"
+                    ></textarea>
+                </label>
+            </div>
+
+            <div class="modal-acoes">
+                <button
+                    class="botao botao-secundario"
+                    data-fechar-modal-linha
+                    type="button"
+                >
+                    Cancelar
+                </button>
+
+                <button
+                    class="botao botao-principal"
+                    id="botaoSalvarLinha"
+                    type="submit"
+                >
+                    <svg aria-hidden="true">
+                        <use href="#icon-check"></use>
+                    </svg>
+
+                    <span>
+                        Cadastrar linha
+                    </span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL DE USUÁRIO -->
+
+<div
+    class="modal"
+    id="modalUsuario"
+    aria-hidden="true"
+>
+    <div
+        class="modal-fundo"
+        data-fechar-modal-usuario
+    ></div>
+
+    <div
+        class="modal-conteudo modal-usuario"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="tituloModalUsuario"
+    >
+        <header class="modal-cabecalho">
+            <div>
+                <span class="rotulo">
+                    Controle de acesso
+                </span>
+
+                <h2 id="tituloModalUsuario">
+                    Novo usuário
+                </h2>
+            </div>
+
+            <button
+                class="botao-icone"
+                data-fechar-modal-usuario
+                type="button"
+                aria-label="Fechar"
+            >
+                <svg aria-hidden="true">
+                    <use href="#icon-x"></use>
+                </svg>
+            </button>
+        </header>
+
+        <form
+            id="formularioUsuario"
+            novalidate
+        >
+            <input
+                id="usuarioGerenciadoId"
+                type="hidden"
+            >
+
+            <div class="grade-formulario">
+                <label class="campo campo-largo">
+                    <span>Nome de exibição</span>
+
+                    <input
+                        id="nomeUsuarioGerenciado"
+                        name="nome"
+                        type="text"
+                        minlength="3"
+                        maxlength="100"
+                        autocomplete="off"
+                        placeholder="Nome completo"
+                        required
+                    >
+                </label>
+
+                <label class="campo">
+                    <span>Usuário de acesso</span>
+
+                    <input
+                        id="loginUsuarioGerenciado"
+                        name="usuario"
+                        type="text"
+                        minlength="3"
+                        maxlength="40"
+                        pattern="[a-zA-Z0-9._-]+"
+                        autocomplete="off"
+                        autocapitalize="none"
+                        spellcheck="false"
+                        placeholder="exemplo.usuario"
+                        required
+                    >
+
+                    <small>
+                        Letras sem acento, números, ponto,
+                        hífen ou underline.
+                    </small>
+                </label>
+
+                <label class="campo">
+                    <span>Perfil de acesso</span>
+
+                    <select
+                        id="perfilUsuarioGerenciado"
+                        name="perfil"
+                        required
+                    >
+                        <option value="operador">
+                            Operador
+                        </option>
+
+                        <option value="administrador">
+                            Administrador
+                        </option>
+                    </select>
+                </label>
+
+                <label
+                    class="campo campo-largo"
+                    id="campoSituacaoUsuario"
+                    hidden
+                >
+                    <span>Situação da conta</span>
+
+                    <select
+                        id="situacaoUsuarioGerenciado"
+                        name="ativo"
+                    >
+                        <option value="true">
+                            Ativo
+                        </option>
+
+                        <option value="false">
+                            Inativo
+                        </option>
+                    </select>
+                </label>
+
+                <div
+                    class="campos-senha-novo-usuario campo-largo"
+                    id="camposSenhaNovoUsuario"
+                >
+                    <label class="campo">
+                        <span>Senha inicial</span>
+
+                        <input
+                            id="senhaUsuarioGerenciado"
+                            name="senha"
+                            type="password"
+                            minlength="10"
+                            maxlength="128"
+                            autocomplete="new-password"
+                            placeholder="Mínimo de 10 caracteres"
+                        >
+                    </label>
+
+                    <label class="campo">
+                        <span>Confirmar senha</span>
+
+                        <input
+                            id="confirmarSenhaUsuarioGerenciado"
+                            name="confirmarSenha"
+                            type="password"
+                            minlength="10"
+                            maxlength="128"
+                            autocomplete="new-password"
+                            placeholder="Repita a senha"
+                        >
+                    </label>
+                </div>
+
+                <!-- PERMISSÕES DO USUÁRIO -->
+
+<section
+    class="permissoes-usuario campo-largo"
+    id="grupoPermissoesUsuario"
+>
+    <header class="permissoes-usuario-cabecalho">
+        <div>
+            <span class="rotulo">
+                Permissões
+            </span>
+
+            <h3>
+                Acessos do usuário
+            </h3>
+
+            <p>
+                Escolha o que este usuário poderá visualizar
+                e modificar dentro do sistema.
+            </p>
+        </div>
+
+        <div class="permissoes-usuario-acoes">
+            <button
+                class="botao botao-secundario botao-pequeno"
+                id="botaoPermissoesPadrao"
+                type="button"
+            >
+                Restaurar padrão
+            </button>
+
+            <button
+                class="botao botao-secundario botao-pequeno"
+                id="botaoMarcarTodasPermissoes"
+                type="button"
+            >
+                Marcar todas
+            </button>
+        </div>
+    </header>
+
+    <div class="grade-permissoes-usuario">
+        <!-- CLIENTES -->
+
+        <article class="grupo-permissao">
+            <header>
+                <div class="grupo-permissao-icone">
+                    <svg aria-hidden="true">
+                        <use href="#icon-users"></use>
+                    </svg>
+                </div>
+
+                <div>
+                    <h4>Clientes</h4>
+
+                    <p>
+                        Cadastro e gerenciamento dos clientes.
+                    </p>
+                </div>
+            </header>
+
+            <div class="lista-permissoes">
+                <label class="opcao-permissao">
+                    <input
+                        type="checkbox"
+                        data-permissao="clientes.visualizar"
+                    >
+
+                    <span class="controle-permissao"></span>
+
+                    <span>
+                        <strong>Visualizar</strong>
+
+                        <small>
+                            Consultar clientes cadastrados
+                        </small>
+                    </span>
+                </label>
+
+                <label class="opcao-permissao">
+                    <input
+                        type="checkbox"
+                        data-permissao="clientes.criar"
+                    >
+
+                    <span class="controle-permissao"></span>
+
+                    <span>
+                        <strong>Cadastrar</strong>
+
+                        <small>
+                            Criar novos clientes
+                        </small>
+                    </span>
+                </label>
+
+                <label class="opcao-permissao">
+                    <input
+                        type="checkbox"
+                        data-permissao="clientes.editar"
+                    >
+
+                    <span class="controle-permissao"></span>
+
+                    <span>
+                        <strong>Editar</strong>
+
+                        <small>
+                            Alterar dados dos clientes
+                        </small>
+                    </span>
+                </label>
+
+                <label class="opcao-permissao">
+                    <input
+                        type="checkbox"
+                        data-permissao="clientes.excluir"
+                    >
+
+                    <span class="controle-permissao"></span>
+
+                    <span>
+                        <strong>Excluir</strong>
+
+                        <small>
+                            Apagar clientes cadastrados
+                        </small>
+                    </span>
+                </label>
+            </div>
+        </article>
+
+        <!-- ORDENS -->
+
+        <article class="grupo-permissao">
+            <header>
+                <div class="grupo-permissao-icone">
+                    <svg aria-hidden="true">
+                        <use href="#icon-check-file"></use>
+                    </svg>
+                </div>
+
+                <div>
+                    <h4>Ordens</h4>
+
+                    <p>
+                        Controle das ordens de bordado.
+                    </p>
+                </div>
+            </header>
+
+            <div class="lista-permissoes">
+                <label class="opcao-permissao">
+                    <input
+                        type="checkbox"
+                        data-permissao="ordens.visualizar"
+                    >
+
+                    <span class="controle-permissao"></span>
+
+                    <span>
+                        <strong>Visualizar</strong>
+
+                        <small>
+                            Consultar ordens cadastradas
+                        </small>
+                    </span>
+                </label>
+
+                <label class="opcao-permissao">
+                    <input
+                        type="checkbox"
+                        data-permissao="ordens.criar"
+                    >
+
+                    <span class="controle-permissao"></span>
+
+                    <span>
+                        <strong>Cadastrar</strong>
+
+                        <small>
+                            Criar novas ordens
+                        </small>
+                    </span>
+                </label>
+
+                <label class="opcao-permissao">
+                    <input
+                        type="checkbox"
+                        data-permissao="ordens.editar"
+                    >
+
+                    <span class="controle-permissao"></span>
+
+                    <span>
+                        <strong>Editar</strong>
+
+                        <small>
+                            Alterar ordens existentes
+                        </small>
+                    </span>
+                </label>
+
+                <label class="opcao-permissao">
+                    <input
+                        type="checkbox"
+                        data-permissao="ordens.excluir"
+                    >
+
+                    <span class="controle-permissao"></span>
+
+                    <span>
+                        <strong>Excluir</strong>
+
+                        <small>
+                            Apagar ordens cadastradas
+                        </small>
+                    </span>
+                </label>
+            </div>
+        </article>
+
+        <!-- LINHAS -->
+
+        <article class="grupo-permissao">
+            <header>
+<div class="grupo-permissao-icone">
+    <svg aria-hidden="true">
+        <use href="#icon-linha"></use>
+    </svg>
+</div>
+
+                <div>
+                    <h4>Catálogo de linhas</h4>
+
+                    <p>
+                        Cadastro e consulta das linhas utilizadas.
+                    </p>
+                </div>
+            </header>
+
+            <div class="lista-permissoes">
+                <label class="opcao-permissao">
+                    <input
+                        type="checkbox"
+                        data-permissao="linhas.visualizar"
+                    >
+
+                    <span class="controle-permissao"></span>
+
+                    <span>
+                        <strong>Visualizar</strong>
+                        <small>Consultar o catálogo de linhas</small>
+                    </span>
+                </label>
+
+                <label class="opcao-permissao">
+                    <input
+                        type="checkbox"
+                        data-permissao="linhas.criar"
+                    >
+
+                    <span class="controle-permissao"></span>
+
+                    <span>
+                        <strong>Cadastrar</strong>
+                        <small>Adicionar novas linhas</small>
+                    </span>
+                </label>
+
+                <label class="opcao-permissao">
+                    <input
+                        type="checkbox"
+                        data-permissao="linhas.editar"
+                    >
+
+                    <span class="controle-permissao"></span>
+
+                    <span>
+                        <strong>Editar</strong>
+                        <small>Alterar linhas cadastradas</small>
+                    </span>
+                </label>
+
+                <label class="opcao-permissao">
+                    <input
+                        type="checkbox"
+                        data-permissao="linhas.excluir"
+                    >
+
+                    <span class="controle-permissao"></span>
+
+                    <span>
+                        <strong>Excluir</strong>
+                        <small>Apagar linhas do catálogo</small>
+                    </span>
+                </label>
+            </div>
+        </article>
+
+        <!-- ARQUIVOS -->
+
+        <article class="grupo-permissao">
+            <header>
+                <div class="grupo-permissao-icone">
+                    <svg aria-hidden="true">
+                        <use href="#icon-file"></use>
+                    </svg>
+                </div>
+
+                <div>
+                    <h4>Arquivos</h4>
+
+                    <p>
+                        Logos originais e arquivos convertidos.
+                    </p>
+                </div>
+            </header>
+
+            <div class="lista-permissoes">
+                <label class="opcao-permissao">
+                    <input
+                        type="checkbox"
+                        data-permissao="arquivos.baixar"
+                    >
+
+                    <span class="controle-permissao"></span>
+
+                    <span>
+                        <strong>Abrir e baixar</strong>
+                        <small>Acessar arquivos dos clientes</small>
+                    </span>
+                </label>
+
+                <label class="opcao-permissao">
+                    <input
+                        type="checkbox"
+                        data-permissao="arquivos.remover"
+                    >
+
+                    <span class="controle-permissao"></span>
+
+                    <span>
+                        <strong>Remover</strong>
+                        <small>Excluir arquivos dos clientes</small>
+                    </span>
+                </label>
+            </div>
+        </article>
+
+        <!-- BACKUP -->
+
+        <article class="grupo-permissao">
+            <header>
+                <div class="grupo-permissao-icone">
+                    <svg aria-hidden="true">
+                        <use href="#icon-folder"></use>
+                    </svg>
+                </div>
+
+                <div>
+                    <h4>Backup</h4>
+
+                    <p>
+                        Segurança e restauração dos dados.
+                    </p>
+                </div>
+            </header>
+
+            <div class="lista-permissoes">
+                <label class="opcao-permissao">
+                    <input
+                        type="checkbox"
+                        data-permissao="backup.criar"
+                    >
+
+                    <span class="controle-permissao"></span>
+
+                    <span>
+                        <strong>Criar backup</strong>
+                        <small>Baixar cópia completa do sistema</small>
+                    </span>
+                </label>
+
+                <label class="opcao-permissao">
+                    <input
+                        type="checkbox"
+                        data-permissao="backup.restaurar"
+                    >
+
+                    <span class="controle-permissao"></span>
+
+                    <span>
+                        <strong>Restaurar backup</strong>
+                        <small>Substituir os dados por um backup</small>
+                    </span>
+                </label>
+            </div>
+        </article>
+
+        <!-- ADMINISTRAÇÃO -->
+
+        <article class="grupo-permissao grupo-permissao-administracao">
+            <header>
+                <div class="grupo-permissao-icone">
+                    <svg aria-hidden="true">
+                        <use href="#icon-settings"></use>
+                    </svg>
+                </div>
+
+                <div>
+                    <h4>Administração</h4>
+
+                    <p>
+                        Controle de usuários e permissões.
+                    </p>
+                </div>
+            </header>
+
+            <div class="lista-permissoes">
+                <label class="opcao-permissao">
+                    <input
+                        type="checkbox"
+                        data-permissao="usuarios.gerenciar"
+                    >
+
+                    <span class="controle-permissao"></span>
+
+                    <span>
+                        <strong>Gerenciar usuários</strong>
+
+                        <small>
+                            Criar usuários, editar permissões,
+                            redefinir senhas e excluir contas
+                        </small>
+                    </span>
+                </label>
+            </div>
+        </article>
+    </div>
+</section>
+
+                <div class="aviso-perfil-usuario campo-largo">
+                    <svg aria-hidden="true">
+                        <use href="#icon-alert"></use>
+                    </svg>
+
+                    <p>
+                        O perfil define um modelo inicial de permissões.
+                        Os acessos podem ser personalizados individualmente
+                        para cada usuário.
+                    </p>
+                </div>
+            </div>
+
+            <div class="modal-acoes">
+                <button
+                    class="botao botao-secundario"
+                    data-fechar-modal-usuario
+                    type="button"
+                >
+                    Cancelar
+                </button>
+
+                <button
+                    class="botao botao-principal"
+                    id="botaoSalvarUsuario"
+                    type="submit"
+                >
+                    <svg aria-hidden="true">
+                        <use href="#icon-check"></use>
+                    </svg>
+
+                    <span>
+                        Criar usuário
+                    </span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL DE REDEFINIÇÃO DE SENHA -->
+
+<div
+    class="modal"
+    id="modalSenhaUsuario"
+    aria-hidden="true"
+>
+    <div
+        class="modal-fundo"
+        data-fechar-modal-senha-usuario
+    ></div>
+
+    <div
+        class="modal-conteudo modal-senha-usuario"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="tituloModalSenhaUsuario"
+    >
+        <header class="modal-cabecalho">
+            <div>
+                <span class="rotulo">
+                    Segurança
+                </span>
+
+                <h2 id="tituloModalSenhaUsuario">
+                    Redefinir senha
+                </h2>
+
+                <p id="descricaoModalSenhaUsuario">
+                    Defina uma nova senha de acesso.
+                </p>
+            </div>
+
+            <button
+                class="botao-icone"
+                data-fechar-modal-senha-usuario
+                type="button"
+                aria-label="Fechar"
+            >
+                <svg aria-hidden="true">
+                    <use href="#icon-x"></use>
+                </svg>
+            </button>
+        </header>
+
+        <form
+            id="formularioSenhaUsuario"
+            novalidate
+        >
+            <input
+                id="senhaUsuarioId"
+                type="hidden"
+            >
+
+            <div class="grade-formulario">
+                <label class="campo">
+                    <span>Nova senha</span>
+
+                    <input
+                        id="novaSenhaUsuario"
+                        type="password"
+                        minlength="10"
+                        maxlength="128"
+                        autocomplete="new-password"
+                        placeholder="Mínimo de 10 caracteres"
+                        required
+                    >
+                </label>
+
+                <label class="campo">
+                    <span>Confirmar nova senha</span>
+
+                    <input
+                        id="confirmarNovaSenhaUsuario"
+                        type="password"
+                        minlength="10"
+                        maxlength="128"
+                        autocomplete="new-password"
+                        placeholder="Repita a nova senha"
+                        required
+                    >
+                </label>
+
+                <div class="aviso-perfil-usuario campo-largo">
+                    <svg aria-hidden="true">
+                        <use href="#icon-alert"></use>
+                    </svg>
+
+                    <p>
+                        As sessões abertas deste usuário serão
+                        encerradas após a alteração da senha.
+                    </p>
+                </div>
+            </div>
+
+            <div class="modal-acoes">
+                <button
+                    class="botao botao-secundario"
+                    data-fechar-modal-senha-usuario
+                    type="button"
+                >
+                    Cancelar
+                </button>
+
+                <button
+                    class="botao botao-principal"
+                    id="botaoSalvarSenhaUsuario"
+                    type="submit"
+                >
+                    <svg aria-hidden="true">
+                        <use href="#icon-check"></use>
+                    </svg>
+
+                    <span>
+                        Redefinir senha
+                    </span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+        <script src="app.js"></script>
+        <script src="ordens-ui.js"></script>
+        <script src="linhas-ui.js"></script>
+        <script src="usuarios-ui.js"></script>
+    
 </body>
 </html>

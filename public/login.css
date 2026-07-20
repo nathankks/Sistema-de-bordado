@@ -110,52 +110,20 @@ svg {
 
     overflow: hidden;
 
-    background: #111111;
+    background-color: #111111;
+
+    background-image:
+        linear-gradient(
+            rgba(0, 0, 0, 0.48),
+            rgba(0, 0, 0, 0.68)
+        ),
+        url("/imagens/fundo.jpg");
+
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: cover;
+
     color: #ffffff;
-}
-
-.login-apresentacao::before {
-    position: absolute;
-
-    top: -180px;
-    left: -160px;
-
-    width: 460px;
-    height: 460px;
-
-    background:
-        radial-gradient(
-            circle,
-            rgba(255, 255, 255, 0.12),
-            transparent 68%
-        );
-
-    content: "";
-    pointer-events: none;
-}
-
-.login-apresentacao::after {
-    position: absolute;
-
-    right: -180px;
-    bottom: -230px;
-
-    width: 580px;
-    height: 580px;
-
-    border: 1px solid
-        rgba(255, 255, 255, 0.07);
-
-    border-radius: 50%;
-
-    box-shadow:
-        0 0 0 80px
-        rgba(255, 255, 255, 0.025),
-        0 0 0 160px
-        rgba(255, 255, 255, 0.018);
-
-    content: "";
-    pointer-events: none;
 }
 
 .login-marca {

@@ -10,6 +10,17 @@ const $ = seletor =>
 const $$ = seletor =>
     document.querySelectorAll(seletor);
 
+const iconeConfirmacao =
+    $("#iconeConfirmacao");
+
+const iconeConfirmacaoUse =
+    $("#iconeConfirmacaoUse");
+
+const anoCreditos =
+    $("#anoCreditos");
+
+
+
 /*
 |--------------------------------------------------------------------------
 | Estado do sistema
@@ -21,8 +32,494 @@ const CHAVE_TEMA =
 
 let clientes = [];
 let filtroAtual = "";
+let tipoPessoaCliente =
+    "fisica";
 let clienteDetalhadoId = null;
 let carregandoClientes = true;
+let statusClienteAtual =
+    "todos";
+
+let ordenacaoClienteAtual =
+    "recentes";
+
+/*
+|--------------------------------------------------------------------------
+| Permissões do usuário atual
+|--------------------------------------------------------------------------
+*/
+
+let usuarioAtualSistema =
+    null;
+
+let permissoesUsuarioSistema =
+    Object.create(
+        null
+    );
+
+function possuiPermissaoSistema(
+    permissao
+) {
+    return Boolean(
+        permissoesUsuarioSistema[
+            permissao
+        ]
+    );
+}
+
+function exigirPermissaoInterface(
+    permissao,
+    mensagem =
+        "Você não possui permissão para realizar esta ação."
+) {
+    if (
+        possuiPermissaoSistema(
+            permissao
+        )
+    ) {
+        return true;
+    }
+
+    mostrarNotificacao(
+        "Acesso não permitido",
+        mensagem,
+        "erro"
+    );
+
+    return false;
+}
+
+function definirVisibilidadePorPermissao(
+    elemento,
+    permitido
+) {
+    if (!elemento) {
+        return;
+    }
+
+    elemento.hidden =
+        !permitido;
+
+    elemento.classList.toggle(
+        "permissao-oculta",
+        !permitido
+    );
+
+    elemento.setAttribute(
+        "aria-hidden",
+        permitido
+            ? "false"
+            : "true"
+    );
+
+    if (
+        elemento instanceof
+        HTMLButtonElement
+    ) {
+        elemento.disabled =
+            !permitido;
+    }
+}
+
+function alterarVisibilidadePermissao(
+    seletor,
+    permitido
+) {
+    document
+        .querySelectorAll(
+            seletor
+        )
+        .forEach(
+            elemento => {
+                definirVisibilidadePorPermissao(
+                    elemento,
+                    permitido
+                );
+            }
+        );
+}
+
+/*
+|--------------------------------------------------------------------------
+| Permissões declaradas diretamente no HTML
+|--------------------------------------------------------------------------
+*/
+
+function verificarPermissoesElemento(
+    elemento
+) {
+    const valor =
+        String(
+            elemento.dataset
+                .permissaoExigida ||
+            ""
+        );
+
+    const permissoes =
+        valor
+            .split(",")
+            .map(
+                permissao =>
+                    permissao.trim()
+            )
+            .filter(
+                Boolean
+            );
+
+    if (!permissoes.length) {
+        return true;
+    }
+
+    const modo =
+        elemento.dataset
+            .permissaoModo ||
+        "todas";
+
+    if (modo === "alguma") {
+        return permissoes.some(
+            permissao =>
+                possuiPermissaoSistema(
+                    permissao
+                )
+        );
+    }
+
+    return permissoes.every(
+        permissao =>
+            possuiPermissaoSistema(
+                permissao
+            )
+    );
+}
+
+function aplicarPermissoesDeclarativas(
+    raiz = document
+) {
+    const elementos = [];
+
+    if (
+        raiz instanceof Element &&
+        raiz.matches(
+            "[data-permissao-exigida]"
+        )
+    ) {
+        elementos.push(
+            raiz
+        );
+    }
+
+    if (
+        raiz.querySelectorAll
+    ) {
+        elementos.push(
+            ...raiz.querySelectorAll(
+                "[data-permissao-exigida]"
+            )
+        );
+    }
+
+    elementos.forEach(
+        elemento => {
+            const permitido =
+                verificarPermissoesElemento(
+                    elemento
+                );
+
+            definirVisibilidadePorPermissao(
+                elemento,
+                permitido
+            );
+        }
+    );
+}
+
+window.aplicarPermissoesDeclarativas =
+    aplicarPermissoesDeclarativas;
+
+function aplicarPermissoesNaInterface() {
+    const podeVisualizarClientes =
+        possuiPermissaoSistema(
+            "clientes.visualizar"
+        );
+
+    const podeCriarClientes =
+        possuiPermissaoSistema(
+            "clientes.criar"
+        );
+
+    const podeEditarClientes =
+        possuiPermissaoSistema(
+            "clientes.editar"
+        );
+
+    const podeExcluirClientes =
+        possuiPermissaoSistema(
+            "clientes.excluir"
+        );
+
+    const podeVisualizarOrdens =
+        possuiPermissaoSistema(
+            "ordens.visualizar"
+        );
+
+    const podeCriarOrdens =
+        possuiPermissaoSistema(
+            "ordens.criar"
+        );
+
+    const podeVisualizarLinhas =
+        possuiPermissaoSistema(
+            "linhas.visualizar"
+        );
+
+    const podeCriarLinhas =
+        possuiPermissaoSistema(
+            "linhas.criar"
+        );
+
+    const podeBaixarArquivos =
+        possuiPermissaoSistema(
+            "arquivos.baixar"
+        );
+
+    const podeCriarBackup =
+        possuiPermissaoSistema(
+            "backup.criar"
+        );
+
+    const podeRestaurarBackup =
+        possuiPermissaoSistema(
+            "backup.restaurar"
+        );
+
+    const podeGerenciarUsuarios =
+        possuiPermissaoSistema(
+            "usuarios.gerenciar"
+        );
+
+    aplicarPermissoesDeclarativas(
+        document
+        );
+
+    /*
+     * Menus e seções.
+     */
+
+    alterarVisibilidadePermissao(
+        '.menu-item[data-secao="clientes"]',
+        podeVisualizarClientes
+    );
+
+    alterarVisibilidadePermissao(
+        "#secao-clientes",
+        podeVisualizarClientes
+    );
+
+    alterarVisibilidadePermissao(
+        '.menu-item[data-secao="ordens"]',
+        podeVisualizarOrdens
+    );
+
+    alterarVisibilidadePermissao(
+        "#secao-ordens",
+        podeVisualizarOrdens
+    );
+
+    alterarVisibilidadePermissao(
+        '.menu-item[data-secao="linhas"]',
+        podeVisualizarLinhas
+    );
+
+    alterarVisibilidadePermissao(
+        "#secao-linhas",
+        podeVisualizarLinhas
+    );
+
+    alterarVisibilidadePermissao(
+        '.menu-item[data-secao="arquivos"]',
+        podeBaixarArquivos &&
+        podeVisualizarClientes
+    );
+
+    alterarVisibilidadePermissao(
+        "#secao-arquivos",
+        podeBaixarArquivos &&
+        podeVisualizarClientes
+    );
+
+    alterarVisibilidadePermissao(
+        "#menuUsuarios",
+        podeGerenciarUsuarios
+    );
+
+    alterarVisibilidadePermissao(
+        "#secao-usuarios",
+        podeGerenciarUsuarios
+    );
+
+    /*
+     * Cadastro de clientes.
+     */
+
+    alterarVisibilidadePermissao(
+        `
+        #menuNovoCliente,
+        #botaoNovoCliente,
+        #botaoCadastrarDestaque,
+        #acaoNovoCliente,
+        #botaoNovoClienteSecao
+        `,
+        podeCriarClientes
+    );
+
+    /*
+     * Cadastro de ordens e linhas.
+     */
+
+    alterarVisibilidadePermissao(
+        "#botaoNovaOrdem",
+        podeCriarOrdens
+    );
+
+    alterarVisibilidadePermissao(
+        "#botaoNovaLinha",
+        podeCriarLinhas
+    );
+
+    /*
+     * Edição e exclusão de clientes.
+     */
+
+    if (botaoEditarDetalhes) {
+        botaoEditarDetalhes.hidden =
+            !podeEditarClientes;
+    }
+
+    alterarVisibilidadePermissao(
+        "#botaoApagarTudo",
+        podeExcluirClientes
+    );
+
+    /*
+     * Backup.
+     */
+
+    const cardBackup =
+        document.querySelector(
+            ".config-card-backup"
+        );
+
+    const blocoCriarBackup =
+        botaoCriarBackup
+            ?.closest(
+                ".config-backup-bloco"
+            );
+
+    const blocoRestaurarBackup =
+        botaoRestaurarBackup
+            ?.closest(
+                ".config-backup-bloco"
+            );
+
+    if (cardBackup) {
+        cardBackup.hidden =
+            !podeCriarBackup &&
+            !podeRestaurarBackup;
+    }
+
+    if (blocoCriarBackup) {
+        blocoCriarBackup.hidden =
+            !podeCriarBackup;
+    }
+
+    if (blocoRestaurarBackup) {
+        blocoRestaurarBackup.hidden =
+            !podeRestaurarBackup;
+    }
+
+    /*
+     * Sai de uma seção que ficou bloqueada.
+     */
+
+    const secaoAtiva =
+        document.querySelector(
+            ".secao.ativa"
+        );
+
+    if (
+        secaoAtiva?.hidden
+    ) {
+        navegarPara(
+            "dashboard"
+        );
+    }
+
+    /*
+     * Avisa os outros arquivos JavaScript.
+     */
+
+    window.dispatchEvent(
+        new CustomEvent(
+            "permissoes-carregadas",
+            {
+                detail: {
+                    usuario:
+                        usuarioAtualSistema,
+
+                    permissoes:
+                        permissoesUsuarioSistema
+                }
+            }
+        )
+    );
+}
+
+/*
+ * Disponibiliza o controle para
+ * ordens-ui.js e linhas-ui.js.
+ */
+
+window.possuiPermissaoSistema =
+    possuiPermissaoSistema;
+
+window.exigirPermissaoInterface =
+    exigirPermissaoInterface;
+
+const observadorPermissoes =
+    new MutationObserver(
+        alteracoes => {
+            for (
+                const alteracao
+                of alteracoes
+            ) {
+                for (
+                    const elemento
+                    of alteracao.addedNodes
+                ) {
+                    if (
+                        elemento instanceof
+                        Element
+                    ) {
+                        aplicarPermissoesDeclarativas(
+                            elemento
+                        );
+                    }
+                }
+            }
+        }
+    );
+
+if (document.body) {
+    observadorPermissoes.observe(
+        document.body,
+        {
+            childList:
+                true,
+
+            subtree:
+                true
+        }
+    );
+}
 
 /*
 |--------------------------------------------------------------------------
@@ -136,6 +633,15 @@ const buscaClientes =
 const quantidadeResultados =
     $("#quantidadeResultados");
 
+const filtroStatusCliente =
+    $("#filtroStatusCliente");
+
+const ordenacaoClientes =
+    $("#ordenacaoClientes");
+
+const botaoExportarClientes =
+    $("#botaoExportarClientes");
+
 const totalClientes =
     $("#totalClientes");
 
@@ -150,6 +656,54 @@ const totalConfiguracoes =
 
 const campoCpf =
     $("#cpf");
+
+const rotuloDocumentoCliente =
+    $("#rotuloDocumentoCliente");
+
+const botoesTipoPessoa =
+    $$("[data-tipo-pessoa]");
+
+const campoLinhaCliente =
+    $("#linha");
+
+const seletorLinhaCliente =
+    $("#seletorLinhaCliente");
+
+const botaoLinhaCliente =
+    $("#botaoLinhaCliente");
+
+const textoLinhaCliente =
+    $("#textoLinhaCliente");
+
+const subtextoLinhaCliente =
+    $("#subtextoLinhaCliente");
+
+const amostraLinhaCliente =
+    $("#amostraLinhaCliente");
+
+const menuLinhaCliente =
+    $("#menuLinhaCliente");
+
+const buscaLinhaCliente =
+    $("#buscaLinhaCliente");
+
+const listaLinhasCliente =
+    $("#listaLinhasCliente");
+
+const mensagemLinhaCliente =
+    $("#mensagemLinhaCliente");
+
+const linhasSelecionadasCliente =
+    $("#linhasSelecionadasCliente");
+
+const quantidadeLinhasSelecionadasCliente =
+    $("#quantidadeLinhasSelecionadasCliente");
+
+const botaoLimparLinhasCliente =
+    $("#botaoLimparLinhasCliente");
+
+const botaoConcluirLinhasCliente =
+    $("#botaoConcluirLinhasCliente");
 
 const campoTelefone =
     $("#telefone");
@@ -174,6 +728,39 @@ const campoLogoOriginal =
 
 const campoLogoConvertida =
     $("#logoConvertida");
+
+/*
+|--------------------------------------------------------------------------
+| Elementos da área Minha conta
+|--------------------------------------------------------------------------
+*/
+
+const formularioPerfil =
+    $("#formularioPerfil");
+
+const nomeConta =
+    $("#nomeConta");
+
+const usuarioConta =
+    $("#usuarioConta");
+
+const botaoSalvarPerfil =
+    $("#botaoSalvarPerfil");
+
+const formularioSenha =
+    $("#formularioSenha");
+
+const senhaAtualConta =
+    $("#senhaAtualConta");
+
+const novaSenhaConta =
+    $("#novaSenhaConta");
+
+const confirmarNovaSenhaConta =
+    $("#confirmarNovaSenhaConta");
+
+const botaoSalvarSenha =
+    $("#botaoSalvarSenha");
 
 /*
 |--------------------------------------------------------------------------
@@ -205,9 +792,27 @@ const botaoRestaurarBackup =
 const titulosSecoes = {
     dashboard: "Visão geral",
     clientes: "Clientes",
+    ordens: "Ordens",
     arquivos: "Arquivos",
+    linhas: "Catálogo de linhas",
+    usuarios: "Gerenciamento de usuários",
     configuracoes: "Configurações"
 };
+
+const modalConfirmacao =
+    $("#modalConfirmacao");
+
+const tituloConfirmacao =
+    $("#tituloConfirmacao");
+
+const mensagemConfirmacao =
+    $("#mensagemConfirmacao");
+
+const botaoCancelarConfirmacao =
+    $("#botaoCancelarConfirmacao");
+
+const botaoConfirmarAcao =
+    $("#botaoConfirmarAcao");
 
 /*
 |--------------------------------------------------------------------------
@@ -293,6 +898,23 @@ async function carregarClientesDoServidor(
         mostrarErro = true
     } = {}
 ) {
+
+    if (
+    !possuiPermissaoSistema(
+        "clientes.visualizar"
+    )
+) {
+    clientes =
+        [];
+
+    carregandoClientes =
+        false;
+
+    renderizarTudo();
+
+    return;
+}
+
     carregandoClientes = true;
 
     renderizarTudo();
@@ -384,6 +1006,134 @@ function formatarCpf(valor) {
         );
 }
 
+function normalizarCnpj(
+    valor
+) {
+    const bruto =
+        String(
+            valor || ""
+        )
+            .toUpperCase()
+            .replace(
+                /[^A-Z0-9]/g,
+                ""
+            );
+
+    /*
+     * As primeiras 12 posições podem
+     * ter letras ou números.
+     *
+     * Os dois dígitos verificadores
+     * finais continuam numéricos.
+     */
+    const base =
+        bruto.slice(
+            0,
+            12
+        );
+
+    const digitos =
+        bruto
+            .slice(12)
+            .replace(
+                /\D/g,
+                ""
+            )
+            .slice(
+                0,
+                2
+            );
+
+    return (
+        base +
+        digitos
+    );
+}
+
+function formatarCnpj(
+    valor
+) {
+    return normalizarCnpj(
+        valor
+    )
+        .replace(
+            /^([A-Z0-9]{2})([A-Z0-9])/,
+            "$1.$2"
+        )
+        .replace(
+            /^([A-Z0-9]{2})\.([A-Z0-9]{3})([A-Z0-9])/,
+            "$1.$2.$3"
+        )
+        .replace(
+            /\.([A-Z0-9]{3})([A-Z0-9])/,
+            ".$1/$2"
+        )
+        .replace(
+            /([A-Z0-9]{4})([0-9]{1,2})$/,
+            "$1-$2"
+        );
+}
+
+function identificarTipoPessoaPorDocumento(
+    valor
+) {
+    const documento =
+        String(
+            valor || ""
+        )
+            .toUpperCase()
+            .replace(
+                /[^A-Z0-9]/g,
+                ""
+            );
+
+    return (
+        documento.length === 14 ||
+        /[A-Z]/.test(
+            documento
+        )
+    )
+        ? "juridica"
+        : "fisica";
+}
+
+function normalizarDocumentoPorTipo(
+    valor,
+    tipo =
+        tipoPessoaCliente
+) {
+    if (
+        tipo ===
+        "juridica"
+    ) {
+        return normalizarCnpj(
+            valor
+        );
+    }
+
+    return somenteNumeros(
+        valor
+    ).slice(
+        0,
+        11
+    );
+}
+
+function formatarDocumentoPorTipo(
+    valor,
+    tipo =
+        tipoPessoaCliente
+) {
+    return tipo ===
+        "juridica"
+        ? formatarCnpj(
+            valor
+        )
+        : formatarCpf(
+            valor
+        );
+}
+
 function formatarTelefone(valor) {
     const numeros =
         somenteNumeros(valor)
@@ -414,17 +1164,23 @@ function formatarTelefone(valor) {
 
 /*
 |--------------------------------------------------------------------------
-| Validação de CPF
+| Validação de CPF e CNPJ
 |--------------------------------------------------------------------------
 */
 
-function validarCpf(valor) {
+function validarCpf(
+    valor
+) {
     const cpf =
-        somenteNumeros(valor);
+        somenteNumeros(
+            valor
+        );
 
     if (
         cpf.length !== 11 ||
-        /^(\d)\1{10}$/.test(cpf)
+        /^(\d)\1{10}$/.test(
+            cpf
+        )
     ) {
         return false;
     }
@@ -440,7 +1196,9 @@ function validarCpf(valor) {
             indice += 1
         ) {
             soma +=
-                Number(cpf[indice]) *
+                Number(
+                    cpf[indice]
+                ) *
                 (
                     quantidade +
                     1 -
@@ -449,7 +1207,10 @@ function validarCpf(valor) {
         }
 
         const resto =
-            (soma * 10) % 11;
+            (
+                soma *
+                10
+            ) % 11;
 
         return resto === 10
             ? 0
@@ -457,19 +1218,260 @@ function validarCpf(valor) {
     }
 
     return (
-        calcularDigito(9) ===
-            Number(cpf[9]) &&
+        calcularDigito(
+            9
+        ) ===
+            Number(
+                cpf[9]
+            ) &&
 
-        calcularDigito(10) ===
-            Number(cpf[10])
+        calcularDigito(
+            10
+        ) ===
+            Number(
+                cpf[10]
+            )
     );
 }
 
-function atualizarEstadoCpf() {
-    const numeros =
-        somenteNumeros(
+function validarCnpj(
+    valor
+) {
+    const cnpj =
+        normalizarCnpj(
+            valor
+        );
+
+    if (
+        !/^[A-Z0-9]{12}\d{2}$/.test(
+            cnpj
+        )
+    ) {
+        return false;
+    }
+
+    if (
+        /^(\d)\1{13}$/.test(
+            cnpj
+        )
+    ) {
+        return false;
+    }
+
+    function valorCaractere(
+        caractere
+    ) {
+        return (
+            caractere
+                .charCodeAt(
+                    0
+                ) -
+            48
+        );
+    }
+
+    function calcularDigito(
+        base,
+        pesos
+    ) {
+        const soma =
+            base
+                .split("")
+                .reduce(
+                    (
+                        total,
+                        caractere,
+                        indice
+                    ) =>
+                        total +
+                        valorCaractere(
+                            caractere
+                        ) *
+                        pesos[
+                            indice
+                        ],
+                    0
+                );
+
+        const resto =
+            soma % 11;
+
+        return resto < 2
+            ? 0
+            : 11 - resto;
+    }
+
+    const base =
+        cnpj.slice(
+            0,
+            12
+        );
+
+    const primeiroDigito =
+        calcularDigito(
+            base,
+            [
+                5,
+                4,
+                3,
+                2,
+                9,
+                8,
+                7,
+                6,
+                5,
+                4,
+                3,
+                2
+            ]
+        );
+
+    const segundoDigito =
+        calcularDigito(
+            base +
+            primeiroDigito,
+            [
+                6,
+                5,
+                4,
+                3,
+                2,
+                9,
+                8,
+                7,
+                6,
+                5,
+                4,
+                3,
+                2
+            ]
+        );
+
+    return (
+        cnpj.slice(
+            -2
+        ) ===
+        `${primeiroDigito}${segundoDigito}`
+    );
+}
+
+function obterRotuloDocumentoAtual() {
+    return tipoPessoaCliente ===
+        "juridica"
+        ? "CNPJ"
+        : "CPF";
+}
+
+function validarDocumentoAtual(
+    valor
+) {
+    return tipoPessoaCliente ===
+        "juridica"
+        ? validarCnpj(
+            valor
+        )
+        : validarCpf(
+            valor
+        );
+}
+
+function definirTipoPessoaCliente(
+    tipo,
+    {
+        limparCampo = true
+    } = {}
+) {
+    tipoPessoaCliente =
+        tipo ===
+        "juridica"
+            ? "juridica"
+            : "fisica";
+
+    const juridica =
+        tipoPessoaCliente ===
+        "juridica";
+
+    if (
+        rotuloDocumentoCliente
+    ) {
+        rotuloDocumentoCliente
+            .textContent =
+                juridica
+                    ? "CNPJ"
+                    : "CPF";
+    }
+
+    campoCpf.maxLength =
+        juridica
+            ? 18
+            : 14;
+
+    campoCpf.placeholder =
+        juridica
+            ? "00.000.000/0000-00"
+            : "000.000.000-00";
+
+    campoCpf.inputMode =
+        juridica
+            ? "text"
+            : "numeric";
+
+    campoCpf.setAttribute(
+        "autocapitalize",
+        juridica
+            ? "characters"
+            : "off"
+    );
+
+    botoesTipoPessoa
+        .forEach(
+            botao => {
+                const ativo =
+                    botao.dataset
+                        .tipoPessoa ===
+                    tipoPessoaCliente;
+
+                botao.classList.toggle(
+                    "ativo",
+                    ativo
+                );
+
+                botao.setAttribute(
+                    "aria-pressed",
+                    ativo
+                        ? "true"
+                        : "false"
+                );
+            }
+        );
+
+    if (limparCampo) {
+        campoCpf.value =
+            "";
+    } else {
+        campoCpf.value =
+            formatarDocumentoPorTipo(
+                campoCpf.value
+            );
+    }
+
+    atualizarEstadoDocumento();
+}
+
+function atualizarEstadoDocumento() {
+    const rotulo =
+        obterRotuloDocumentoAtual();
+
+    const documento =
+        normalizarDocumentoPorTipo(
             campoCpf.value
         );
+
+    const quantidadeEsperada =
+        tipoPessoaCliente ===
+        "juridica"
+            ? 14
+            : 11;
 
     campoCpf.classList.remove(
         "invalido"
@@ -480,16 +1482,19 @@ function atualizarEstadoCpf() {
         "valido"
     );
 
-    if (!numeros) {
+    if (!documento) {
         mensagemCpf.textContent =
-            "Digite um CPF válido.";
+            `Digite um ${rotulo} válido.`;
 
         return;
     }
 
-    if (numeros.length < 11) {
+    if (
+        documento.length <
+        quantidadeEsperada
+    ) {
         mensagemCpf.textContent =
-            "O CPF precisa ter 11 números.";
+            `O ${rotulo} precisa ter ${quantidadeEsperada} caracteres.`;
 
         mensagemCpf.classList.add(
             "erro"
@@ -498,13 +1503,17 @@ function atualizarEstadoCpf() {
         return;
     }
 
-    if (!validarCpf(numeros)) {
+    if (
+        !validarDocumentoAtual(
+            documento
+        )
+    ) {
         campoCpf.classList.add(
             "invalido"
         );
 
         mensagemCpf.textContent =
-            "Este CPF não é válido.";
+            `Este ${rotulo} não é válido.`;
 
         mensagemCpf.classList.add(
             "erro"
@@ -515,13 +1524,23 @@ function atualizarEstadoCpf() {
 
     const duplicado =
         clientes.some(
-            cliente =>
-                somenteNumeros(
-                    cliente.cpf
-                ) === numeros &&
+            cliente => {
+                const tipoCliente =
+                    identificarTipoPessoaPorDocumento(
+                        cliente.cpf
+                    );
 
-                cliente.id !==
-                    clienteId.value
+                return (
+                    normalizarDocumentoPorTipo(
+                        cliente.cpf,
+                        tipoCliente
+                    ) ===
+                        documento &&
+
+                    cliente.id !==
+                        clienteId.value
+                );
+            }
         );
 
     if (duplicado) {
@@ -530,7 +1549,7 @@ function atualizarEstadoCpf() {
         );
 
         mensagemCpf.textContent =
-            "Este CPF já está cadastrado.";
+            `Este ${rotulo} já está cadastrado.`;
 
         mensagemCpf.classList.add(
             "erro"
@@ -540,7 +1559,7 @@ function atualizarEstadoCpf() {
     }
 
     mensagemCpf.textContent =
-        "CPF válido.";
+        `${rotulo} válido.`;
 
     mensagemCpf.classList.add(
         "valido"
@@ -1120,26 +2139,78 @@ function alternarTema() {
 */
 
 function abrirMenuMobile() {
-    sidebar.classList.add(
+    sidebar?.classList.add(
         "aberto"
     );
 
-    fundoMenuMobile.classList.add(
+    fundoMenuMobile?.classList.add(
         "aberto"
+    );
+
+    botaoMenuMobile?.setAttribute(
+        "aria-expanded",
+        "true"
+    );
+
+    botaoMenuMobile?.setAttribute(
+        "aria-label",
+        "Fechar menu"
     );
 }
 
 function fecharMenuMobile() {
-    sidebar.classList.remove(
+    sidebar?.classList.remove(
         "aberto"
     );
 
-    fundoMenuMobile.classList.remove(
+    fundoMenuMobile?.classList.remove(
         "aberto"
+    );
+
+    botaoMenuMobile?.setAttribute(
+        "aria-expanded",
+        "false"
+    );
+
+    botaoMenuMobile?.setAttribute(
+        "aria-label",
+        "Abrir menu"
     );
 }
 
 function navegarPara(secao) {
+
+    const permissoesSecoes = {
+    clientes:
+        "clientes.visualizar",
+
+    ordens:
+        "ordens.visualizar",
+
+    linhas:
+        "linhas.visualizar",
+
+    arquivos:
+        "arquivos.baixar",
+
+    usuarios:
+        "usuarios.gerenciar"
+};
+
+const permissaoNecessaria =
+    permissoesSecoes[
+        secao
+    ];
+
+if (
+    permissaoNecessaria &&
+    !exigirPermissaoInterface(
+        permissaoNecessaria
+    )
+) {
+    return;
+}
+
     secoes.forEach(elemento => {
         elemento.classList.toggle(
             "ativa",
@@ -1176,10 +2247,861 @@ function navegarPara(secao) {
 |--------------------------------------------------------------------------
 */
 
+/*
+|--------------------------------------------------------------------------
+| Seletor múltiplo de linhas do cliente
+|--------------------------------------------------------------------------
+*/
+
+const SEPARADOR_LINHAS_CLIENTE =
+    "\n";
+
+let linhasAntigasCliente = [];
+
+function criarValorLinhaCatalogo(
+    linha
+) {
+    return [
+        linha.marca,
+        linha.codigo,
+        linha.nome
+    ]
+        .filter(Boolean)
+        .join(" — ");
+}
+
+function obterLinhasDisponiveisCliente() {
+    if (
+        typeof window
+            .obterLinhasAtivasCatalogo !==
+        "function"
+    ) {
+        return [];
+    }
+
+    return window
+        .obterLinhasAtivasCatalogo();
+}
+
+function encontrarLinhaCliente(
+    valor
+) {
+    return (
+        obterLinhasDisponiveisCliente()
+            .find(
+                linha =>
+                    criarValorLinhaCatalogo(
+                        linha
+                    ) === valor
+            ) ||
+        null
+    );
+}
+
+function normalizarListaLinhasCliente(
+    valor
+) {
+    const valores =
+        Array.isArray(valor)
+            ? valor
+            : String(
+                valor || ""
+            ).split(
+                /\r?\n/
+            );
+
+    return [
+        ...new Set(
+            valores
+                .map(
+                    item =>
+                        String(
+                            item || ""
+                        ).trim()
+                )
+                .filter(Boolean)
+        )
+    ];
+}
+
+function obterLinhasSelecionadasCliente() {
+    return normalizarListaLinhasCliente(
+        campoLinhaCliente?.value ||
+        ""
+    );
+}
+
+function obterNomeLinhaCliente(
+    valor
+) {
+    const linha =
+        encontrarLinhaCliente(
+            valor
+        );
+
+    return (
+        linha?.nome ||
+        valor
+    );
+}
+
+function obterStatusLinhaCliente(
+    linha
+) {
+    if (
+        linha.statusEstoque ===
+        "zerado"
+    ) {
+        return {
+            texto: "Sem estoque",
+            classe: "zerado"
+        };
+    }
+
+    if (
+        linha.statusEstoque ===
+        "baixo"
+    ) {
+        return {
+            texto: "Estoque baixo",
+            classe: "baixo"
+        };
+    }
+
+    return {
+        texto: "Disponível",
+        classe: "disponivel"
+    };
+}
+
+function definirLinhasSelecionadasCliente(
+    valores
+) {
+    if (!campoLinhaCliente) {
+        return;
+    }
+
+    const lista =
+        normalizarListaLinhasCliente(
+            valores
+        );
+
+    campoLinhaCliente.value =
+        lista.join(
+            SEPARADOR_LINHAS_CLIENTE
+        );
+
+    linhasAntigasCliente =
+        lista.filter(
+            valor =>
+                !encontrarLinhaCliente(
+                    valor
+                )
+        );
+
+    atualizarVisualLinhaCliente();
+}
+
+function renderizarLinhasSelecionadasCliente() {
+    if (
+        !linhasSelecionadasCliente
+    ) {
+        return;
+    }
+
+    const selecionadas =
+        obterLinhasSelecionadasCliente();
+
+    linhasSelecionadasCliente.hidden =
+        !selecionadas.length;
+
+    linhasSelecionadasCliente.innerHTML =
+        selecionadas
+            .map(
+                valor => {
+                    const linha =
+                        encontrarLinhaCliente(
+                            valor
+                        );
+
+                    const nome =
+                        obterNomeLinhaCliente(
+                            valor
+                        );
+
+                    const cor =
+                        linha?.corHex ||
+                        "#777777";
+
+                    return `
+                        <button
+                            class="linha-selecionada-ordem"
+                            data-remover-linha-cliente="${encodeURIComponent(
+                                valor
+                            )}"
+                            type="button"
+                            title="Remover ${escaparHtml(
+                                nome
+                            )}"
+                            aria-label="Remover ${escaparHtml(
+                                nome
+                            )}"
+                        >
+                            <span
+                                class="amostra-chip-linha-ordem"
+                                style="background-color: ${escaparHtml(
+                                    cor
+                                )}"
+                            ></span>
+
+                            <span>
+                                ${escaparHtml(
+                                    nome
+                                )}
+                            </span>
+
+                            ${icone("x")}
+                        </button>
+                    `;
+                }
+            )
+            .join("");
+}
+
+function atualizarVisualLinhaCliente() {
+    if (
+        !campoLinhaCliente ||
+        !textoLinhaCliente ||
+        !subtextoLinhaCliente
+    ) {
+        return;
+    }
+
+    const selecionadas =
+        obterLinhasSelecionadasCliente();
+
+    const quantidade =
+        selecionadas.length;
+
+    if (
+        quantidadeLinhasSelecionadasCliente
+    ) {
+        quantidadeLinhasSelecionadasCliente
+            .textContent =
+                `${quantidade} ${
+                    quantidade === 1
+                        ? "linha selecionada"
+                        : "linhas selecionadas"
+                }`;
+    }
+
+    renderizarLinhasSelecionadasCliente();
+
+    if (!quantidade) {
+        textoLinhaCliente.textContent =
+            window.catalogoLinhasCarregado
+                ? "Nenhuma linha selecionada"
+                : "Carregando catálogo...";
+
+        subtextoLinhaCliente.textContent =
+            window.catalogoLinhasCarregado
+                ? "Pesquise e selecione uma ou mais linhas"
+                : "Aguarde o carregamento das linhas";
+
+        if (amostraLinhaCliente) {
+            amostraLinhaCliente.hidden =
+                true;
+        }
+
+        if (mensagemLinhaCliente) {
+            mensagemLinhaCliente.textContent =
+                "Você pode selecionar várias linhas ou concluir sem nenhuma.";
+
+            mensagemLinhaCliente
+                .classList.remove(
+                    "erro"
+                );
+        }
+
+        return;
+    }
+
+    if (quantidade === 1) {
+        const valor =
+            selecionadas[0];
+
+        const linha =
+            encontrarLinhaCliente(
+                valor
+            );
+
+        if (linha) {
+            const status =
+                obterStatusLinhaCliente(
+                    linha
+                );
+
+            textoLinhaCliente.textContent =
+                linha.nome;
+
+            subtextoLinhaCliente.textContent =
+                `${linha.marca} · Código ${linha.codigo} · ${status.texto}`;
+
+            if (amostraLinhaCliente) {
+                amostraLinhaCliente.hidden =
+                    false;
+
+                amostraLinhaCliente.style
+                    .backgroundColor =
+                        linha.corHex ||
+                        "#777777";
+            }
+        } else {
+            textoLinhaCliente.textContent =
+                valor;
+
+            subtextoLinhaCliente.textContent =
+                "Linha anterior — fora do catálogo";
+
+            if (amostraLinhaCliente) {
+                amostraLinhaCliente.hidden =
+                    false;
+
+                amostraLinhaCliente.style
+                    .backgroundColor =
+                        "#777777";
+            }
+        }
+    } else {
+        const nomes =
+            selecionadas.map(
+                obterNomeLinhaCliente
+            );
+
+        textoLinhaCliente.textContent =
+            `${quantidade} linhas selecionadas`;
+
+        subtextoLinhaCliente.textContent =
+            nomes
+                .slice(
+                    0,
+                    3
+                )
+                .join(" · ") +
+            (
+                quantidade > 3
+                    ? ` · +${quantidade - 3}`
+                    : ""
+            );
+
+        if (amostraLinhaCliente) {
+            amostraLinhaCliente.hidden =
+                true;
+        }
+    }
+
+    if (mensagemLinhaCliente) {
+        mensagemLinhaCliente.textContent =
+            `${quantidade} ${
+                quantidade === 1
+                    ? "linha selecionada"
+                    : "linhas selecionadas"
+            }. Clique em uma etiqueta para remover.`;
+
+        mensagemLinhaCliente
+            .classList.remove(
+                "erro"
+            );
+    }
+}
+
+function criarOpcaoLinhaCliente(
+    linha
+) {
+    const valor =
+        criarValorLinhaCatalogo(
+            linha
+        );
+
+    const selecionada =
+        obterLinhasSelecionadasCliente()
+            .includes(
+                valor
+            );
+
+    const status =
+        obterStatusLinhaCliente(
+            linha
+        );
+
+    const estoque =
+        new Intl.NumberFormat(
+            "pt-BR",
+            {
+                maximumFractionDigits:
+                    2
+            }
+        ).format(
+            Number(
+                linha.estoque || 0
+            )
+        );
+
+    return `
+        <button
+            class="opcao-menu-linha ${
+                selecionada
+                    ? "selecionada"
+                    : ""
+            }"
+            data-valor-linha="${encodeURIComponent(
+                valor
+            )}"
+            type="button"
+            role="option"
+            aria-selected="${selecionada}"
+        >
+            <span
+                class="amostra-opcao-linha"
+                style="background-color: ${escaparHtml(
+                    linha.corHex ||
+                    "#777777"
+                )}"
+            ></span>
+
+            <span class="informacoes-opcao-linha">
+                <strong>
+                    ${escaparHtml(
+                        linha.nome
+                    )}
+                </strong>
+
+                <span>
+                    ${escaparHtml(
+                        linha.marca
+                    )}
+                    · Código
+                    ${escaparHtml(
+                        linha.codigo
+                    )}
+                    · Estoque:
+                    ${escaparHtml(
+                        estoque
+                    )}
+                    ${escaparHtml(
+                        linha.unidade
+                    )}
+                </span>
+            </span>
+
+            <span class="opcao-linha-ordem-final">
+                <span
+                    class="status-opcao-linha ${status.classe}"
+                >
+                    ${escaparHtml(
+                        status.texto
+                    )}
+                </span>
+
+                <span class="marcador-linha-ordem">
+                    ${
+                        selecionada
+                            ? icone("check")
+                            : ""
+                    }
+                </span>
+            </span>
+        </button>
+    `;
+}
+
+function criarOpcaoLinhaAntigaCliente(
+    valor
+) {
+    const selecionada =
+        obterLinhasSelecionadasCliente()
+            .includes(
+                valor
+            );
+
+    return `
+        <button
+            class="opcao-menu-linha linha-legada ${
+                selecionada
+                    ? "selecionada"
+                    : ""
+            }"
+            data-valor-linha="${encodeURIComponent(
+                valor
+            )}"
+            type="button"
+            role="option"
+            aria-selected="${selecionada}"
+        >
+            <span
+                class="amostra-opcao-linha"
+                style="background-color: #777777"
+            ></span>
+
+            <span class="informacoes-opcao-linha">
+                <strong>
+                    ${escaparHtml(
+                        valor
+                    )}
+                </strong>
+
+                <span>
+                    Linha utilizada anteriormente
+                </span>
+            </span>
+
+            <span class="opcao-linha-ordem-final">
+                <span class="status-opcao-linha legado">
+                    Fora do catálogo
+                </span>
+
+                <span class="marcador-linha-ordem">
+                    ${
+                        selecionada
+                            ? icone("check")
+                            : ""
+                    }
+                </span>
+            </span>
+        </button>
+    `;
+}
+
+function renderizarOpcoesLinhaCliente() {
+    if (!listaLinhasCliente) {
+        return;
+    }
+
+    const termo =
+        normalizarTexto(
+            buscaLinhaCliente?.value ||
+            ""
+        );
+
+    const linhas =
+        obterLinhasDisponiveisCliente()
+            .filter(
+                linha => {
+                    if (!termo) {
+                        return true;
+                    }
+
+                    const conteudo =
+                        normalizarTexto(
+                            [
+                                linha.marca,
+                                linha.codigo,
+                                linha.nome,
+                                linha.fornecedor,
+                                linha.corHex
+                            ]
+                                .filter(Boolean)
+                                .join(" ")
+                        );
+
+                    return conteudo.includes(
+                        termo
+                    );
+                }
+            );
+
+    let html =
+        linhasAntigasCliente
+            .filter(
+                valor =>
+                    !termo ||
+                    normalizarTexto(
+                        valor
+                    ).includes(
+                        termo
+                    )
+            )
+            .map(
+                criarOpcaoLinhaAntigaCliente
+            )
+            .join("");
+
+    html += linhas
+        .map(
+            criarOpcaoLinhaCliente
+        )
+        .join("");
+
+    if (!html) {
+        html = `
+            <div class="menu-linha-vazio">
+                <strong>
+                    Nenhuma linha encontrada
+                </strong>
+
+                <span>
+                    Pesquise usando outro código,
+                    marca ou nome da cor.
+                </span>
+            </div>
+        `;
+    }
+
+    listaLinhasCliente.innerHTML =
+        html;
+}
+
+function abrirMenuLinhaCliente() {
+    if (
+        !menuLinhaCliente ||
+        !botaoLinhaCliente
+    ) {
+        return;
+    }
+
+    menuLinhaCliente.hidden =
+        false;
+
+    seletorLinhaCliente
+        ?.classList.add(
+            "aberto"
+        );
+
+    botaoLinhaCliente.setAttribute(
+        "aria-expanded",
+        "true"
+    );
+
+    if (buscaLinhaCliente) {
+        buscaLinhaCliente.value =
+            "";
+    }
+
+    renderizarOpcoesLinhaCliente();
+
+    setTimeout(
+        () => {
+            buscaLinhaCliente
+                ?.focus();
+        },
+        30
+    );
+}
+
+function fecharMenuLinhaCliente() {
+    if (
+        !menuLinhaCliente ||
+        !botaoLinhaCliente
+    ) {
+        return;
+    }
+
+    menuLinhaCliente.hidden =
+        true;
+
+    seletorLinhaCliente
+        ?.classList.remove(
+            "aberto"
+        );
+
+    botaoLinhaCliente.setAttribute(
+        "aria-expanded",
+        "false"
+    );
+}
+
+function selecionarLinhaCliente(
+    valor
+) {
+    const selecionadas =
+        obterLinhasSelecionadasCliente();
+
+    const jaSelecionada =
+        selecionadas.includes(
+            valor
+        );
+
+    const novaLista =
+        jaSelecionada
+            ? selecionadas.filter(
+                item =>
+                    item !== valor
+            )
+            : [
+                ...selecionadas,
+                valor
+            ];
+
+    definirLinhasSelecionadasCliente(
+        novaLista
+    );
+
+    botaoLinhaCliente
+        ?.classList.remove(
+            "invalido"
+        );
+
+    mensagemLinhaCliente
+        ?.classList.remove(
+            "erro"
+        );
+
+    renderizarOpcoesLinhaCliente();
+}
+
+function removerLinhaCliente(
+    valor
+) {
+    const novaLista =
+        obterLinhasSelecionadasCliente()
+            .filter(
+                item =>
+                    item !== valor
+            );
+
+    definirLinhasSelecionadasCliente(
+        novaLista
+    );
+
+    if (
+        menuLinhaCliente &&
+        !menuLinhaCliente.hidden
+    ) {
+        renderizarOpcoesLinhaCliente();
+    }
+}
+
+function limparLinhasCliente() {
+    definirLinhasSelecionadasCliente(
+        []
+    );
+
+    renderizarOpcoesLinhaCliente();
+}
+
+function preencherCampoLinhaCliente(
+    valorSelecionado = ""
+) {
+    definirLinhasSelecionadasCliente(
+        normalizarListaLinhasCliente(
+            valorSelecionado
+        )
+    );
+
+    botaoLinhaCliente
+        ?.classList.remove(
+            "invalido"
+        );
+
+    mensagemLinhaCliente
+        ?.classList.remove(
+            "erro"
+        );
+}
+
+function formatarResumoLinhasCliente(
+    valor
+) {
+    const nomes =
+        normalizarListaLinhasCliente(
+            valor
+        ).map(
+            obterNomeLinhaCliente
+        );
+
+    if (!nomes.length) {
+        return "—";
+    }
+
+    if (nomes.length <= 2) {
+        return nomes.join(
+            ", "
+        );
+    }
+
+    return `${
+        nomes
+            .slice(
+                0,
+                2
+            )
+            .join(", ")
+    } +${nomes.length - 2}`;
+}
+
+function formatarLinhasClienteDetalhes(
+    valor
+) {
+    const nomes =
+        normalizarListaLinhasCliente(
+            valor
+        ).map(
+            obterNomeLinhaCliente
+        );
+
+    return nomes.length
+        ? nomes.join("\n")
+        : "—";
+}
+
+window.atualizarSelectLinhasCliente =
+    function () {
+        preencherCampoLinhaCliente(
+            campoLinhaCliente?.value ||
+            ""
+        );
+
+        if (
+            menuLinhaCliente &&
+            !menuLinhaCliente.hidden
+        ) {
+            renderizarOpcoesLinhaCliente();
+        }
+    };
+
 function abrirModalCliente(
     cliente = null
 ) {
+
+    const permissaoNecessaria =
+    cliente
+        ? "clientes.editar"
+        : "clientes.criar";
+
+if (
+    !exigirPermissaoInterface(
+        permissaoNecessaria,
+
+        cliente
+            ? "Você não possui permissão para editar clientes."
+            : "Você não possui permissão para cadastrar clientes."
+    )
+) {
+    return;
+}
+
     formularioCliente.reset();
+
+    const tipoDocumentoCliente =
+    cliente
+        ? identificarTipoPessoaPorDocumento(
+            cliente.cpf
+        )
+        : "fisica";
+
+definirTipoPessoaCliente(
+    tipoDocumentoCliente,
+    {
+        limparCampo:
+            true
+    }
+);
+
+    fecharMenuLinhaCliente();
+
+    preencherCampoLinhaCliente(
+        cliente?.linha || ""
+    );
 
     campoCpf.classList.remove(
         "invalido"
@@ -1190,8 +3112,10 @@ function abrirModalCliente(
         "valido"
     );
 
-    mensagemCpf.textContent =
-        "Digite um CPF válido.";
+mensagemCpf.textContent =
+    `Digite um ${
+        obterRotuloDocumentoAtual()
+    } válido.`;
 
     if (cliente) {
         tituloModalCliente.textContent =
@@ -1209,18 +3133,18 @@ function abrirModalCliente(
             cliente.nome || "";
 
         campoCpf.value =
-            cliente.cpf || "";
+    formatarDocumentoPorTipo(
+        cliente.cpf || "",
+        tipoDocumentoCliente
+    );
 
         campoTelefone.value =
             cliente.telefone || "";
 
-        $("#linha").value =
-            cliente.linha || "";
-
         $("#observacoes").value =
             cliente.observacoes || "";
 
-        atualizarEstadoCpf();
+        atualizarEstadoDocumento();
     } else {
         tituloModalCliente.textContent =
             "Novo cliente";
@@ -1251,6 +3175,8 @@ function abrirModalCliente(
 }
 
 function fecharModalCliente() {
+    fecharMenuLinhaCliente();
+
     modalCliente.classList.remove(
         "aberto"
     );
@@ -1474,7 +3400,9 @@ function abrirDetalhes(id) {
         cliente.telefone || "—";
 
     detalhesLinha.textContent =
-        cliente.linha || "—";
+    formatarLinhasClienteDetalhes(
+        cliente.linha
+    );
 
     detalhesData.textContent =
         formatarData(
@@ -1527,6 +3455,16 @@ function fecharDetalhes() {
 }
 
 function editarCliente(id) {
+
+    if (
+    !exigirPermissaoInterface(
+        "clientes.editar",
+        "Você não possui permissão para editar clientes."
+    )
+) {
+    return;
+}
+
     const cliente =
         clientes.find(
             item =>
@@ -1553,6 +3491,16 @@ async function removerArquivoIndividual(
     tipo,
     botao = null
 ) {
+
+    if (
+    !exigirPermissaoInterface(
+        "arquivos.remover",
+        "Você não possui permissão para remover arquivos."
+    )
+) {
+    return;
+}
+
     const cliente =
         clientes.find(
             item =>
@@ -1606,21 +3554,32 @@ async function removerArquivoIndividual(
         return;
     }
 
-    const confirmou =
-        confirm(
+const confirmou =
+    await confirmarAcao({
+        tipo:
+            "perigo",
+
+        titulo:
+        tipo === "original"
+        ? "Remover logo original?"
+        : "Remover arquivo convertido?",
+
+        mensagem:
             [
                 configuracao.pergunta,
-                "",
+
                 configuracao.nome
                     ? `Arquivo: ${configuracao.nome}`
                     : "",
-                "",
+
                 "O cadastro do cliente será mantido."
             ]
                 .filter(Boolean)
-                .join("\n")
-        );
+                .join("\n\n"),
 
+        textoConfirmar:
+            "Remover arquivo"
+    });
     if (!confirmou) {
         return;
     }
@@ -1729,47 +3688,375 @@ function substituirArquivoIndividual(
 |--------------------------------------------------------------------------
 */
 
+function atualizarFiltro(
+    valor,
+    abrirClientes = false
+) {
+    filtroAtual =
+        String(valor ?? "");
+
+    if (
+        buscaGlobal &&
+        buscaGlobal.value !== filtroAtual
+    ) {
+        buscaGlobal.value =
+            filtroAtual;
+    }
+
+    if (
+        buscaClientes &&
+        buscaClientes.value !== filtroAtual
+    ) {
+        buscaClientes.value =
+            filtroAtual;
+    }
+
+    if (
+        abrirClientes &&
+        filtroAtual.trim()
+    ) {
+        navegarPara(
+            "clientes"
+        );
+
+        return;
+    }
+
+    renderizarClientes();
+}
+
 function filtrarClientes() {
     const busca =
         normalizarTexto(
             filtroAtual
         );
 
-    if (!busca) {
-        return [...clientes];
-    }
+    let lista =
+        clientes.filter(
+            cliente => {
+                /*
+                 * A pesquisa da seção Clientes
+                 * considera somente nome e CPF.
+                 */
+                const correspondeBusca =
+                    !busca ||
+                    [
+                        cliente.nome,
+                        cliente.cpf
+                    ].some(
+                        campo =>
+                            normalizarTexto(
+                                campo
+                            ).includes(
+                                busca
+                            )
+                    );
 
-    return clientes.filter(
-        cliente =>
-            [
-                cliente.nome,
-                cliente.cpf,
-                cliente.telefone,
-                cliente.linha
-            ].some(
-                campo =>
-                    normalizarTexto(
-                        campo
-                    ).includes(busca)
-            )
-    );
+                if (!correspondeBusca) {
+                    return false;
+                }
+
+                const possuiOriginal =
+                    Boolean(
+                        cliente.logoOriginal
+                    );
+
+                const possuiConvertido =
+                    Boolean(
+                        cliente.logoConvertida
+                    );
+
+                switch (
+                    statusClienteAtual
+                ) {
+                    case "convertidos":
+                        return possuiConvertido;
+
+                    case "pendentes":
+                        return !possuiConvertido;
+
+                    case "com-original":
+                        return possuiOriginal;
+
+                    case "sem-arquivos":
+                        return (
+                            !possuiOriginal &&
+                            !possuiConvertido
+                        );
+
+                    default:
+                        return true;
+                }
+            }
+        );
+
+    lista =
+        [...lista].sort(
+            (
+                clienteA,
+                clienteB
+            ) => {
+                switch (
+                    ordenacaoClienteAtual
+                ) {
+                    case "antigos":
+                        return (
+                            new Date(
+                                clienteA.criadoEm ||
+                                0
+                            ) -
+                            new Date(
+                                clienteB.criadoEm ||
+                                0
+                            )
+                        );
+
+                    case "nome-az":
+                        return String(
+                            clienteA.nome ||
+                            ""
+                        ).localeCompare(
+                            String(
+                                clienteB.nome ||
+                                ""
+                            ),
+                            "pt-BR"
+                        );
+
+                    case "nome-za":
+                        return String(
+                            clienteB.nome ||
+                            ""
+                        ).localeCompare(
+                            String(
+                                clienteA.nome ||
+                                ""
+                            ),
+                            "pt-BR"
+                        );
+
+                    case "recentes":
+                    default:
+                        return (
+                            new Date(
+                                clienteB.criadoEm ||
+                                0
+                            ) -
+                            new Date(
+                                clienteA.criadoEm ||
+                                0
+                            )
+                        );
+                }
+            }
+        );
+
+    return lista;
 }
 
-function atualizarFiltro(valor) {
-    filtroAtual =
-        String(valor || "");
+/*
+|--------------------------------------------------------------------------
+| Exportação dos clientes para CSV
+|--------------------------------------------------------------------------
+*/
 
-    buscaGlobal.value =
-        filtroAtual;
+function escaparCampoCsv(
+    valor
+) {
+    let texto =
+        String(
+            valor ?? ""
+        )
+            .replace(
+                /\r?\n/g,
+                " "
+            )
+            .trim();
 
-    buscaClientes.value =
-        filtroAtual;
-
-    renderizarClientes();
-
-    if (filtroAtual.trim()) {
-        navegarPara("clientes");
+    /*
+     * Evita que programas de planilha
+     * interpretem o conteúdo como fórmula.
+     */
+    if (
+        /^[=+\-@]/.test(
+            texto
+        )
+    ) {
+        texto =
+            `'${texto}`;
     }
+
+    return `"${texto.replace(
+        /"/g,
+        '""'
+    )}"`;
+}
+
+function formatarDataCsv(
+    valor
+) {
+    if (!valor) {
+        return "";
+    }
+
+    const data =
+        new Date(valor);
+
+    if (
+        Number.isNaN(
+            data.getTime()
+        )
+    ) {
+        return "";
+    }
+
+    return new Intl.DateTimeFormat(
+        "pt-BR",
+        {
+            dateStyle: "short",
+            timeStyle: "short"
+        }
+    ).format(data);
+}
+
+function obterStatusClienteCsv(
+    cliente
+) {
+    if (
+        cliente.logoConvertida
+    ) {
+        return "Convertido";
+    }
+
+    if (
+        cliente.logoOriginal
+    ) {
+        return "Aguardando conversão";
+    }
+
+    return "Sem arquivos";
+}
+
+function exportarClientesCsv() {
+    const lista =
+        filtrarClientes();
+
+    if (!lista.length) {
+        mostrarNotificacao(
+            "Nenhum cliente para exportar",
+            "Altere os filtros ou cadastre um cliente.",
+            "aviso"
+        );
+
+        return;
+    }
+
+    const cabecalho = [
+        "Nome",
+        "CPF",
+        "Telefone",
+        "Linha",
+        "Logo original",
+        "Arquivo convertido",
+        "Status",
+        "Data do cadastro"
+    ]
+        .map(
+            escaparCampoCsv
+        )
+        .join(";");
+
+    const linhas =
+        lista.map(
+            cliente =>
+                [
+                    cliente.nome,
+                    cliente.cpf,
+                    cliente.telefone,
+                    cliente.linha,
+                    cliente.logoOriginal ||
+                        "Não enviado",
+                    cliente.logoConvertida ||
+                        "Não enviado",
+                    obterStatusClienteCsv(
+                        cliente
+                    ),
+                    formatarDataCsv(
+                        cliente.criadoEm
+                    )
+                ]
+                    .map(
+                        escaparCampoCsv
+                    )
+                    .join(";")
+        );
+
+    /*
+     * O BOM ajuda o Excel a reconhecer
+     * corretamente acentos e caracteres
+     * da língua portuguesa.
+     */
+    const conteudo =
+        "\uFEFF" +
+        [
+            cabecalho,
+            ...linhas
+        ].join("\r\n");
+
+    const arquivo =
+        new Blob(
+            [conteudo],
+            {
+                type:
+                    "text/csv;charset=utf-8"
+            }
+        );
+
+    const url =
+        URL.createObjectURL(
+            arquivo
+        );
+
+    const link =
+        document.createElement(
+            "a"
+        );
+
+    const dataAtual =
+        new Date()
+            .toISOString()
+            .slice(0, 10);
+
+    link.href =
+        url;
+
+    link.download =
+        `clientes-${dataAtual}.csv`;
+
+    document.body.appendChild(
+        link
+    );
+
+    link.click();
+    link.remove();
+
+    setTimeout(
+        () => {
+            URL.revokeObjectURL(
+                url
+            );
+        },
+        1000
+    );
+
+    mostrarNotificacao(
+        "Lista exportada",
+        `${lista.length} ${
+            lista.length === 1
+                ? "cliente foi exportado"
+                : "clientes foram exportados"
+        } para CSV.`
+    );
 }
 
 /*
@@ -1940,13 +4227,62 @@ function renderizarRecentes() {
 */
 
 function renderizarClientes() {
+    const podeVerDadosPessoais =
+        possuiPermissaoSistema(
+            "clientes.dados_pessoais"
+        );
+
+    const podeVisualizarDetalhes =
+        possuiPermissaoSistema(
+            "clientes.dados_pessoais"
+        );
+
+    const podeEditar =
+        possuiPermissaoSistema(
+            "clientes.editar"
+        );
+
+    const podeExcluir =
+        possuiPermissaoSistema(
+            "clientes.excluir"
+        );
+
+    const podeBaixarArquivos =
+        possuiPermissaoSistema(
+            "arquivos.baixar"
+        );
+
+    /*
+     * Sempre aparecem:
+     * Cliente, CPF e Ações.
+     *
+     * Telefone e linha dependem dos
+     * dados pessoais.
+     *
+     * Arquivo depende também da
+     * permissão para baixar.
+     */
+const totalColunasVisiveis =
+    2 +
+    (
+        podeVerDadosPessoais
+            ? 2
+            : 0
+    ) +
+    (
+        podeVerDadosPessoais &&
+        podeBaixarArquivos
+            ? 1
+            : 0
+    );
+
     if (carregandoClientes) {
         quantidadeResultados.textContent =
             "Carregando...";
 
         corpoTabelaClientes.innerHTML = `
             <tr>
-                <td colspan="6">
+                <td colspan="${totalColunasVisiveis}">
                     ${htmlCarregando()}
                 </td>
             </tr>
@@ -1968,7 +4304,7 @@ function renderizarClientes() {
     if (!lista.length) {
         corpoTabelaClientes.innerHTML = `
             <tr>
-                <td colspan="6">
+                <td colspan="${totalColunasVisiveis}">
                     <div class="estado-vazio">
                         <div class="estado-vazio-icone">
                             ${icone("search")}
@@ -1979,9 +4315,7 @@ function renderizarClientes() {
                         </p>
 
                         <small>
-                            Pesquise usando o nome,
-                            telefone ou somente os
-                            números do CPF.
+                            Pesquise pelo nome, CPF ou CNPJ do cliente.
                         </small>
                     </div>
                 </td>
@@ -1996,7 +4330,7 @@ function renderizarClientes() {
             .map(
                 cliente => `
                     <tr>
-                        <td>
+                        <td class="coluna-cliente-clientes">
                             <div class="tabela-cliente">
                                 <div class="avatar-cliente">
                                     ${escaparHtml(
@@ -2006,42 +4340,64 @@ function renderizarClientes() {
                                     )}
                                 </div>
 
-                                <div>
-                                    <strong>
-                                        ${escaparHtml(
-                                            cliente.nome
-                                        )}
-                                    </strong>
+                                <div class="tabela-cliente-informacoes">
+    <strong>
+        ${escaparHtml(
+            cliente.nome ||
+            "Cliente"
+        )}
+    </strong>
 
-                                    <span>
-                                        ${formatarData(
-                                            cliente.criadoEm
-                                        )}
-                                    </span>
-                                </div>
+    <span class="cpf-cliente-tabela">
+        ${escaparHtml(
+            cliente.cpf ||
+                "CPF/CNPJ não informado"
+        )}
+    </span>
+
+    ${
+        podeVerDadosPessoais
+            ? `
+                <small class="data-cliente-tabela">
+                    Cadastrado em
+                    ${formatarData(
+                        cliente.criadoEm
+                    )}
+                </small>
+            `
+            : ""
+    }
+</div>
                             </div>
                         </td>
 
-                        <td>
+                        <td
+                            class="coluna-telefone-clientes"
+                            data-permissao-exigida="clientes.dados_pessoais"
+                        >
                             ${escaparHtml(
-                                cliente.cpf
+                                cliente.telefone ||
+                                "—"
                             )}
                         </td>
 
-                        <td>
+                        <td
+                            class="coluna-linha-clientes"
+                            data-permissao-exigida="clientes.dados_pessoais"
+                        >
                             ${escaparHtml(
-                                cliente.telefone
-                            )}
+    formatarResumoLinhasCliente(
+        cliente.linha
+    )
+)}
                         </td>
 
-                        <td>
-                            ${escaparHtml(
-                                cliente.linha
-                            )}
-                        </td>
-
-                        <td>
+                        <td
+                            class="coluna-arquivo-clientes"
+                            data-permissao-exigida="clientes.dados_pessoais,arquivos.baixar"
+                        >
                             ${
+                                podeBaixarArquivos &&
                                 cliente.logoConvertidaUrl
                                     ? `
                                         <a
@@ -2049,10 +4405,13 @@ function renderizarClientes() {
                                             href="${escaparHtml(
                                                 cliente.logoConvertidaUrl
                                             )}"
+                                            target="_blank"
+                                            rel="noopener"
                                             title="Baixar arquivo convertido"
                                         >
                                             ${escaparHtml(
-                                                cliente.logoConvertida
+                                                cliente.logoConvertida ||
+                                                "Baixar arquivo"
                                             )}
                                         </a>
                                     `
@@ -2064,40 +4423,71 @@ function renderizarClientes() {
                             }
                         </td>
 
-                        <td>
+                        <td class="coluna-acoes-clientes">
                             <div class="acoes-cliente">
-                                <button
-                                    class="botao-acao"
-                                    data-visualizar="${cliente.id}"
-                                    type="button"
-                                    title="Visualizar cliente"
-                                >
-                                    ${icone("eye")}
-                                </button>
+                                ${
+                                    podeVisualizarDetalhes
+                                        ? `
+                                            <button
+                                                class="botao-acao"
+                                                data-visualizar="${escaparHtml(
+                                                    cliente.id
+                                                )}"
+                                                type="button"
+                                                title="Visualizar cliente"
+                                                aria-label="Visualizar cliente"
+                                            >
+                                                ${icone("eye")}
+                                            </button>
+                                        `
+                                        : ""
+                                }
 
-                                <button
-                                    class="botao-acao"
-                                    data-editar="${cliente.id}"
-                                    type="button"
-                                    title="Editar cliente"
-                                >
-                                    ${icone("edit")}
-                                </button>
+                                ${
+                                    podeEditar
+                                        ? `
+                                            <button
+                                                class="botao-acao"
+                                                data-editar="${escaparHtml(
+                                                    cliente.id
+                                                )}"
+                                                type="button"
+                                                title="Editar cliente"
+                                                aria-label="Editar cliente"
+                                            >
+                                                ${icone("edit")}
+                                            </button>
+                                        `
+                                        : ""
+                                }
 
-                                <button
-                                    class="botao-acao perigo"
-                                    data-excluir="${cliente.id}"
-                                    type="button"
-                                    title="Excluir cliente"
-                                >
-                                    ${icone("trash")}
-                                </button>
+                                ${
+                                    podeExcluir
+                                        ? `
+                                            <button
+                                                class="botao-acao perigo"
+                                                data-excluir="${escaparHtml(
+                                                    cliente.id
+                                                )}"
+                                                type="button"
+                                                title="Excluir cliente"
+                                                aria-label="Excluir cliente"
+                                            >
+                                                ${icone("trash")}
+                                            </button>
+                                        `
+                                        : ""
+                                }
                             </div>
                         </td>
                     </tr>
                 `
             )
             .join("");
+
+    aplicarPermissoesDeclarativas(
+        corpoTabelaClientes
+    );
 }
 
 /*
@@ -2199,7 +4589,6 @@ function renderizarArquivos() {
         gradeArquivos.innerHTML = `
             <div
                 class="estado-vazio"
-                style="grid-column: 1 / -1"
             >
                 <div class="estado-vazio-icone">
                     ${icone("folder")}
@@ -2345,6 +4734,32 @@ async function cadastrarOuEditarCliente(
 ) {
     evento.preventDefault();
 
+    const clienteEmEdicao =
+    Boolean(
+        String(
+            clienteId
+                ?.value ||
+            ""
+        ).trim()
+    );
+
+const permissaoNecessaria =
+    clienteEmEdicao
+        ? "clientes.editar"
+        : "clientes.criar";
+
+if (
+    !exigirPermissaoInterface(
+        permissaoNecessaria,
+
+        clienteEmEdicao
+            ? "Você não possui permissão para editar clientes."
+            : "Você não possui permissão para cadastrar clientes."
+    )
+) {
+    return;
+}
+
     if (
         !formularioCliente.checkValidity()
     ) {
@@ -2359,73 +4774,94 @@ async function cadastrarOuEditarCliente(
             clienteId.value || ""
         ).trim();
 
-    const cpf =
-        campoCpf.value.trim();
+    const documento =
+    campoCpf.value.trim();
 
-    if (!validarCpf(cpf)) {
-        campoCpf.classList.add(
-            "invalido"
-        );
+const rotuloDocumento =
+    obterRotuloDocumentoAtual();
 
-        mensagemCpf.textContent =
-            "Este CPF não é válido.";
+if (
+    !validarDocumentoAtual(
+        documento
+    )
+) {
+    campoCpf.classList.add(
+        "invalido"
+    );
 
-        mensagemCpf.classList.remove(
-            "valido"
-        );
+    mensagemCpf.textContent =
+        `Este ${rotuloDocumento} não é válido.`;
 
-        mensagemCpf.classList.add(
-            "erro"
-        );
+    mensagemCpf.classList.remove(
+        "valido"
+    );
 
-        campoCpf.focus();
+    mensagemCpf.classList.add(
+        "erro"
+    );
 
-        mostrarNotificacao(
-            "CPF inválido",
-            "Revise o CPF antes de salvar.",
-            "erro"
-        );
+    campoCpf.focus();
 
-        return;
-    }
+    mostrarNotificacao(
+        `${rotuloDocumento} inválido`,
+        `Revise o ${rotuloDocumento} antes de salvar.`,
+        "erro"
+    );
 
-    const duplicado =
-        clientes.some(
-            cliente =>
-                somenteNumeros(
+    return;
+}
+
+    const documentoNormalizado =
+    normalizarDocumentoPorTipo(
+        documento
+    );
+
+const duplicado =
+    clientes.some(
+        cliente => {
+            const tipoCliente =
+                identificarTipoPessoaPorDocumento(
                     cliente.cpf
+                );
+
+            return (
+                normalizarDocumentoPorTipo(
+                    cliente.cpf,
+                    tipoCliente
                 ) ===
-                    somenteNumeros(cpf) &&
+                    documentoNormalizado &&
 
                 cliente.id !== id
-        );
+            );
+        }
+    );
 
-    if (duplicado) {
-        campoCpf.classList.add(
-            "invalido"
-        );
+if (duplicado) {
+    campoCpf.classList.add(
+        "invalido"
+    );
 
-        mensagemCpf.textContent =
-            "Este CPF já está cadastrado.";
+    mensagemCpf.textContent =
+        `Este ${rotuloDocumento} já está cadastrado.`;
 
-        mensagemCpf.classList.remove(
-            "valido"
-        );
+    mensagemCpf.classList.remove(
+        "valido"
+    );
 
-        mensagemCpf.classList.add(
-            "erro"
-        );
+    mensagemCpf.classList.add(
+        "erro"
+    );
 
-        campoCpf.focus();
+    campoCpf.focus();
 
-        mostrarNotificacao(
-            "CPF já cadastrado",
-            "Procure o cadastro existente.",
-            "erro"
-        );
+    mostrarNotificacao(
+        `${rotuloDocumento} já cadastrado`,
+        "Procure o cadastro existente.",
+        "erro"
+    );
 
-        return;
-    }
+    return;
+}
 
     try {
         validarArquivosSelecionados();
@@ -2446,6 +4882,13 @@ async function cadastrarOuEditarCliente(
         new FormData(
             formularioCliente
         );
+
+    dadosFormulario.set(
+    "cpf",
+    formatarDocumentoPorTipo(
+        documento
+    )
+);
 
     dadosFormulario.delete(
         "clienteId"
@@ -2524,6 +4967,16 @@ async function cadastrarOuEditarCliente(
 */
 
 async function excluirCliente(id) {
+
+    if (
+    !exigirPermissaoInterface(
+        "clientes.excluir",
+        "Você não possui permissão para excluir clientes."
+    )
+) {
+    return;
+}
+
     const cliente =
         clientes.find(
             item =>
@@ -2534,10 +4987,17 @@ async function excluirCliente(id) {
         return;
     }
 
-    const confirmou =
-        confirm(
-            `Excluir o cadastro de ${cliente.nome} e todos os arquivos dele?`
-        );
+const confirmou =
+    await confirmarAcao({
+        titulo:
+            "Excluir cadastro?",
+
+        mensagem:
+            `O cadastro de ${cliente.nome} e todos os arquivos vinculados serão excluídos permanentemente.`,
+
+        textoConfirmar:
+            "Excluir cliente"
+    });
 
     if (!confirmou) {
         return;
@@ -2581,6 +5041,16 @@ async function excluirCliente(id) {
 }
 
 async function apagarTudo() {
+
+    if (
+    !exigirPermissaoInterface(
+        "clientes.excluir",
+        "Você não possui permissão para apagar os dados dos clientes."
+    )
+) {
+    return;
+}
+
     if (!clientes.length) {
         mostrarNotificacao(
             "Nada para apagar",
@@ -2591,10 +5061,28 @@ async function apagarTudo() {
         return;
     }
 
-    const confirmou =
-        confirm(
-            "Apagar permanentemente todos os clientes e arquivos?"
-        );
+const confirmou =
+    await confirmarAcao({
+        tipo:
+            "perigo",
+
+        titulo:
+            "Apagar todos os dados?",
+
+        mensagem:
+            [
+                `${clientes.length} ${
+                    clientes.length === 1
+                        ? "cliente será excluído"
+                        : "clientes serão excluídos"
+                }, junto com todos os arquivos vinculados.`,
+
+                "Esta ação não poderá ser desfeita."
+            ].join("\n\n"),
+
+        textoConfirmar:
+            "Apagar tudo"
+    });
 
     if (!confirmou) {
         return;
@@ -2763,6 +5251,16 @@ function extrairNomeBackup(
 }
 
 async function criarBackupSistema() {
+
+    if (
+    !exigirPermissaoInterface(
+        "backup.criar",
+        "Você não possui permissão para criar backups."
+    )
+) {
+    return;
+}
+
     if (!botaoCriarBackup) {
         return;
     }
@@ -2953,6 +5451,16 @@ function atualizarBackupSelecionado() {
 }
 
 async function restaurarBackupSistema() {
+
+    if (
+    !exigirPermissaoInterface(
+        "backup.restaurar",
+        "Você não possui permissão para restaurar backups."
+    )
+) {
+    return;
+}
+
     const arquivo =
         inputBackup
             ?.files?.[0];
@@ -2967,15 +5475,29 @@ async function restaurarBackupSistema() {
         return;
     }
 
-    const confirmou =
-        confirm(
+const confirmou =
+    await confirmarAcao({
+        tipo:
+            "aviso",
+
+        icone:
+            "file",
+
+        titulo:
+            "Restaurar backup?",
+
+        mensagem:
             [
-                `Restaurar o backup "${arquivo.name}"?`,
-                "",
-                "Todos os clientes e arquivos atuais serão substituídos.",
+                `Arquivo selecionado: ${arquivo.name}`,
+
+                "Todos os clientes, ordens e arquivos atuais serão substituídos pelos dados do backup.",
+
                 "Esta ação não poderá ser desfeita."
-            ].join("\n")
-        );
+            ].join("\n\n"),
+
+        textoConfirmar:
+            "Restaurar backup"
+    });
 
     if (!confirmou) {
         return;
@@ -3116,6 +5638,48 @@ function formatarPerfilUsuario(
     );
 }
 
+function aplicarUsuarioNaInterface(
+    usuario
+) {
+    if (!usuario) {
+        return;
+    }
+
+    if (nomeUsuarioLogado) {
+        nomeUsuarioLogado.textContent =
+            usuario.nome ||
+            "Administrador";
+    }
+
+    if (perfilUsuarioLogado) {
+        perfilUsuarioLogado.textContent =
+            formatarPerfilUsuario(
+                usuario.perfil
+            );
+    }
+
+    if (iniciaisUsuarioLogado) {
+        iniciaisUsuarioLogado.textContent =
+            obterIniciaisUsuario(
+                usuario.nome
+            );
+    }
+
+    /*
+     * Preenche os campos da área
+     * Minha conta.
+     */
+    if (nomeConta) {
+        nomeConta.value =
+            usuario.nome || "";
+    }
+
+    if (usuarioConta) {
+        usuarioConta.value =
+            usuario.usuario || "";
+    }
+}
+
 async function carregarUsuarioAtual() {
     try {
         const resposta =
@@ -3123,7 +5687,9 @@ async function carregarUsuarioAtual() {
                 "/api/auth/status"
             );
 
-        if (!resposta.autenticado) {
+        if (
+            !resposta.autenticado
+        ) {
             window.location.replace(
                 "/login.html"
             );
@@ -3131,26 +5697,312 @@ async function carregarUsuarioAtual() {
             return false;
         }
 
-        const usuario =
-            resposta.usuario;
+        usuarioAtualSistema =
+            resposta.usuario ||
+            null;
 
-        nomeUsuarioLogado.textContent =
-            usuario?.nome ||
-            "Administrador";
+        permissoesUsuarioSistema =
+            usuarioAtualSistema
+                ?.permissoes &&
+            typeof usuarioAtualSistema
+                .permissoes ===
+                "object"
 
-        perfilUsuarioLogado.textContent =
-            formatarPerfilUsuario(
-                usuario?.perfil
-            );
+                ? {
+                    ...usuarioAtualSistema
+                        .permissoes
+                }
 
-        iniciaisUsuarioLogado.textContent =
-            obterIniciaisUsuario(
-                usuario?.nome
-            );
+                : Object.create(
+                    null
+                );
+
+        window.usuarioAtualSistema =
+            usuarioAtualSistema;
+
+        aplicarUsuarioNaInterface(
+            usuarioAtualSistema
+        );
+
+        aplicarPermissoesNaInterface();
 
         return true;
-    } catch {
+    } catch (erro) {
+        console.error(
+            "Falha ao carregar usuário:",
+            erro
+        );
+
         return false;
+    }
+}
+
+/*
+|--------------------------------------------------------------------------
+| Atualização dos dados da conta
+|--------------------------------------------------------------------------
+*/
+
+async function salvarPerfilConta(
+    evento
+) {
+    evento.preventDefault();
+
+    if (
+        !formularioPerfil ||
+        !nomeConta ||
+        !usuarioConta ||
+        !botaoSalvarPerfil
+    ) {
+        return;
+    }
+
+    if (
+        !formularioPerfil
+            .checkValidity()
+    ) {
+        formularioPerfil
+            .reportValidity();
+
+        return;
+    }
+
+    const nome =
+        nomeConta.value.trim();
+
+    const usuario =
+        usuarioConta.value
+            .trim()
+            .toLowerCase();
+
+    const formatoUsuario =
+        /^[a-z0-9._-]+$/;
+
+    if (
+        !formatoUsuario.test(
+            usuario
+        )
+    ) {
+        mostrarNotificacao(
+            "Usuário inválido",
+            "Use somente letras sem acento, números, ponto, hífen ou underline.",
+            "erro"
+        );
+
+        usuarioConta.focus();
+
+        return;
+    }
+
+    const textoBotao =
+        botaoSalvarPerfil
+            .querySelector("span");
+
+    const textoOriginal =
+        textoBotao?.textContent ||
+        "Salvar dados da conta";
+
+    botaoSalvarPerfil.disabled =
+        true;
+
+    if (textoBotao) {
+        textoBotao.textContent =
+            "Salvando...";
+    }
+
+    try {
+        const resposta =
+            await requisicaoApi(
+                "/api/auth/perfil",
+                {
+                    method: "PUT",
+
+                    body:
+                        JSON.stringify({
+                            nome,
+                            usuario
+                        })
+                }
+            );
+
+        aplicarUsuarioNaInterface(
+            resposta.usuario
+        );
+
+        mostrarNotificacao(
+            "Conta atualizada",
+            resposta.mensagem ||
+            "Os dados da conta foram atualizados."
+        );
+    } catch (erro) {
+        mostrarNotificacao(
+            "Não foi possível atualizar",
+            erro.message,
+            "erro"
+        );
+    } finally {
+        botaoSalvarPerfil.disabled =
+            false;
+
+        if (textoBotao) {
+            textoBotao.textContent =
+                textoOriginal;
+        }
+    }
+}
+
+/*
+|--------------------------------------------------------------------------
+| Alteração da senha da conta
+|--------------------------------------------------------------------------
+*/
+
+async function salvarNovaSenha(
+    evento
+) {
+    evento.preventDefault();
+
+    if (
+        !formularioSenha ||
+        !senhaAtualConta ||
+        !novaSenhaConta ||
+        !confirmarNovaSenhaConta ||
+        !botaoSalvarSenha
+    ) {
+        return;
+    }
+
+    if (
+        !formularioSenha
+            .checkValidity()
+    ) {
+        formularioSenha
+            .reportValidity();
+
+        return;
+    }
+
+    const senhaAtual =
+        senhaAtualConta.value;
+
+    const novaSenha =
+        novaSenhaConta.value;
+
+    const confirmarNovaSenha =
+        confirmarNovaSenhaConta.value;
+
+    if (
+        novaSenha !==
+        confirmarNovaSenha
+    ) {
+        mostrarNotificacao(
+            "Senhas diferentes",
+            "A confirmação não corresponde à nova senha.",
+            "erro"
+        );
+
+        confirmarNovaSenhaConta.focus();
+
+        return;
+    }
+
+    if (
+        novaSenha === senhaAtual
+    ) {
+        mostrarNotificacao(
+            "Escolha outra senha",
+            "A nova senha deve ser diferente da senha atual.",
+            "erro"
+        );
+
+        novaSenhaConta.focus();
+
+        return;
+    }
+
+    const possuiLetra =
+        /[a-zA-Z]/.test(
+            novaSenha
+        );
+
+    const possuiNumero =
+        /\d/.test(
+            novaSenha
+        );
+
+    if (
+        novaSenha.length < 10 ||
+        !possuiLetra ||
+        !possuiNumero
+    ) {
+        mostrarNotificacao(
+            "Senha pouco segura",
+            "Use pelo menos 10 caracteres, contendo uma letra e um número.",
+            "erro"
+        );
+
+        novaSenhaConta.focus();
+
+        return;
+    }
+
+    const textoBotao =
+        botaoSalvarSenha
+            .querySelector("span");
+
+    const textoOriginal =
+        textoBotao?.textContent ||
+        "Alterar minha senha";
+
+    botaoSalvarSenha.disabled =
+        true;
+
+    if (textoBotao) {
+        textoBotao.textContent =
+            "Alterando senha...";
+    }
+
+    try {
+        const resposta =
+            await requisicaoApi(
+                "/api/auth/senha",
+                {
+                    method: "PUT",
+
+                    body:
+                        JSON.stringify({
+                            senhaAtual,
+                            novaSenha,
+                            confirmarNovaSenha
+                        })
+                }
+            );
+
+        formularioSenha.reset();
+
+        aplicarUsuarioNaInterface(
+            resposta.usuario
+        );
+
+        mostrarNotificacao(
+            "Senha alterada",
+            resposta.mensagem ||
+            "Sua senha foi alterada com sucesso."
+        );
+    } catch (erro) {
+        mostrarNotificacao(
+            "Não foi possível alterar",
+            erro.message,
+            "erro"
+        );
+    } finally {
+        botaoSalvarSenha.disabled =
+            false;
+
+        if (textoBotao) {
+            textoBotao.textContent =
+                textoOriginal;
+        }
     }
 }
 
@@ -3213,6 +6065,195 @@ $$(
         fecharModalCliente
     );
 });
+
+botaoLinhaCliente
+    ?.addEventListener(
+        "click",
+        () => {
+            if (
+                menuLinhaCliente?.hidden
+            ) {
+                abrirMenuLinhaCliente();
+            } else {
+                fecharMenuLinhaCliente();
+            }
+        }
+    );
+
+buscaLinhaCliente
+    ?.addEventListener(
+        "input",
+        renderizarOpcoesLinhaCliente
+    );
+
+listaLinhasCliente
+    ?.addEventListener(
+        "click",
+        evento => {
+            const opcao =
+                evento.target.closest(
+                    "[data-valor-linha]"
+                );
+
+            if (!opcao) {
+                return;
+            }
+
+            selecionarLinhaCliente(
+                decodeURIComponent(
+                    opcao.dataset
+                        .valorLinha
+                )
+            );
+        }
+    );
+
+document.addEventListener(
+    "click",
+    evento => {
+        if (
+            seletorLinhaCliente &&
+            !seletorLinhaCliente.contains(
+                evento.target
+            )
+        ) {
+            fecharMenuLinhaCliente();
+        }
+    }
+);
+
+document.addEventListener(
+    "keydown",
+    evento => {
+        if (
+            evento.key === "Escape" &&
+            menuLinhaCliente &&
+            !menuLinhaCliente.hidden
+        ) {
+            fecharMenuLinhaCliente();
+            botaoLinhaCliente?.focus();
+        }
+    }
+);
+
+linhasSelecionadasCliente
+    ?.addEventListener(
+        "click",
+        evento => {
+            const botao =
+                evento.target.closest(
+                    "[data-remover-linha-cliente]"
+                );
+
+            if (!botao) {
+                return;
+            }
+
+            removerLinhaCliente(
+                decodeURIComponent(
+                    botao.dataset
+                        .removerLinhaCliente
+                )
+            );
+        }
+    );
+
+botaoLimparLinhasCliente
+    ?.addEventListener(
+        "click",
+        limparLinhasCliente
+    );
+
+botaoConcluirLinhasCliente
+    ?.addEventListener(
+        "click",
+        () => {
+            fecharMenuLinhaCliente();
+
+            botaoLinhaCliente
+                ?.focus();
+        }
+    );
+
+botaoConfirmarAcao
+    ?.addEventListener(
+        "click",
+        () => {
+            finalizarConfirmacao(
+                true
+            );
+        }
+    );
+
+botaoCancelarConfirmacao
+    ?.addEventListener(
+        "click",
+        () => {
+            finalizarConfirmacao(
+                false
+            );
+        }
+    );
+
+$$(
+    "[data-cancelar-confirmacao]"
+).forEach(
+    elemento => {
+        elemento.addEventListener(
+            "click",
+            () => {
+                finalizarConfirmacao(
+                    false
+                );
+            }
+        );
+    }
+);
+
+document.addEventListener(
+    "keydown",
+    evento => {
+        if (
+            evento.key === "Escape" &&
+            modalConfirmacao
+                ?.classList.contains(
+                    "aberto"
+                )
+        ) {
+            finalizarConfirmacao(
+                false
+            );
+        }
+    }
+);
+
+botaoExportarClientes
+    ?.addEventListener(
+        "click",
+        exportarClientesCsv
+    );
+
+filtroStatusCliente
+    ?.addEventListener(
+        "change",
+        evento => {
+            statusClienteAtual =
+                evento.target.value;
+
+            renderizarClientes();
+        }
+    );
+
+ordenacaoClientes
+    ?.addEventListener(
+        "change",
+        evento => {
+            ordenacaoClienteAtual =
+                evento.target.value;
+
+            renderizarClientes();
+        }
+    );
 
 [
     detalhesOriginal,
@@ -3333,15 +6374,31 @@ botaoTema
         alternarTema
     );
 
-botaoMenuMobile.addEventListener(
-    "click",
-    abrirMenuMobile
-);
+botaoMenuMobile
+    ?.addEventListener(
+        "click",
+        () => {
+            const estaAberto =
+                sidebar
+                    ?.classList
+                    .contains(
+                        "aberto"
+                    );
 
-fundoMenuMobile.addEventListener(
-    "click",
-    fecharMenuMobile
-);
+            if (estaAberto) {
+                fecharMenuMobile();
+                return;
+            }
+
+            abrirMenuMobile();
+        }
+    );
+
+fundoMenuMobile
+    ?.addEventListener(
+        "click",
+        fecharMenuMobile
+    );
 
 botaoSair
     ?.addEventListener(
@@ -3349,21 +6406,42 @@ botaoSair
         sairDoSistema
 );
 
+botoesTipoPessoa
+    .forEach(
+        botao => {
+            botao.addEventListener(
+                "click",
+                () => {
+                    definirTipoPessoaCliente(
+                        botao.dataset
+                            .tipoPessoa,
+                        {
+                            limparCampo:
+                                true
+                        }
+                    );
+
+                    campoCpf.focus();
+                }
+            );
+        }
+    );
+
 campoCpf.addEventListener(
     "input",
     evento => {
         evento.target.value =
-            formatarCpf(
+            formatarDocumentoPorTipo(
                 evento.target.value
             );
 
-        atualizarEstadoCpf();
+        atualizarEstadoDocumento();
     }
 );
 
 campoCpf.addEventListener(
     "blur",
-    atualizarEstadoCpf
+    atualizarEstadoDocumento
 );
 
 campoTelefone.addEventListener(
@@ -3406,26 +6484,72 @@ campoLogoConvertida.addEventListener(
     }
 );
 
-buscaGlobal.addEventListener(
-    "input",
-    evento =>
-        atualizarFiltro(
-            evento.target.value
-        )
-);
+buscaGlobal
+    ?.addEventListener(
+        "input",
+        evento => {
+            atualizarFiltro(
+                evento.target.value,
+                true
+            );
+        }
+    );
 
-buscaClientes.addEventListener(
-    "input",
-    evento => {
-        filtroAtual =
-            evento.target.value;
+buscaGlobal
+    ?.addEventListener(
+        "search",
+        evento => {
+            atualizarFiltro(
+                evento.target.value,
+                Boolean(
+                    evento.target.value
+                        .trim()
+                )
+            );
+        }
+    );
 
-        buscaGlobal.value =
-            evento.target.value;
+buscaGlobal
+    ?.addEventListener(
+        "keydown",
+        evento => {
+            if (
+                evento.key !== "Enter"
+            ) {
+                return;
+            }
 
-        renderizarClientes();
-    }
-);
+            evento.preventDefault();
+
+            atualizarFiltro(
+                evento.target.value,
+                true
+            );
+        }
+    );
+
+buscaClientes
+    ?.addEventListener(
+        "input",
+        evento => {
+            atualizarFiltro(
+                evento.target.value,
+                false
+            );
+        }
+    );
+
+formularioPerfil
+    ?.addEventListener(
+        "submit",
+        salvarPerfilConta
+    );
+
+formularioSenha
+    ?.addEventListener(
+        "submit",
+        salvarNovaSenha
+    );
 
 formularioCliente.addEventListener(
     "submit",
@@ -3495,6 +6619,180 @@ document.addEventListener(
 
 /*
 |--------------------------------------------------------------------------
+| Confirmação personalizada
+|--------------------------------------------------------------------------
+*/
+
+let resolverConfirmacao = null;
+let overflowAnteriorConfirmacao = "";
+
+function finalizarConfirmacao(
+    confirmou
+) {
+    if (!resolverConfirmacao) {
+        return;
+    }
+
+    const resolver =
+        resolverConfirmacao;
+
+    resolverConfirmacao =
+        null;
+
+    modalConfirmacao
+        ?.classList.remove(
+            "aberto"
+        );
+
+    modalConfirmacao
+        ?.setAttribute(
+            "aria-hidden",
+            "true"
+        );
+
+    document.body.style.overflow =
+        overflowAnteriorConfirmacao;
+
+    resolver(
+        Boolean(confirmou)
+    );
+}
+
+function confirmarAcao({
+    titulo =
+        "Confirmar ação?",
+
+    mensagem =
+        "Esta ação não poderá ser desfeita.",
+
+    textoConfirmar =
+        "Confirmar",
+
+    tipo =
+        "perigo",
+
+    icone =
+        ""
+} = {}) {
+    if (
+        !modalConfirmacao ||
+        !tituloConfirmacao ||
+        !mensagemConfirmacao ||
+        !botaoConfirmarAcao
+    ) {
+        console.error(
+            "O modal de confirmação não foi encontrado."
+        );
+
+        return Promise.resolve(
+            false
+        );
+    }
+
+    /*
+     * Cancela uma confirmação anterior,
+     * caso ainda exista alguma aberta.
+     */
+    if (resolverConfirmacao) {
+        finalizarConfirmacao(
+            false
+        );
+    }
+
+    const configuracoes = {
+        perigo: {
+            icone:
+                "trash",
+
+            classeBotao:
+                "botao-perigo"
+        },
+
+        aviso: {
+            icone:
+                "file",
+
+            classeBotao:
+                "botao-aviso"
+        },
+
+        sucesso: {
+            icone:
+                "check",
+
+            classeBotao:
+                "botao-sucesso"
+        }
+    };
+
+    const configuracao =
+        configuracoes[tipo] ||
+        configuracoes.perigo;
+
+    tituloConfirmacao.textContent =
+        titulo;
+
+    mensagemConfirmacao.textContent =
+        mensagem;
+
+    botaoConfirmarAcao.textContent =
+        textoConfirmar;
+
+    modalConfirmacao.dataset.tipo =
+        tipo;
+
+    if (iconeConfirmacaoUse) {
+        iconeConfirmacaoUse.setAttribute(
+            "href",
+            `#icon-${
+                icone ||
+                configuracao.icone
+            }`
+        );
+    }
+
+    botaoConfirmarAcao.classList.remove(
+        "botao-perigo",
+        "botao-aviso",
+        "botao-sucesso"
+    );
+
+    botaoConfirmarAcao.classList.add(
+        configuracao.classeBotao
+    );
+
+    overflowAnteriorConfirmacao =
+        document.body.style.overflow;
+
+    document.body.style.overflow =
+        "hidden";
+
+    modalConfirmacao.classList.add(
+        "aberto"
+    );
+
+    modalConfirmacao.setAttribute(
+        "aria-hidden",
+        "false"
+    );
+
+    setTimeout(
+        () => {
+            botaoConfirmarAcao.focus();
+        },
+        50
+    );
+
+    return new Promise(
+        resolver => {
+            resolverConfirmacao =
+                resolver;
+        }
+    );
+}
+
+/*
+|--------------------------------------------------------------------------
 | Eventos do backup
 |--------------------------------------------------------------------------
 */
@@ -3527,12 +6825,182 @@ botaoRestaurarBackup
 
 /*
 |--------------------------------------------------------------------------
+| Sidebar recolhível
+|--------------------------------------------------------------------------
+*/
+
+(() => {
+    const CHAVE_SIDEBAR =
+        "sidebarSistemaRecolhida";
+
+    const botao =
+        document.querySelector(
+            "#botaoRecolherSidebar"
+        );
+
+    if (!botao) {
+        return;
+    }
+
+    const consultaDesktop =
+        window.matchMedia(
+            "(min-width: 1025px)"
+        );
+
+    function sidebarEstaRecolhida() {
+        return document.body
+            .classList
+            .contains(
+                "sidebar-recolhida"
+            );
+    }
+
+    function aplicarEstadoSidebar(
+        recolhida
+    ) {
+        document.body.classList.toggle(
+            "sidebar-recolhida",
+            recolhida &&
+            consultaDesktop.matches
+        );
+
+        const estadoAtual =
+            recolhida &&
+            consultaDesktop.matches;
+
+        botao.setAttribute(
+            "aria-expanded",
+            estadoAtual
+                ? "false"
+                : "true"
+        );
+
+        botao.setAttribute(
+            "aria-label",
+            estadoAtual
+                ? "Expandir menu lateral"
+                : "Recolher menu lateral"
+        );
+
+        botao.title =
+            estadoAtual
+                ? "Expandir menu"
+                : "Recolher menu";
+
+        const texto =
+            botao.querySelector(
+                "span"
+            );
+
+        if (texto) {
+            texto.textContent =
+                estadoAtual
+                    ? "Expandir menu"
+                    : "Recolher menu";
+        }
+    }
+
+    function obterEstadoSalvo() {
+        return (
+            localStorage.getItem(
+                CHAVE_SIDEBAR
+            ) ===
+            "true"
+        );
+    }
+
+    /*
+     * Adiciona título aos itens para que,
+     * no menu recolhido, o navegador mostre
+     * o nome ao passar o mouse.
+     */
+    document
+        .querySelectorAll(
+            ".sidebar .menu-item"
+        )
+        .forEach(
+            item => {
+                const texto =
+                    item.querySelector(
+                        ".menu-item-conteudo strong"
+                    )
+                        ?.textContent
+                        ?.trim() ||
+
+                    item.querySelector(
+                        ":scope > span:last-child"
+                    )
+                        ?.textContent
+                        ?.trim();
+
+                if (
+                    texto &&
+                    !item.title
+                ) {
+                    item.title =
+                        texto;
+                }
+            }
+        );
+
+    aplicarEstadoSidebar(
+        obterEstadoSalvo()
+    );
+
+    botao.addEventListener(
+        "click",
+        () => {
+            const novoEstado =
+                !sidebarEstaRecolhida();
+
+            localStorage.setItem(
+                CHAVE_SIDEBAR,
+                String(
+                    novoEstado
+                )
+            );
+
+            aplicarEstadoSidebar(
+                novoEstado
+            );
+        }
+    );
+
+    function atualizarPorTamanho() {
+        aplicarEstadoSidebar(
+            obterEstadoSalvo()
+        );
+    }
+
+    if (
+        typeof consultaDesktop
+            .addEventListener ===
+        "function"
+    ) {
+        consultaDesktop.addEventListener(
+            "change",
+            atualizarPorTamanho
+        );
+    } else {
+        consultaDesktop.addListener(
+            atualizarPorTamanho
+        );
+    }
+})();
+
+/*
+|--------------------------------------------------------------------------
 | Inicialização
 |--------------------------------------------------------------------------
 */
 
 async function inicializarSistema() {
     carregarTema();
+
+    if (anoCreditos) {
+    anoCreditos.textContent =
+        new Date().getFullYear();
+}
 
     const autenticado =
         await carregarUsuarioAtual();
