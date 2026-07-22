@@ -362,11 +362,12 @@ function aplicarPermissoesNaInterface() {
 
     alterarVisibilidadePermissao(
         `
-        #menuNovoCliente,
-        #botaoNovoCliente,
-        #botaoCadastrarDestaque,
-        #acaoNovoCliente,
-        #botaoNovoClienteSecao
+    #menuNovoCliente,
+    #botaoNovoCliente,
+    #botaoCadastrarDestaque,
+    #botaoCadastrarClienteOrdem,
+    #acaoNovoCliente,
+    #botaoNovoClienteSecao
         `,
         podeCriarClientes
     );
@@ -3948,6 +3949,11 @@ atualizarEstadoDocumento();
 }
 
 function fecharModalCliente() {
+    const estavaAberto =
+        modalCliente.classList.contains(
+            "aberto"
+        );
+
     fecharMenuLinhaCliente();
 
     modalCliente.classList.remove(
@@ -3961,6 +3967,14 @@ function fecharModalCliente() {
 
     document.body.style.overflow =
         "";
+
+    if (estavaAberto) {
+        window.dispatchEvent(
+            new CustomEvent(
+                "modal-cliente-fechado"
+            )
+        );
+    }
 }
 
 /*
@@ -5714,13 +5728,29 @@ dadosFormulario.set(
                 }
             );
 
-        await carregarClientesDoServidor(
-            {
-                mostrarErro: false
-            }
-        );
+await carregarClientesDoServidor(
+    {
+        mostrarErro: false
+    }
+);
 
-        fecharModalCliente();
+window.dispatchEvent(
+    new CustomEvent(
+        "cliente-salvo",
+        {
+            detail: {
+                cliente:
+                    resposta.cliente ||
+                    null,
+
+                novo:
+                    !id
+            }
+        }
+    )
+);
+
+fecharModalCliente();
 
         mostrarNotificacao(
             id
@@ -7589,11 +7619,26 @@ $("#botaoApagarTudo")
 document.addEventListener(
     "keydown",
     evento => {
-        if (evento.key === "Escape") {
-            fecharModalCliente();
-            fecharDetalhes();
-            fecharMenuMobile();
+        if (evento.key !== "Escape") {
+            return;
         }
+
+        if (
+            modalCliente
+                ?.classList.contains(
+                    "aberto"
+                )
+        ) {
+            evento.preventDefault();
+            evento.stopImmediatePropagation();
+
+            fecharModalCliente();
+
+            return;
+        }
+
+        fecharDetalhes();
+        fecharMenuMobile();
     }
 );
 
