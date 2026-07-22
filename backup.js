@@ -757,35 +757,174 @@ function criarServicoBackup({
     |--------------------------------------------------------------------------
     */
 
-    function validarBancoRecebido(
+function validarBancoRecebido(
+    bancoRecebido
+) {
+    /*
+     * Confere a integridade geral
+     * do arquivo SQLite.
+     */
+
+    const resultadoIntegridade =
         bancoRecebido
+            .prepare(
+                "PRAGMA integrity_check"
+            )
+            .get();
+
+    const valorIntegridade =
+        Object.values(
+            resultadoIntegridade || {}
+        )[0];
+
+    if (
+        valorIntegridade !==
+        "ok"
     ) {
-        const resultadoIntegridade =
-            bancoRecebido
-                .prepare(
-                    "PRAGMA integrity_check"
-                )
-                .get();
+        throw new ErroHttp(
+            400,
+            "O banco de dados do backup está corrompido."
+        );
+    }
 
-        const valorIntegridade =
-            Object.values(
-                resultadoIntegridade ||
-                {}
-            )[0];
+    /*
+     * Confere relacionamentos, como
+     * ordens vinculadas a clientes.
+     */
 
-        if (
-            valorIntegridade !== "ok"
-        ) {
-            throw new ErroHttp(
-                400,
-                "O banco de dados do backup está corrompido."
-            );
+    const errosRelacionamentos =
+        bancoRecebido
+            .prepare(
+                "PRAGMA foreign_key_check"
+            )
+            .all();
+
+    if (
+        errosRelacionamentos.length
+    ) {
+        throw new ErroHttp(
+            400,
+            "O banco do backup possui relacionamentos inválidos.",
+            {
+                quantidade:
+                    errosRelacionamentos.length
+            }
+        );
+    }
+
+    const tabelasObrigatorias = {
+        usuarios: {
+            tabela:
+                "usuarios",
+
+            colunas: [
+                "id",
+                "nome",
+                "usuario",
+                "senha_hash",
+                "perfil",
+                "ativo",
+                "criado_em",
+                "atualizado_em",
+                "ultimo_login_em",
+                "permissoes"
+            ]
+        },
+
+        clientes: {
+            tabela:
+                "clientes",
+
+            colunas: [
+                "id",
+                "nome",
+                "cpf",
+                "cpf_numeros",
+                "telefone",
+                "telefone_numeros",
+                "linha",
+                "logo_original",
+                "logo_original_arquivo",
+                "logo_convertida",
+                "logo_convertida_arquivo",
+                "observacoes",
+                "criado_em",
+                "atualizado_em"
+            ]
+        },
+
+        linhas: {
+            tabela:
+                "catalogo_linhas",
+
+            colunas: [
+                "id",
+                "marca",
+                "codigo",
+                "nome",
+                "cor_hex",
+                "unidade",
+                "estoque",
+                "estoque_minimo",
+                "ativo",
+                "observacoes",
+                "criado_em",
+                "atualizado_em",
+                "fornecedor",
+                "valor_centavos"
+            ]
+        },
+
+        ordens: {
+            tabela:
+                "ordens",
+
+            colunas: [
+                "numero",
+                "id",
+                "cliente_id",
+                "cliente_nome",
+                "cliente_cpf",
+                "descricao",
+                "quantidade",
+                "linha",
+                "prazo_entrega",
+                "valor_centavos",
+                "status",
+                "arquivo_original",
+                "arquivo_convertido",
+                "observacoes",
+                "criado_em",
+                "atualizado_em"
+            ]
         }
+    };
 
-        const colunas =
+    function protegerIdentificador(
+        valor
+    ) {
+        return `"${String(
+            valor
+        ).replace(
+            /"/g,
+            '""'
+        )}"`;
+    }
+
+    function lerTabelaObrigatoria(
+        configuracao
+    ) {
+        const nomeTabela =
+            configuracao.tabela;
+
+        const colunasExistentes =
             bancoRecebido
                 .prepare(
-                    "PRAGMA table_info(clientes)"
+                    `PRAGMA table_info(${
+                        protegerIdentificador(
+                            nomeTabela
+                        )
+                    })`
                 )
                 .all()
                 .map(
@@ -793,64 +932,104 @@ function criarServicoBackup({
                         coluna.name
                 );
 
-        const colunasNecessarias = [
-            "id",
-            "nome",
-            "cpf",
-            "cpf_numeros",
-            "telefone",
-            "telefone_numeros",
-            "linha",
-            "logo_original",
-            "logo_original_arquivo",
-            "logo_convertida",
-            "logo_convertida_arquivo",
-            "observacoes",
-            "criado_em",
-            "atualizado_em"
-        ];
+        const colunasFaltando =
+            configuracao
+                .colunas
+                .filter(
+                    coluna =>
+                        !colunasExistentes
+                            .includes(
+                                coluna
+                            )
+                );
 
-        const faltando =
-            colunasNecessarias.filter(
-                coluna =>
-                    !colunas.includes(
-                        coluna
-                    )
-            );
-
-        if (faltando.length) {
+        if (
+            colunasFaltando.length
+        ) {
             throw new ErroHttp(
                 400,
-                "O banco do backup não possui a estrutura esperada.",
+                `A tabela ${nomeTabela} do backup não possui a estrutura esperada.`,
                 {
-                    colunasFaltando:
-                        faltando
+                    tabela:
+                        nomeTabela,
+
+                    colunasFaltando
                 }
             );
         }
 
+        const selecaoColunas =
+            configuracao
+                .colunas
+                .map(
+                    protegerIdentificador
+                )
+                .join(
+                    ",\n"
+                );
+
         return bancoRecebido
             .prepare(`
                 SELECT
-                    id,
-                    nome,
-                    cpf,
-                    cpf_numeros,
-                    telefone,
-                    telefone_numeros,
-                    linha,
-                    logo_original,
-                    logo_original_arquivo,
-                    logo_convertida,
-                    logo_convertida_arquivo,
-                    observacoes,
-                    criado_em,
-                    atualizado_em
-                FROM clientes
-                ORDER BY criado_em ASC
+                    ${selecaoColunas}
+
+                FROM ${
+                    protegerIdentificador(
+                        nomeTabela
+                    )
+                }
             `)
             .all();
     }
+
+    const dadosRecebidos = {};
+
+    for (
+        const [
+            identificador,
+            configuracao
+        ]
+        of Object.entries(
+            tabelasObrigatorias
+        )
+    ) {
+        dadosRecebidos[
+            identificador
+        ] =
+            lerTabelaObrigatoria(
+                configuracao
+            );
+    }
+
+    /*
+     * Impede restaurar um banco que
+     * deixaria o sistema sem acesso.
+     */
+
+    const possuiAdministradorAtivo =
+        dadosRecebidos
+            .usuarios
+            .some(
+                usuario =>
+                    usuario.perfil ===
+                        "administrador" &&
+
+                    Number(
+                        usuario.ativo
+                    ) === 1
+            );
+
+    if (
+        !possuiAdministradorAtivo
+    ) {
+        throw new ErroHttp(
+            400,
+            "O backup não possui um administrador ativo."
+        );
+    }
+
+    return dadosRecebidos;
+}
 
     /*
     |--------------------------------------------------------------------------
@@ -1035,43 +1214,140 @@ function criarServicoBackup({
     */
 
     function restaurarRegistrosBanco(
-        clientes
+        dadosRecebidos
     ) {
-        const inserir =
-            banco.prepare(`
-                INSERT INTO clientes (
-                    id,
-                    nome,
-                    cpf,
-                    cpf_numeros,
-                    telefone,
-                    telefone_numeros,
-                    linha,
-                    logo_original,
-                    logo_original_arquivo,
-                    logo_convertida,
-                    logo_convertida_arquivo,
-                    observacoes,
-                    criado_em,
-                    atualizado_em
-                )
-                VALUES (
-                    ?,
-                    ?,
-                    ?,
-                    ?,
-                    ?,
-                    ?,
-                    ?,
-                    ?,
-                    ?,
-                    ?,
-                    ?,
-                    ?,
-                    ?,
-                    ?
-                )
-            `);
+        const configuracoes = [
+            {
+                tabela: "usuarios",
+                colunas: [
+                    "id",
+                    "nome",
+                    "usuario",
+                    "senha_hash",
+                    "perfil",
+                    "ativo",
+                    "criado_em",
+                    "atualizado_em",
+                    "ultimo_login_em",
+                    "permissoes"
+                ],
+                registros:
+                    dadosRecebidos.usuarios
+            },
+            {
+                tabela: "clientes",
+                colunas: [
+                    "id",
+                    "nome",
+                    "cpf",
+                    "cpf_numeros",
+                    "telefone",
+                    "telefone_numeros",
+                    "linha",
+                    "logo_original",
+                    "logo_original_arquivo",
+                    "logo_convertida",
+                    "logo_convertida_arquivo",
+                    "observacoes",
+                    "criado_em",
+                    "atualizado_em"
+                ],
+                registros:
+                    dadosRecebidos.clientes
+            },
+            {
+                tabela: "catalogo_linhas",
+                colunas: [
+                    "id",
+                    "marca",
+                    "codigo",
+                    "nome",
+                    "cor_hex",
+                    "unidade",
+                    "estoque",
+                    "estoque_minimo",
+                    "ativo",
+                    "observacoes",
+                    "criado_em",
+                    "atualizado_em",
+                    "fornecedor",
+                    "valor_centavos"
+                ],
+                registros:
+                    dadosRecebidos.linhas
+            },
+            {
+                tabela: "ordens",
+                colunas: [
+                    "numero",
+                    "id",
+                    "cliente_id",
+                    "cliente_nome",
+                    "cliente_cpf",
+                    "descricao",
+                    "quantidade",
+                    "linha",
+                    "prazo_entrega",
+                    "valor_centavos",
+                    "status",
+                    "arquivo_original",
+                    "arquivo_convertido",
+                    "observacoes",
+                    "criado_em",
+                    "atualizado_em"
+                ],
+                registros:
+                    dadosRecebidos.ordens
+            }
+        ];
+
+        function protegerIdentificador(
+            valor
+        ) {
+            return `"${String(
+                valor
+            ).replace(
+                /"/g,
+                '""'
+            )}"`;
+        }
+
+        const inseridores =
+            configuracoes.map(
+                configuracao => {
+                    const colunasSql =
+                        configuracao
+                            .colunas
+                            .map(
+                                protegerIdentificador
+                            )
+                            .join(", ");
+
+                    const valoresSql =
+                        configuracao
+                            .colunas
+                            .map(() => "?")
+                            .join(", ");
+
+                    return {
+                        ...configuracao,
+
+                        inserir:
+                            banco.prepare(`
+                                INSERT INTO ${
+                                    protegerIdentificador(
+                                        configuracao.tabela
+                                    )
+                                } (
+                                    ${colunasSql}
+                                )
+                                VALUES (
+                                    ${valoresSql}
+                                )
+                            `)
+                    };
+                }
+            );
 
         let transacaoAberta =
             false;
@@ -1083,29 +1359,57 @@ function criarServicoBackup({
 
             transacaoAberta = true;
 
-            banco.exec(
-                "DELETE FROM clientes"
-            );
+            /*
+             * Sessões e bloqueios não são
+             * reaproveitados por segurança.
+             * Após restaurar, todos entram
+             * novamente com os usuários do backup.
+             */
+            banco.exec(`
+                DELETE FROM sessoes;
+                DELETE FROM tentativas_login;
+                DELETE FROM ordens;
+                DELETE FROM clientes;
+                DELETE FROM catalogo_linhas;
+                DELETE FROM usuarios;
+                DELETE FROM sqlite_sequence
+                WHERE name = 'ordens';
+            `);
 
             for (
-                const cliente
-                of clientes
+                const configuracao
+                of inseridores
             ) {
-                inserir.run(
-                    cliente.id,
-                    cliente.nome,
-                    cliente.cpf,
-                    cliente.cpf_numeros,
-                    cliente.telefone,
-                    cliente.telefone_numeros,
-                    cliente.linha,
-                    cliente.logo_original,
-                    cliente.logo_original_arquivo,
-                    cliente.logo_convertida,
-                    cliente.logo_convertida_arquivo,
-                    cliente.observacoes,
-                    cliente.criado_em,
-                    cliente.atualizado_em
+                for (
+                    const registro
+                    of configuracao.registros
+                ) {
+                    configuracao
+                        .inserir
+                        .run(
+                            ...configuracao
+                                .colunas
+                                .map(
+                                    coluna =>
+                                        registro[coluna]
+                                )
+                        );
+                }
+            }
+
+            const resultadoIntegridade =
+                banco
+                    .prepare(
+                        "PRAGMA foreign_key_check"
+                    )
+                    .all();
+
+            if (
+                resultadoIntegridade.length
+            ) {
+                throw new ErroHttp(
+                    400,
+                    "Os dados restaurados possuem relacionamentos inválidos."
                 );
             }
 
@@ -1433,7 +1737,7 @@ async function restaurarBackup(
                 }
             );
 
-        const clientesRecebidos =
+        const dadosRecebidos =
             validarBancoRecebido(
                 bancoRecebido
             );
@@ -1445,7 +1749,7 @@ async function restaurarBackup(
         const resumoArquivos =
             await prepararArquivosRecebidos(
                 pacote.arquivos,
-                clientesRecebidos,
+                dadosRecebidos.clientes,
                 pastaPreparacao
             );
 
@@ -1508,7 +1812,7 @@ async function restaurarBackup(
          * prontos o banco é atualizado.
          */
         restaurarRegistrosBanco(
-            clientesRecebidos
+            dadosRecebidos
         );
 
         registrosRestaurados =
@@ -1562,8 +1866,17 @@ async function restaurarBackup(
                     restauradoEm:
                         dataRestauro,
 
+                    usuarios:
+                        dadosRecebidos.usuarios.length,
+
                     clientes:
-                        clientesRecebidos.length,
+                        dadosRecebidos.clientes.length,
+
+                    linhas:
+                        dadosRecebidos.linhas.length,
+
+                    ordens:
+                        dadosRecebidos.ordens.length,
 
                     arquivos:
                         resumoArquivos.quantidade,
