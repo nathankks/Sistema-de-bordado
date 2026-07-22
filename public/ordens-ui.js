@@ -8,6 +8,19 @@ let ordens = [];
 let carregandoOrdens = true;
 let buscaOrdemAtual = "";
 let statusOrdemAtual = "todos";
+let ordemDetalhesAtualId = "";
+
+/*
+|--------------------------------------------------------------------------
+| Alertas de prazo
+|--------------------------------------------------------------------------
+*/
+
+const DIAS_ANTECEDENCIA_ALERTA_ORDEM =
+    2;
+
+let assinaturaUltimoAlertaPrazos =
+    "";
 
 /*
 |--------------------------------------------------------------------------
@@ -20,6 +33,33 @@ const botaoNovaOrdem =
 
 const modalOrdem =
     $("#modalOrdem");
+
+const modalDetalhesOrdem =
+    $("#modalDetalhesOrdem");
+
+const tituloDetalhesOrdem =
+    $("#tituloDetalhesOrdem");
+
+const conteudoDetalhesOrdem =
+    $("#conteudoDetalhesOrdem");
+
+const botaoFecharDetalhesOrdem =
+    $("#botaoFecharDetalhesOrdem");
+
+const statusDetalhesOrdem =
+    $("#statusDetalhesOrdem");
+
+const resumoDetalhesOrdem =
+    $("#resumoDetalhesOrdem");
+
+const atualizacaoDetalhesOrdem =
+    $("#atualizacaoDetalhesOrdem");
+
+const botaoImprimirDetalhesOrdem =
+    $("#botaoImprimirDetalhesOrdem");
+
+const botaoEditarDetalhesOrdem =
+    $("#botaoEditarDetalhesOrdem");
 
 const formularioOrdem =
     $("#formularioOrdem");
@@ -155,6 +195,21 @@ const botaoVerOrdensDashboard =
 
 const cartaoOrdensAtrasadas =
     $("#cartaoOrdensAtrasadas");
+
+const modalAlertaPrazosOrdens =
+    $("#modalAlertaPrazosOrdens");
+
+const listaAlertaPrazosOrdens =
+    $("#listaAlertaPrazosOrdens");
+
+const quantidadeOrdensAtrasadas =
+    $("#quantidadeOrdensAtrasadas");
+
+const quantidadeOrdensProximas =
+    $("#quantidadeOrdensProximas");
+
+const botaoFecharAlertaPrazos =
+    $("#botaoFecharAlertaPrazos");
 
 /*
 |--------------------------------------------------------------------------
@@ -1180,6 +1235,256 @@ function obterRotuloExtensaoLogoOrdem(
     );
 }
 
+function criarCartaoArquivoClienteOrdem(
+    cliente,
+    tipo,
+    podeAcessarArquivos
+) {
+    const original =
+        tipo === "original";
+
+    const nomeArquivo =
+        String(
+            (
+                original
+                    ? cliente.logoOriginal
+                    : cliente.logoConvertida
+            ) || ""
+        ).trim();
+
+    const urlArquivo =
+        String(
+            (
+                original
+                    ? cliente.logoOriginalUrl
+                    : cliente.logoConvertidaUrl
+            ) || ""
+        ).trim();
+
+    const titulo =
+        original
+            ? "Logo original"
+            : "Arquivo convertido";
+
+    const descricao =
+        original
+            ? "Imagem usada como referência"
+            : "Arquivo pronto para bordado";
+
+    const possuiArquivo =
+        Boolean(
+            nomeArquivo
+        );
+
+    const arquivoDisponivel =
+        Boolean(
+            nomeArquivo &&
+            urlArquivo
+        );
+
+    /*
+     * Arquivo não cadastrado.
+     */
+
+    if (!possuiArquivo) {
+        return `
+            <article
+                class="arquivo-cliente-ordem arquivo-cliente-ordem-vazio"
+            >
+                <span class="logo-cliente-ordem-icone">
+                    ${icone(
+                        original
+                            ? "file"
+                            : "check-file"
+                    )}
+                </span>
+
+                <div class="logo-cliente-ordem-informacoes">
+                    <span class="logo-cliente-ordem-etiqueta">
+                        ${escaparHtml(
+                            titulo
+                        )}
+                    </span>
+
+                    <strong>
+                        Nenhum arquivo cadastrado
+                    </strong>
+
+                    <small>
+                        ${escaparHtml(
+                            descricao
+                        )}
+                    </small>
+                </div>
+            </article>
+        `;
+    }
+
+    const extensao =
+        obterExtensaoLogoOrdem(
+            nomeArquivo
+        );
+
+    const rotuloExtensao =
+        obterRotuloExtensaoLogoOrdem(
+            nomeArquivo
+        );
+
+    const possuiPreview =
+        original &&
+        arquivoDisponivel &&
+        podeAcessarArquivos &&
+        logoOrdemEhImagem(
+            nomeArquivo
+        );
+
+    const podeVisualizar =
+        original &&
+        arquivoDisponivel &&
+        podeAcessarArquivos &&
+        [
+            ".png",
+            ".jpg",
+            ".jpeg",
+            ".webp",
+            ".pdf"
+        ].includes(
+            extensao
+        );
+
+    const urlDownload =
+        arquivoDisponivel
+            ? `${urlArquivo}${
+                urlArquivo.includes("?")
+                    ? "&"
+                    : "?"
+            }download=1`
+            : "";
+
+    return `
+        <article
+            class="arquivo-cliente-ordem ${
+                arquivoDisponivel
+                    ? "arquivo-cliente-ordem-disponivel"
+                    : "arquivo-cliente-ordem-indisponivel"
+            }"
+        >
+            <div class="logo-cliente-ordem-preview">
+                ${
+                    possuiPreview
+                        ? `
+                            <img
+                                src="${escaparHtml(
+                                    urlArquivo
+                                )}"
+                                alt="${escaparHtml(
+                                    titulo
+                                )} de ${escaparHtml(
+                                    cliente.nome ||
+                                    "cliente"
+                                )}"
+                                data-preview-arquivo-ordem
+                                data-extensao-arquivo-ordem="${escaparHtml(
+                                    rotuloExtensao
+                                )}"
+                                loading="lazy"
+                            >
+                        `
+                        : `
+                            <span class="logo-cliente-ordem-extensao">
+                                ${escaparHtml(
+                                    rotuloExtensao
+                                )}
+                            </span>
+                        `
+                }
+            </div>
+
+            <div class="logo-cliente-ordem-informacoes">
+                <span class="logo-cliente-ordem-etiqueta">
+                    ${escaparHtml(
+                        titulo
+                    )}
+                </span>
+
+                <strong
+                    title="${escaparHtml(
+                        nomeArquivo
+                    )}"
+                >
+                    ${escaparHtml(
+                        nomeArquivo
+                    )}
+                </strong>
+
+                <small>
+                    ${escaparHtml(
+                        descricao
+                    )}
+                </small>
+            </div>
+
+            <div class="logo-cliente-ordem-acoes">
+                ${
+                    !arquivoDisponivel
+                        ? `
+                            <span class="logo-cliente-ordem-status">
+                                Arquivo indisponível
+                            </span>
+                        `
+                        : !podeAcessarArquivos
+                            ? `
+                                <span class="logo-cliente-ordem-status">
+                                    Sem permissão
+                                </span>
+                            `
+                            : `
+                                ${
+                                    podeVisualizar
+                                        ? `
+                                            <a
+                                                class="logo-cliente-ordem-botao"
+                                                href="${escaparHtml(
+                                                    urlArquivo
+                                                )}"
+                                                target="_blank"
+                                                rel="noopener"
+                                                title="Visualizar ${escaparHtml(
+                                                    titulo.toLowerCase()
+                                                )}"
+                                            >
+                                                ${icone("eye")}
+
+                                                <span>
+                                                    Visualizar
+                                                </span>
+                                            </a>
+                                        `
+                                        : ""
+                                }
+
+                                <a
+                                    class="logo-cliente-ordem-botao logo-cliente-ordem-botao-principal"
+                                    href="${escaparHtml(
+                                        urlDownload
+                                    )}"
+                                    title="Baixar ${escaparHtml(
+                                        titulo.toLowerCase()
+                                    )}"
+                                >
+                                    ${icone("file")}
+
+                                    <span>
+                                        Baixar
+                                    </span>
+                                </a>
+                            `
+                }
+            </div>
+        </article>
+    `;
+}
+
 function renderizarLogoClienteOrdem() {
     if (!logoClienteOrdem) {
         return;
@@ -1209,53 +1514,7 @@ function renderizarLogoClienteOrdem() {
                 </strong>
 
                 <span>
-                    A logo cadastrada aparecerá aqui.
-                </span>
-            </div>
-        `;
-
-        return;
-    }
-
-    const nomeLogo =
-        String(
-            cliente.logoOriginal ||
-            ""
-        ).trim();
-
-    const urlLogo =
-        String(
-            cliente.logoOriginalUrl ||
-            ""
-        ).trim();
-
-    /*
-     * Cliente selecionado, mas sem logo.
-     */
-
-    if (
-        !nomeLogo ||
-        !urlLogo
-    ) {
-        logoClienteOrdem.className =
-            "logo-cliente-ordem logo-cliente-ordem-sem-arquivo";
-
-        logoClienteOrdem.innerHTML = `
-            <span class="logo-cliente-ordem-icone">
-                ${icone("file")}
-            </span>
-
-            <div class="logo-cliente-ordem-mensagem">
-                <strong>
-                    Nenhuma logo cadastrada
-                </strong>
-
-                <span>
-                    ${escaparHtml(
-                        cliente.nome ||
-                        "Este cliente"
-                    )}
-                    não possui uma logo original.
+                    Os arquivos cadastrados aparecerão aqui.
                 </span>
             </div>
         `;
@@ -1273,200 +1532,62 @@ function renderizarLogoClienteOrdem() {
                 "arquivos.baixar"
             );
 
-    /*
-     * Não tenta carregar a imagem quando
-     * o usuário não pode acessar arquivos.
-     */
-
-    if (!podeAcessarArquivos) {
-        logoClienteOrdem.className =
-            "logo-cliente-ordem logo-cliente-ordem-sem-permissao";
-
-        logoClienteOrdem.innerHTML = `
-            <span class="logo-cliente-ordem-icone">
-                ${icone("alert")}
-            </span>
-
-            <div class="logo-cliente-ordem-mensagem">
-                <strong>
-                    Logo cadastrada
-                </strong>
-
-                <span>
-                    Você não possui permissão para
-                    visualizar ou baixar este arquivo.
-                </span>
-            </div>
-        `;
-
-        return;
-    }
-
-    const extensao =
-        obterExtensaoLogoOrdem(
-            nomeLogo
-        );
-
-    const possuiPreview =
-        logoOrdemEhImagem(
-            nomeLogo
-        );
-
-    const podeVisualizarNoNavegador =
-        [
-            ".png",
-            ".jpg",
-            ".jpeg",
-            ".webp",
-            ".pdf"
-        ].includes(
-            extensao
-        );
-
-    const urlDownload =
-        `${urlLogo}${
-            urlLogo.includes(
-                "?"
-            )
-                ? "&"
-                : "?"
-        }download=1`;
-
     logoClienteOrdem.className =
-        "logo-cliente-ordem logo-cliente-ordem-disponivel";
+        "logo-cliente-ordem logo-cliente-ordem-lista";
 
     logoClienteOrdem.innerHTML = `
-        <div class="logo-cliente-ordem-preview">
-            ${
-                possuiPreview
-                    ? `
-                        <img
-                            src="${escaparHtml(
-                                urlLogo
-                            )}"
-                            alt="Logo original de ${escaparHtml(
-                                cliente.nome ||
-                                "cliente"
-                            )}"
-                            loading="lazy"
-                        >
-                    `
-                    : `
-                        <span class="logo-cliente-ordem-extensao">
-                            ${escaparHtml(
-                                obterRotuloExtensaoLogoOrdem(
-                                    nomeLogo
-                                )
-                            )}
-                        </span>
-                    `
-            }
-        </div>
+        ${criarCartaoArquivoClienteOrdem(
+            cliente,
+            "original",
+            podeAcessarArquivos
+        )}
 
-        <div class="logo-cliente-ordem-informacoes">
-            <span class="logo-cliente-ordem-etiqueta">
-                Logo original
-            </span>
-
-            <strong
-                title="${escaparHtml(
-                    nomeLogo
-                )}"
-            >
-                ${escaparHtml(
-                    nomeLogo
-                )}
-            </strong>
-
-            <small>
-                Cliente:
-                ${escaparHtml(
-                    cliente.nome ||
-                    "Não informado"
-                )}
-            </small>
-        </div>
-
-        <div class="logo-cliente-ordem-acoes">
-            <a
-                class="logo-cliente-ordem-botao"
-                href="${escaparHtml(
-                    urlLogo
-                )}"
-                target="_blank"
-                rel="noopener"
-                title="${
-                    podeVisualizarNoNavegador
-                        ? "Visualizar logo"
-                        : "Abrir arquivo"
-                }"
-            >
-                ${icone("eye")}
-
-                <span>
-                    ${
-                        podeVisualizarNoNavegador
-                            ? "Visualizar"
-                            : "Abrir arquivo"
-                    }
-                </span>
-            </a>
-
-            <a
-                class="logo-cliente-ordem-botao logo-cliente-ordem-botao-principal"
-                href="${escaparHtml(
-                    urlDownload
-                )}"
-                title="Baixar logo"
-            >
-                ${icone("file")}
-
-                <span>
-                    Baixar
-                </span>
-            </a>
-        </div>
+        ${criarCartaoArquivoClienteOrdem(
+            cliente,
+            "convertido",
+            podeAcessarArquivos
+        )}
     `;
 
     /*
-     * Caso a imagem não possa ser carregada,
-     * mantém a caixa utilizável com o nome
-     * da extensão.
+     * Mostra a extensão caso a prévia
+     * da imagem não carregue.
      */
 
-    const imagem =
-        logoClienteOrdem
-            .querySelector(
-                "img"
-            );
+    logoClienteOrdem
+        .querySelectorAll(
+            "[data-preview-arquivo-ordem]"
+        )
+        .forEach(
+            imagem => {
+                imagem.addEventListener(
+                    "error",
+                    () => {
+                        const preview =
+                            imagem.closest(
+                                ".logo-cliente-ordem-preview"
+                            );
 
-    imagem?.addEventListener(
-        "error",
-        () => {
-            const preview =
-                logoClienteOrdem
-                    .querySelector(
-                        ".logo-cliente-ordem-preview"
-                    );
+                        if (!preview) {
+                            return;
+                        }
 
-            if (!preview) {
-                return;
+                        preview.innerHTML = `
+                            <span class="logo-cliente-ordem-extensao">
+                                ${escaparHtml(
+                                    imagem.dataset
+                                        .extensaoArquivoOrdem ||
+                                    "ARQ"
+                                )}
+                            </span>
+                        `;
+                    },
+                    {
+                        once: true
+                    }
+                );
             }
-
-            preview.innerHTML = `
-                <span class="logo-cliente-ordem-extensao">
-                    ${escaparHtml(
-                        obterRotuloExtensaoLogoOrdem(
-                            nomeLogo
-                        )
-                    )}
-                </span>
-            `;
-        },
-        {
-            once: true
-        }
-    );
+        );
 }
 
 function criarOpcaoClienteOrdem(
@@ -1735,6 +1856,638 @@ function atualizarDadosPeloCliente() {
 | Modal
 |--------------------------------------------------------------------------
 */
+
+function formatarDataHoraOrdem(
+    valor
+) {
+    if (!valor) {
+        return "Não informado";
+    }
+
+    const data =
+        new Date(
+            valor
+        );
+
+    if (
+        Number.isNaN(
+            data.getTime()
+        )
+    ) {
+        return "Não informado";
+    }
+
+    return new Intl.DateTimeFormat(
+        "pt-BR",
+        {
+            dateStyle:
+                "short",
+
+            timeStyle:
+                "short"
+        }
+    ).format(
+        data
+    );
+}
+
+function formatarValorDetalhesOrdem(
+    valorCentavos
+) {
+    const valor =
+        Number(
+            valorCentavos || 0
+        ) / 100;
+
+    return new Intl.NumberFormat(
+        "pt-BR",
+        {
+            style:
+                "currency",
+
+            currency:
+                "BRL"
+        }
+    ).format(
+        valor
+    );
+}
+
+function criarArquivoDetalhesOrdem({
+    nome,
+    tipo,
+    clienteId
+}) {
+    const original =
+        tipo ===
+        "original";
+
+    const titulo =
+        original
+            ? "Logo original"
+            : "Arquivo convertido";
+
+    const disponivel =
+        Boolean(
+            nome &&
+            clienteId
+        );
+
+    const podeBaixar =
+        typeof possuiPermissaoSistema !==
+            "function" ||
+
+        possuiPermissaoSistema(
+            "arquivos.baixar"
+        );
+
+    const endereco =
+        disponivel
+            ? `/api/clientes/${
+                encodeURIComponent(
+                    clienteId
+                )
+            }/arquivos/${
+                original
+                    ? "original"
+                    : "convertido"
+            }`
+            : "";
+
+    return `
+        <article
+            class="ordem-arquivo ${
+                disponivel
+                    ? "ordem-arquivo-disponivel"
+                    : "ordem-arquivo-ausente"
+            }"
+        >
+            <span class="ordem-arquivo-icone">
+                <svg aria-hidden="true">
+                    <use href="#${
+                        original
+                            ? "icon-file"
+                            : "icon-check-file"
+                    }"></use>
+                </svg>
+            </span>
+
+            <div class="ordem-arquivo-informacoes">
+                <span>
+                    ${escaparHtml(
+                        titulo
+                    )}
+                </span>
+
+                <strong>
+                    ${escaparHtml(
+                        nome ||
+                        "Nenhum arquivo enviado"
+                    )}
+                </strong>
+            </div>
+
+            ${
+                disponivel &&
+                podeBaixar
+                    ? `
+                        <a
+                            class="ordem-arquivo-acao"
+                            href="${escaparHtml(
+                                endereco
+                            )}"
+                            target="_blank"
+                            rel="noopener"
+                            title="Abrir ${escaparHtml(
+                                titulo.toLowerCase()
+                            )}"
+                        >
+                            <svg aria-hidden="true">
+                                <use href="#icon-eye"></use>
+                            </svg>
+
+                            <span>
+                                Abrir
+                            </span>
+                        </a>
+                    `
+                    : `
+                        <span class="ordem-arquivo-status">
+                            ${
+                                disponivel
+                                    ? "Sem permissão"
+                                    : "Não enviado"
+                            }
+                        </span>
+                    `
+            }
+        </article>
+    `;
+}
+
+function abrirDetalhesOrdem(
+    id
+) {
+    const ordem =
+        ordens.find(
+            item =>
+                item.id === id
+        );
+
+    if (
+        !ordem ||
+        !modalDetalhesOrdem ||
+        !conteudoDetalhesOrdem
+    ) {
+        mostrarNotificacao(
+            "Ordem não encontrada",
+            "Atualize a página e tente novamente.",
+            "erro"
+        );
+
+        return;
+    }
+
+    ordemDetalhesAtualId =
+        ordem.id;
+
+    /*
+     * Cabeçalho
+     */
+
+    if (tituloDetalhesOrdem) {
+        tituloDetalhesOrdem.textContent =
+            ordem.codigo ||
+            "Detalhes da ordem";
+    }
+
+    if (statusDetalhesOrdem) {
+        statusDetalhesOrdem.className =
+            `status-ordem status-ordem-${
+                ordem.status || ""
+            }`;
+
+        statusDetalhesOrdem.textContent =
+            ordem.statusTexto ||
+            "Status não informado";
+    }
+
+    if (resumoDetalhesOrdem) {
+        const quantidade =
+            Number(
+                ordem.quantidade || 0
+            );
+
+        resumoDetalhesOrdem.textContent =
+            `${
+                ordem.clienteNome ||
+                "Cliente não informado"
+            } · ${quantidade} ${
+                quantidade === 1
+                    ? "unidade"
+                    : "unidades"
+            }`;
+    }
+
+    if (atualizacaoDetalhesOrdem) {
+        atualizacaoDetalhesOrdem.textContent =
+            formatarDataHoraOrdem(
+                ordem.atualizadoEm
+            );
+    }
+
+    /*
+     * Permissão para editar
+     */
+
+    if (botaoEditarDetalhesOrdem) {
+        botaoEditarDetalhesOrdem.hidden =
+            typeof possuiPermissaoSistema ===
+                "function" &&
+
+            !possuiPermissaoSistema(
+                "ordens.editar"
+            );
+    }
+
+    /*
+     * Conteúdo
+     */
+
+    conteudoDetalhesOrdem.innerHTML = `
+        <section class="ordem-resumo-grade">
+            <article class="ordem-resumo-item">
+                <span class="ordem-resumo-icone">
+                    <svg aria-hidden="true">
+                        <use href="#icon-check-file"></use>
+                    </svg>
+                </span>
+
+                <div>
+                    <span>
+                        Quantidade
+                    </span>
+
+                    <strong>
+                        ${escaparHtml(
+                            ordem.quantidade ||
+                            0
+                        )}
+                        ${
+                            Number(
+                                ordem.quantidade
+                            ) === 1
+                                ? "unidade"
+                                : "unidades"
+                        }
+                    </strong>
+                </div>
+            </article>
+
+            <article class="ordem-resumo-item">
+                <span class="ordem-resumo-icone">
+                    <svg aria-hidden="true">
+                        <use href="#icon-clock"></use>
+                    </svg>
+                </span>
+
+                <div>
+                    <span>
+                        Prazo de entrega
+                    </span>
+
+                    <strong>
+                        ${escaparHtml(
+                            formatarPrazoOrdem(
+                                ordem.prazoEntrega
+                            )
+                        )}
+                    </strong>
+                </div>
+            </article>
+
+            <article class="ordem-resumo-item">
+                <span class="ordem-resumo-icone">
+                    <svg aria-hidden="true">
+                        <use href="#icon-file"></use>
+                    </svg>
+                </span>
+
+                <div>
+                    <span>
+                        Valor
+                    </span>
+
+                    <strong>
+                        ${escaparHtml(
+                            formatarValorDetalhesOrdem(
+                                ordem.valorCentavos
+                            )
+                        )}
+                    </strong>
+                </div>
+            </article>
+        </section>
+
+        <section class="ordem-detalhes-secao">
+            <header class="ordem-detalhes-secao-cabecalho">
+                <span class="ordem-detalhes-secao-icone">
+                    <svg aria-hidden="true">
+                        <use href="#icon-users"></use>
+                    </svg>
+                </span>
+
+                <div>
+                    <h3>
+                        Cliente
+                    </h3>
+
+                    <p>
+                        Dados do cliente vinculado à ordem.
+                    </p>
+                </div>
+            </header>
+
+            <div class="ordem-detalhes-grade">
+                <div class="ordem-detalhe ordem-detalhe-largo">
+                    <span>
+                        Nome ou razão social
+                    </span>
+
+                    <strong>
+                        ${escaparHtml(
+                            ordem.clienteNome ||
+                            "Não informado"
+                        )}
+                    </strong>
+                </div>
+
+                <div class="ordem-detalhe">
+                    <span>
+                        CPF ou CNPJ
+                    </span>
+
+                    <strong>
+                        ${escaparHtml(
+                            ordem.clienteCpf ||
+                            "Não informado"
+                        )}
+                    </strong>
+                </div>
+
+                <div class="ordem-detalhe">
+                    <span>
+                        Número da ordem
+                    </span>
+
+                    <strong>
+                        ${escaparHtml(
+                            ordem.codigo ||
+                            "Não informado"
+                        )}
+                    </strong>
+                </div>
+            </div>
+        </section>
+
+        <section class="ordem-detalhes-secao">
+            <header class="ordem-detalhes-secao-cabecalho">
+                <span class="ordem-detalhes-secao-icone">
+                    <svg aria-hidden="true">
+                        <use href="#icon-linha"></use>
+                    </svg>
+                </span>
+
+                <div>
+                    <h3>
+                        Produção
+                    </h3>
+
+                    <p>
+                        Informações técnicas e materiais utilizados.
+                    </p>
+                </div>
+            </header>
+
+            <div class="ordem-detalhes-grade">
+                <div class="ordem-detalhe ordem-detalhe-largo">
+                    <span>
+                        Descrição do serviço
+                    </span>
+
+                    <strong>
+                        ${escaparHtml(
+                            ordem.descricao ||
+                            "Não informado"
+                        )}
+                    </strong>
+                </div>
+
+                <div class="ordem-detalhe">
+                    <span>
+                        Quantidade
+                    </span>
+
+                    <strong>
+                        ${escaparHtml(
+                            ordem.quantidade ||
+                            0
+                        )}
+                        unidade(s)
+                    </strong>
+                </div>
+
+                <div class="ordem-detalhe">
+                    <span>
+                        Prazo
+                    </span>
+
+                    <strong>
+                        ${escaparHtml(
+                            formatarPrazoOrdem(
+                                ordem.prazoEntrega
+                            )
+                        )}
+                    </strong>
+                </div>
+
+                <div class="ordem-detalhe ordem-detalhe-largo">
+                    <span>
+                        Linhas utilizadas
+                    </span>
+
+                    <div class="ordem-detalhe-linhas">
+                        ${criarHtmlLinhasOrdem(
+                            ordem.linha
+                        )}
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="ordem-detalhes-secao">
+            <header class="ordem-detalhes-secao-cabecalho">
+                <span class="ordem-detalhes-secao-icone">
+                    <svg aria-hidden="true">
+                        <use href="#icon-folder"></use>
+                    </svg>
+                </span>
+
+                <div>
+                    <h3>
+                        Arquivos
+                    </h3>
+
+                    <p>
+                        Arquivos vinculados ao cadastro do cliente.
+                    </p>
+                </div>
+            </header>
+
+            <div class="ordem-arquivos-grade">
+                ${criarArquivoDetalhesOrdem({
+                    nome:
+                        ordem.arquivoOriginal,
+
+                    tipo:
+                        "original",
+
+                    clienteId:
+                        ordem.clienteId
+                })}
+
+                ${criarArquivoDetalhesOrdem({
+                    nome:
+                        ordem.arquivoConvertido,
+
+                    tipo:
+                        "convertido",
+
+                    clienteId:
+                        ordem.clienteId
+                })}
+            </div>
+        </section>
+
+        <section class="ordem-detalhes-secao">
+            <header class="ordem-detalhes-secao-cabecalho">
+                <span class="ordem-detalhes-secao-icone">
+                    <svg aria-hidden="true">
+                        <use href="#icon-file"></use>
+                    </svg>
+                </span>
+
+                <div>
+                    <h3>
+                        Observações
+                    </h3>
+
+                    <p>
+                        Informações adicionais da ordem.
+                    </p>
+                </div>
+            </header>
+
+            <div class="ordem-observacoes">
+                ${
+                    escaparHtml(
+                        ordem.observacoes ||
+                        "Nenhuma observação cadastrada."
+                    )
+                }
+            </div>
+        </section>
+
+        <section class="ordem-detalhes-secao ordem-detalhes-secao-final">
+            <header class="ordem-detalhes-secao-cabecalho">
+                <span class="ordem-detalhes-secao-icone">
+                    <svg aria-hidden="true">
+                        <use href="#icon-clock"></use>
+                    </svg>
+                </span>
+
+                <div>
+                    <h3>
+                        Histórico
+                    </h3>
+
+                    <p>
+                        Datas de criação e atualização do registro.
+                    </p>
+                </div>
+            </header>
+
+            <div class="ordem-detalhes-grade">
+                <div class="ordem-detalhe">
+                    <span>
+                        Cadastrada em
+                    </span>
+
+                    <strong>
+                        ${escaparHtml(
+                            formatarDataHoraOrdem(
+                                ordem.criadoEm
+                            )
+                        )}
+                    </strong>
+                </div>
+
+                <div class="ordem-detalhe">
+                    <span>
+                        Atualizada em
+                    </span>
+
+                    <strong>
+                        ${escaparHtml(
+                            formatarDataHoraOrdem(
+                                ordem.atualizadoEm
+                            )
+                        )}
+                    </strong>
+                </div>
+            </div>
+        </section>
+    `;
+
+    modalDetalhesOrdem.classList.add(
+        "aberto"
+    );
+
+    modalDetalhesOrdem.setAttribute(
+        "aria-hidden",
+        "false"
+    );
+
+    document.body.style.overflow =
+        "hidden";
+
+    setTimeout(
+        () => {
+            botaoFecharDetalhesOrdem
+                ?.focus();
+        },
+        50
+    );
+}
+
+function fecharDetalhesOrdem() {
+    modalDetalhesOrdem
+        ?.classList.remove(
+            "aberto"
+        );
+
+    modalDetalhesOrdem
+        ?.setAttribute(
+            "aria-hidden",
+            "true"
+        );
+
+    document.body.style.overflow =
+        "";
+
+    ordemDetalhesAtualId =
+        "";
+}
 
 function abrirModalOrdem(
     ordem = null
@@ -2240,66 +2993,79 @@ if (!lista.length) {
 
                         <td class="coluna-acoes-ordem">
                             <div class="acoes-ordem">
-                                ${
-                                    obterProximaEtapaOrdem(
-                                        ordem
-                                    )
-                                        ? `
-                                            <button
-                                                class="botao-acao botao-avancar-ordem"
-                                                data-avancar-ordem="${escaparHtml(
-                                                    ordem.id
-                                                )}"
-                                                type="button"
-                                                title="Avançar para ${escaparHtml(
-                                                    obterProximaEtapaOrdem(
-                                                        ordem
-                                                    ).proximoTexto
-                                                )}"
-                                                aria-label="Avançar etapa da ordem"
-                                            >
-                                                ${icone("check")}
-                                            </button>
-                                        `
-                                        : ""
-                                }
 
-                                <button
-                                    class="botao-acao"
-                                    data-editar-ordem="${escaparHtml(
-                                        ordem.id
-                                    )}"
-                                    type="button"
-                                    title="Editar ordem"
-                                    aria-label="Editar ordem"
-                                >
-                                    ${icone("edit")}
-                                </button>
+    ${
+        obterProximaEtapaOrdem(
+            ordem
+        )
+            ? `
+                <button
+                    class="botao-acao botao-avancar-ordem"
+                    data-avancar-ordem="${escaparHtml(
+                        ordem.id
+                    )}"
+                    type="button"
+                    title="Avançar para ${escaparHtml(
+                        obterProximaEtapaOrdem(
+                            ordem
+                        ).proximoTexto
+                    )}"
+                    aria-label="Avançar etapa da ordem"
+                >
+                    ${icone("check")}
+                </button>
+            `
+            : ""
+    }
 
-                                <button
-                                    class="botao-acao perigo"
-                                    data-excluir-ordem="${escaparHtml(
-                                        ordem.id
-                                    )}"
-                                    type="button"
-                                    title="Excluir ordem"
-                                    aria-label="Excluir ordem"
-                                >
-                                    ${icone("trash")}
-                                </button>
+    <button
+        class="botao-acao"
+        data-visualizar-ordem="${escaparHtml(
+            ordem.id
+        )}"
+        type="button"
+        title="Visualizar ordem"
+        aria-label="Visualizar ordem"
+    >
+        ${icone("eye")}
+    </button>
 
-                                <button
-                                    class="botao-acao"
-                                    data-imprimir-ordem="${escaparHtml(
-                                        ordem.id
-                                    )}"
-                                    type="button"
-                                    title="Imprimir ficha de produção"
-                                    aria-label="Imprimir ficha de produção"
-                                >
-                                    ${icone("file")}
-                                </button>
-                            </div>
+    <button
+        class="botao-acao"
+        data-editar-ordem="${escaparHtml(
+            ordem.id
+        )}"
+        type="button"
+        title="Editar ordem"
+        aria-label="Editar ordem"
+    >
+        ${icone("edit")}
+    </button>
+
+    <button
+        class="botao-acao perigo"
+        data-excluir-ordem="${escaparHtml(
+            ordem.id
+        )}"
+        type="button"
+        title="Excluir ordem"
+        aria-label="Excluir ordem"
+    >
+        ${icone("trash")}
+    </button>
+
+    <button
+        class="botao-acao"
+        data-imprimir-ordem="${escaparHtml(
+            ordem.id
+        )}"
+        type="button"
+        title="Imprimir ficha de produção"
+        aria-label="Imprimir ficha de produção"
+    >
+        ${icone("file")}
+    </button>
+</div>
                         </td>
                     </tr>
                 `
@@ -2338,6 +3104,8 @@ async function carregarOrdensDoServidor(
             )
                 ? dados.ordens
                 : [];
+
+        notificarPrazosDasOrdens();
     } catch (erro) {
         ordens = [];
 
@@ -2701,6 +3469,439 @@ function ordemEstaAtrasada(
     return (
         ordem.prazoEntrega <
         obterDataAtualIso()
+    );
+}
+
+function converterDataIsoEmDias(
+    valor
+) {
+    const correspondencia =
+        /^(\d{4})-(\d{2})-(\d{2})$/
+            .exec(
+                String(
+                    valor || ""
+                )
+            );
+
+    if (!correspondencia) {
+        return null;
+    }
+
+    const ano =
+        Number(
+            correspondencia[1]
+        );
+
+    const mes =
+        Number(
+            correspondencia[2]
+        );
+
+    const dia =
+        Number(
+            correspondencia[3]
+        );
+
+    const tempo =
+        Date.UTC(
+            ano,
+            mes - 1,
+            dia
+        );
+
+    if (
+        Number.isNaN(
+            tempo
+        )
+    ) {
+        return null;
+    }
+
+    return Math.floor(
+        tempo /
+        (
+            1000 *
+            60 *
+            60 *
+            24
+        )
+    );
+}
+
+function calcularDiasAtePrazo(
+    prazo
+) {
+    const diaPrazo =
+        converterDataIsoEmDias(
+            prazo
+        );
+
+    const diaAtual =
+        converterDataIsoEmDias(
+            obterDataAtualIso()
+        );
+
+    if (
+        diaPrazo === null ||
+        diaAtual === null
+    ) {
+        return null;
+    }
+
+    return (
+        diaPrazo -
+        diaAtual
+    );
+}
+
+function ordemEstaPertoDeAtrasar(
+    ordem
+) {
+    if (
+        !ordem.prazoEntrega ||
+        ordemEstaFinalizada(
+            ordem
+        ) ||
+        ordemEstaAtrasada(
+            ordem
+        )
+    ) {
+        return false;
+    }
+
+    const diasRestantes =
+        calcularDiasAtePrazo(
+            ordem.prazoEntrega
+        );
+
+    return (
+        diasRestantes !== null &&
+        diasRestantes >= 0 &&
+        diasRestantes <=
+            DIAS_ANTECEDENCIA_ALERTA_ORDEM
+    );
+}
+
+function resumirCodigosOrdens(
+    lista
+) {
+    const codigos =
+        lista
+            .slice(
+                0,
+                3
+            )
+            .map(
+                ordem =>
+                    ordem.codigo
+            )
+            .filter(
+                Boolean
+            );
+
+    if (!codigos.length) {
+        return "";
+    }
+
+    const restantes =
+        lista.length -
+        codigos.length;
+
+    return [
+        codigos.join(
+            ", "
+        ),
+
+        restantes > 0
+            ? `e mais ${restantes}`
+            : ""
+    ]
+        .filter(
+            Boolean
+        )
+        .join(
+            " "
+        );
+}
+
+function criarItemAlertaPrazoOrdem(
+    ordem
+) {
+    const diasRestantes =
+        calcularDiasAtePrazo(
+            ordem.prazoEntrega
+        );
+
+    const atrasada =
+        diasRestantes !== null &&
+        diasRestantes < 0;
+
+    let textoPrazo =
+        "Prazo não informado";
+
+    if (diasRestantes === 0) {
+        textoPrazo =
+            "Vence hoje";
+    } else if (diasRestantes === 1) {
+        textoPrazo =
+            "Vence amanhã";
+    } else if (
+        diasRestantes !== null &&
+        diasRestantes > 1
+    ) {
+        textoPrazo =
+            `Vence em ${diasRestantes} dias`;
+    } else if (diasRestantes === -1) {
+        textoPrazo =
+            "Atrasada há 1 dia";
+    } else if (
+        diasRestantes !== null &&
+        diasRestantes < -1
+    ) {
+        textoPrazo =
+            `Atrasada há ${Math.abs(
+                diasRestantes
+            )} dias`;
+    }
+
+    return `
+        <article
+            class="alerta-prazo-ordem ${
+                atrasada
+                    ? "alerta-prazo-ordem-atrasada"
+                    : "alerta-prazo-ordem-proxima"
+            }"
+        >
+            <div class="alerta-prazo-ordem-principal">
+                <div class="alerta-prazo-ordem-identificacao">
+                    <strong>
+                        ${escaparHtml(
+                            ordem.codigo ||
+                            "Ordem sem código"
+                        )}
+                    </strong>
+
+                    <span>
+                        ${escaparHtml(
+                            ordem.clienteNome ||
+                            "Cliente não informado"
+                        )}
+                    </span>
+                </div>
+
+                <span
+                    class="alerta-prazo-situacao ${
+                        atrasada
+                            ? "atrasada"
+                            : "proxima"
+                    }"
+                >
+                    ${escaparHtml(
+                        textoPrazo
+                    )}
+                </span>
+            </div>
+
+            <div class="alerta-prazo-ordem-detalhes">
+                <div>
+                    <span>
+                        Entrega
+                    </span>
+
+                    <strong>
+                        ${escaparHtml(
+                            formatarPrazoOrdem(
+                                ordem.prazoEntrega
+                            )
+                        )}
+                    </strong>
+                </div>
+
+                <div>
+                    <span>
+                        Status
+                    </span>
+
+                    <strong>
+                        ${escaparHtml(
+                            ordem.statusTexto ||
+                            "Não informado"
+                        )}
+                    </strong>
+                </div>
+
+                <div>
+                    <span>
+                        Quantidade
+                    </span>
+
+                    <strong>
+                        ${escaparHtml(
+                            ordem.quantidade ||
+                            0
+                        )}
+                    </strong>
+                </div>
+            </div>
+        </article>
+    `;
+}
+
+function fecharAlertaPrazosOrdens() {
+    modalAlertaPrazosOrdens
+        ?.classList.remove(
+            "aberto"
+        );
+
+    modalAlertaPrazosOrdens
+        ?.setAttribute(
+            "aria-hidden",
+            "true"
+        );
+
+    document.body.style.overflow =
+        "";
+}
+
+function abrirAlertaPrazosOrdens(
+    atrasadas,
+    proximasDoPrazo
+) {
+    if (
+        !modalAlertaPrazosOrdens ||
+        !listaAlertaPrazosOrdens
+    ) {
+        return;
+    }
+
+    const todasAsOrdens = [
+        ...atrasadas,
+        ...proximasDoPrazo
+    ];
+
+    if (quantidadeOrdensAtrasadas) {
+        quantidadeOrdensAtrasadas.textContent =
+            String(
+                atrasadas.length
+            );
+    }
+
+    if (quantidadeOrdensProximas) {
+        quantidadeOrdensProximas.textContent =
+            String(
+                proximasDoPrazo.length
+            );
+    }
+
+    listaAlertaPrazosOrdens.innerHTML =
+        todasAsOrdens
+            .map(
+                criarItemAlertaPrazoOrdem
+            )
+            .join("");
+
+    modalAlertaPrazosOrdens.classList.add(
+        "aberto"
+    );
+
+    modalAlertaPrazosOrdens.setAttribute(
+        "aria-hidden",
+        "false"
+    );
+
+    document.body.style.overflow =
+        "hidden";
+
+    setTimeout(
+        () => {
+            botaoFecharAlertaPrazos
+                ?.focus();
+        },
+        50
+    );
+}
+
+function notificarPrazosDasOrdens() {
+    const atrasadas =
+        ordens
+            .filter(
+                ordemEstaAtrasada
+            )
+            .sort(
+                (
+                    ordemA,
+                    ordemB
+                ) =>
+                    String(
+                        ordemA.prazoEntrega
+                    ).localeCompare(
+                        String(
+                            ordemB.prazoEntrega
+                        )
+                    )
+            );
+
+    const proximasDoPrazo =
+        ordens
+            .filter(
+                ordemEstaPertoDeAtrasar
+            )
+            .sort(
+                (
+                    ordemA,
+                    ordemB
+                ) =>
+                    String(
+                        ordemA.prazoEntrega
+                    ).localeCompare(
+                        String(
+                            ordemB.prazoEntrega
+                        )
+                    )
+            );
+
+    const assinatura = [
+        ...atrasadas.map(
+            ordem =>
+                `atrasada:${
+                    ordem.id
+                }:${
+                    ordem.prazoEntrega
+                }`
+        ),
+
+        ...proximasDoPrazo.map(
+            ordem =>
+                `proxima:${
+                    ordem.id
+                }:${
+                    ordem.prazoEntrega
+                }`
+        )
+    ]
+        .sort()
+        .join("|");
+
+    if (!assinatura) {
+        assinaturaUltimoAlertaPrazos =
+            "";
+
+        return;
+    }
+
+    if (
+        assinatura ===
+        assinaturaUltimoAlertaPrazos
+    ) {
+        return;
+    }
+
+    assinaturaUltimoAlertaPrazos =
+        assinatura;
+
+    abrirAlertaPrazosOrdens(
+        atrasadas,
+        proximasDoPrazo
     );
 }
 
@@ -3445,6 +4646,63 @@ $$(
     }
 );
 
+$$(
+    "[data-fechar-detalhes-ordem]"
+).forEach(
+    elemento => {
+        elemento.addEventListener(
+            "click",
+            fecharDetalhesOrdem
+        );
+    }
+);
+
+$$(
+    "[data-fechar-alerta-prazos]"
+).forEach(
+    elemento => {
+        elemento.addEventListener(
+            "click",
+            fecharAlertaPrazosOrdens
+        );
+    }
+);
+
+botaoImprimirDetalhesOrdem
+    ?.addEventListener(
+        "click",
+        () => {
+            if (
+                !ordemDetalhesAtualId
+            ) {
+                return;
+            }
+
+            imprimirFichaOrdem(
+                ordemDetalhesAtualId
+            );
+        }
+    );
+
+botaoEditarDetalhesOrdem
+    ?.addEventListener(
+        "click",
+        () => {
+            const id =
+                ordemDetalhesAtualId;
+
+            if (!id) {
+                return;
+            }
+
+            fecharDetalhesOrdem();
+
+            editarOrdem(
+                id
+            );
+        }
+);
+
 botaoLinhaOrdem
     ?.addEventListener(
         "click",
@@ -3678,6 +4936,12 @@ corpoTabelaOrdens
     ?.addEventListener(
         "click",
         evento => {
+
+            const botaoVisualizar =
+            evento.target.closest(
+            "[data-visualizar-ordem]"
+            );
+
             const botaoAvancar =
                 evento.target.closest(
                     "[data-avancar-ordem]"
@@ -3697,6 +4961,15 @@ corpoTabelaOrdens
                 evento.target.closest(
                     "[data-excluir-ordem]"
                 );
+
+            if (botaoVisualizar) {
+            abrirDetalhesOrdem(
+            botaoVisualizar.dataset
+            .visualizarOrdem
+            );
+
+            return;
+            }
 
             if (botaoAvancar) {
                 avancarEtapaOrdem(
@@ -3762,6 +5035,17 @@ document.addEventListener(
         }
 
         if (
+    modalAlertaPrazosOrdens
+        ?.classList.contains(
+            "aberto"
+        )
+) {
+    fecharAlertaPrazosOrdens();
+
+    return;
+}
+
+        if (
             menuClienteOrdem &&
             !menuClienteOrdem.hidden
         ) {
@@ -3771,6 +5055,17 @@ document.addEventListener(
                 ?.focus();
 
             return;
+        }
+
+        if (
+        modalDetalhesOrdem
+        ?.classList.contains(
+            "aberto"
+        )
+        ) {
+        fecharDetalhesOrdem();
+
+        return;
         }
 
         if (
