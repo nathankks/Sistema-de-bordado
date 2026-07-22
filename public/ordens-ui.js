@@ -9,6 +9,7 @@ let carregandoOrdens = true;
 let buscaOrdemAtual = "";
 let statusOrdemAtual = "todos";
 let ordemDetalhesAtualId = "";
+let cadastrandoClientePelaOrdem = false;
 
 /*
 |--------------------------------------------------------------------------
@@ -99,6 +100,9 @@ const listaClientesOrdem =
 
 const mensagemClienteOrdem =
     $("#mensagemClienteOrdem");
+
+const botaoCadastrarClienteOrdem =
+    $("#botaoCadastrarClienteOrdem");
 
 const logoClienteOrdem =
     $("#logoClienteOrdem");
@@ -2506,23 +2510,6 @@ function abrirModalOrdem(
         return;
     }
 
-    if (
-        !Array.isArray(clientes) ||
-        !clientes.length
-    ) {
-        mostrarNotificacao(
-            "Cadastre um cliente primeiro",
-            "Uma ordem precisa estar vinculada a um cliente.",
-            "aviso"
-        );
-
-        navegarPara(
-            "clientes"
-        );
-
-        return;
-    }
-
     formularioOrdem.reset();
     fecharMenuLinhaOrdem();
     fecharMenuClienteOrdem();
@@ -3743,6 +3730,29 @@ function criarItemAlertaPrazoOrdem(
                     </strong>
                 </div>
             </div>
+
+                        <div class="alerta-prazo-ordem-acoes">
+                <button
+                    class="botao-abrir-ordem-alerta"
+                    data-abrir-ordem-alerta="${escaparHtml(
+                        ordem.id
+                    )}"
+                    type="button"
+                    aria-label="Abrir ${escaparHtml(
+                        ordem.codigo ||
+                        "ordem"
+                    )}"
+                >
+                    <svg aria-hidden="true">
+                        <use href="#icon-eye"></use>
+                    </svg>
+
+                    <span>
+                        Abrir ordem
+                    </span>
+                </button>
+            </div>
+
         </article>
     `;
 }
@@ -4668,6 +4678,53 @@ $$(
     }
 );
 
+listaAlertaPrazosOrdens
+    ?.addEventListener(
+        "click",
+        evento => {
+            const botao =
+                evento.target.closest(
+                    "[data-abrir-ordem-alerta]"
+                );
+
+            if (!botao) {
+                return;
+            }
+
+            const ordemId =
+                botao.dataset
+                    .abrirOrdemAlerta;
+
+            const ordem =
+                ordens.find(
+                    item =>
+                        item.id ===
+                        ordemId
+                );
+
+            if (!ordem) {
+                mostrarNotificacao(
+                    "Ordem não encontrada",
+                    "Atualize a página e tente novamente.",
+                    "erro"
+                );
+
+                return;
+            }
+
+            fecharAlertaPrazosOrdens();
+
+            setTimeout(
+                () => {
+                    abrirDetalhesOrdem(
+                        ordem.id
+                    );
+                },
+                120
+            );
+        }
+    );
+
 botaoImprimirDetalhesOrdem
     ?.addEventListener(
         "click",
@@ -4850,6 +4907,38 @@ formularioOrdem
     ?.addEventListener(
         "submit",
         salvarOrdem
+    );
+
+botaoCadastrarClienteOrdem
+    ?.addEventListener(
+        "click",
+        () => {
+            if (
+                !possuiPermissaoSistema(
+                    "clientes.criar"
+                )
+            ) {
+                mostrarNotificacao(
+                    "Acesso negado",
+                    "Você não possui permissão para cadastrar clientes.",
+                    "aviso"
+                );
+
+                return;
+            }
+
+            fecharMenuClienteOrdem();
+
+            cadastrandoClientePelaOrdem =
+                true;
+
+            modalCliente
+                ?.classList.add(
+                    "modal-cliente-sobre-ordem"
+                );
+
+            abrirModalCliente();
+        }
     );
 
 botaoClienteOrdem
@@ -5075,6 +5164,70 @@ document.addEventListener(
                 )
         ) {
             fecharModalOrdem();
+        }
+    }
+);
+
+window.addEventListener(
+    "cliente-salvo",
+    evento => {
+        if (
+            !cadastrandoClientePelaOrdem
+        ) {
+            return;
+        }
+
+        const cliente =
+            evento.detail?.cliente;
+
+        if (!cliente?.id) {
+            return;
+        }
+
+        selecionarClienteDaOrdem(
+            cliente.id
+        );
+
+        if (mensagemClienteOrdem) {
+            mensagemClienteOrdem.textContent =
+                "Cliente cadastrado e selecionado na ordem.";
+        }
+    }
+);
+
+window.addEventListener(
+    "modal-cliente-fechado",
+    () => {
+        if (
+            !cadastrandoClientePelaOrdem
+        ) {
+            return;
+        }
+
+        cadastrandoClientePelaOrdem =
+            false;
+
+        modalCliente
+            ?.classList.remove(
+                "modal-cliente-sobre-ordem"
+            );
+
+        if (
+            modalOrdem
+                ?.classList.contains(
+                    "aberto"
+                )
+        ) {
+            document.body.style.overflow =
+                "hidden";
+
+            setTimeout(
+                () => {
+                    botaoClienteOrdem
+                        ?.focus();
+                },
+                50
+            );
         }
     }
 );
