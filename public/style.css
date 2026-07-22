@@ -8598,100 +8598,159 @@ html[data-theme="dark"]
 
 /*
 |--------------------------------------------------------------------------
-| Tipo de cadastro — minimalista
+| Tipo de cadastro — minimalista e profissional
 |--------------------------------------------------------------------------
 */
 
 .tipo-cadastro-cliente {
-    display: flex;
+    display: grid;
+
+    grid-template-columns:
+        minmax(0, 1fr)
+        auto;
+
+    width: 100%;
+
     align-items: center;
-    justify-content: space-between;
 
-    min-width: 0;
+    padding:
+        10px
+        0
+        14px;
 
-    padding: 14px 16px;
-    gap: 24px;
+    gap: 18px;
 
-    border: 1px solid var(--borda);
-    border-radius: 12px;
+    border: 0;
+    border-bottom: 1px solid var(--borda);
+    border-radius: 0;
 
-    background: var(--superficie-suave);
+    background: transparent;
 }
 
 .tipo-cadastro-informacoes {
     display: grid;
+
     min-width: 0;
+
     gap: 3px;
+
+    text-align: left;
 }
 
 .tipo-cadastro-informacoes > span {
     color: var(--texto);
 
-    font-size: 0.82rem;
+    font-size: 0.72rem;
     font-weight: 700;
 }
 
 .tipo-cadastro-informacoes > small {
     color: var(--texto-suave);
 
-    font-size: 0.73rem;
+    font-size: 0.62rem;
     line-height: 1.4;
 }
 
+/*
+|--------------------------------------------------------------------------
+| Botões de tipo de pessoa
+|--------------------------------------------------------------------------
+*/
+
 .tipo-pessoa-controle {
     display: inline-flex;
+
     align-items: center;
-    flex-shrink: 0;
 
     padding: 3px;
-    gap: 2px;
+    gap: 3px;
 
     border: 1px solid var(--borda);
-    border-radius: 10px;
+    border-radius: 9px;
 
-    background: var(--superficie);
+    background: var(--superficie-suave);
 }
 
 .tipo-pessoa-botao {
+    display: inline-flex;
+
     min-height: 34px;
 
-    padding: 0 14px;
+    align-items: center;
+    justify-content: center;
+
+    padding:
+        0
+        14px;
 
     border: 0;
-    border-radius: 7px;
+    border-radius: 6px;
 
     background: transparent;
     color: var(--texto-suave);
 
     font: inherit;
-    font-size: 0.76rem;
-    font-weight: 600;
+    font-size: 0.67rem;
+    font-weight: 700;
 
     white-space: nowrap;
     cursor: pointer;
 
     transition:
-        background-color 160ms ease,
-        color 160ms ease,
-        box-shadow 160ms ease;
+        background-color 150ms ease,
+        color 150ms ease,
+        box-shadow 150ms ease;
 }
 
-.tipo-pessoa-botao:hover {
+.tipo-pessoa-botao:hover:not(.ativo) {
+    background: var(--superficie);
     color: var(--texto);
 }
 
 .tipo-pessoa-botao.ativo {
     background: var(--texto);
-    color: var(--contraste);
+    color: var(--superficie);
 
     box-shadow:
-        0 1px 3px
+        0 1px 4px
         rgba(0, 0, 0, 0.15);
 }
 
 .tipo-pessoa-botao:focus-visible {
-    outline: 2px solid var(--principal);
-    outline-offset: 2px;
+    outline: none;
+
+    box-shadow:
+        0 0 0 3px
+        rgba(127, 127, 127, 0.18);
+}
+
+/*
+|--------------------------------------------------------------------------
+| Responsividade
+|--------------------------------------------------------------------------
+*/
+
+@media (max-width: 600px) {
+    .tipo-cadastro-cliente {
+        grid-template-columns: 1fr;
+
+        align-items: stretch;
+
+        gap: 10px;
+    }
+
+    .tipo-pessoa-controle {
+        display: grid;
+
+        width: 100%;
+
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+    }
+
+    .tipo-pessoa-botao {
+        width: 100%;
+    }
 }
 
 /*
@@ -11036,5 +11095,1738 @@ html[data-theme="dark"]
                 2,
                 minmax(0, 1fr)
             );
+    }
+}
+
+/*
+|--------------------------------------------------------------------------
+| Arquivos do cliente
+|--------------------------------------------------------------------------
+*/
+
+.campo-logo-original,
+.campo-logo-convertida {
+    display: grid;
+    gap: 10px;
+}
+
+.campo-arquivo-cabecalho {
+    display: flex;
+
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 10px;
+}
+
+.campo-arquivo-cabecalho > span {
+    color: var(--texto);
+
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+.campo-arquivo-cabecalho
+    .campo-opcional {
+    color: var(--texto-suave);
+
+    font-size: 0.62rem;
+    font-weight: 600;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Área de copiar e colar
+|--------------------------------------------------------------------------
+*/
+
+.area-colar-logo {
+    position: relative;
+
+    display: flex;
+
+    width: 100%;
+    min-height: 92px;
+
+    align-items: center;
+    justify-content: flex-start;
+
+    padding: 16px;
+
+    overflow: hidden;
+
+    gap: 13px;
+
+    border: 1px solid var(--borda);
+    border-radius: 12px;
+
+    background: var(--superficie-suave);
+    color: var(--texto);
+
+    cursor: pointer;
+    outline: none;
+
+    transition:
+        border-color 160ms ease,
+        background-color 160ms ease,
+        box-shadow 160ms ease,
+        transform 160ms ease;
+}
+
+.area-colar-logo:hover {
+    border-color: var(--borda-forte);
+    background: var(--superficie);
+}
+
+.area-colar-logo:focus,
+.area-colar-logo:focus-visible {
+    border-color: var(--texto-suave);
+
+    background: var(--superficie);
+
+    outline: none;
+
+    box-shadow:
+        0 0 0 3px
+        rgba(127, 127, 127, 0.2);
+
+    transform: translateY(-1px);
+}
+
+.area-colar-logo.arrastando {
+    border-color: var(--texto);
+
+    background: var(--superficie);
+
+    box-shadow:
+        0 0 0 3px
+        rgba(0, 0, 0, 0.08);
+}
+
+.conteudo-colar-logo {
+    display: flex;
+
+    width: 100%;
+    max-width: none;
+
+    align-items: center;
+    justify-content: flex-start;
+
+    gap: 13px;
+
+    text-align: left;
+}
+
+.conteudo-colar-logo[hidden] {
+    display: none;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Ícones dos arquivos
+|--------------------------------------------------------------------------
+*/
+
+.arquivo-cliente-icone {
+    display: inline-flex;
+
+    width: 42px;
+    height: 42px;
+    min-width: 42px;
+
+    align-items: center;
+    justify-content: center;
+
+    border: 1px solid var(--borda);
+    border-radius: 11px;
+
+    background: var(--superficie);
+    color: var(--texto-suave);
+}
+
+.arquivo-cliente-icone svg {
+    width: 19px;
+    height: 19px;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Textos dos arquivos
+|--------------------------------------------------------------------------
+*/
+
+.arquivo-cliente-textos {
+    display: grid;
+
+    min-width: 0;
+
+    gap: 3px;
+}
+
+.arquivo-cliente-textos strong {
+    overflow: hidden;
+
+    color: var(--texto);
+
+    font-size: 0.76rem;
+    font-weight: 720;
+
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.arquivo-cliente-textos p {
+    margin: 0;
+
+    color: var(--texto-suave);
+
+    font-size: 0.66rem;
+    line-height: 1.45;
+}
+
+.arquivo-cliente-textos small {
+    color: var(--texto-suave);
+
+    font-size: 0.59rem;
+    line-height: 1.4;
+}
+
+.arquivo-cliente-textos kbd {
+    display: inline-flex;
+
+    min-width: 22px;
+    min-height: 20px;
+
+    align-items: center;
+    justify-content: center;
+
+    padding: 1px 5px;
+
+    border: 1px solid var(--borda);
+    border-bottom-color: var(--borda-forte);
+    border-radius: 5px;
+
+    background: var(--superficie);
+    color: var(--texto);
+
+    font-family: inherit;
+    font-size: 0.58rem;
+    font-weight: 750;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Pré-visualização
+|--------------------------------------------------------------------------
+*/
+
+.preview-logo-colada {
+    display: block;
+
+    width: 100%;
+    max-width: 100%;
+    height: 190px;
+
+    padding: 10px;
+
+    object-fit: contain;
+
+    border: 1px solid var(--borda);
+    border-radius: 9px;
+
+    background: var(--superficie);
+}
+
+.preview-logo-colada[hidden] {
+    display: none;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Arquivo convertido
+|--------------------------------------------------------------------------
+*/
+
+.cartao-arquivo-convertido {
+    display: flex;
+
+    width: 100%;
+    min-height: 92px;
+
+    align-items: center;
+
+    padding: 16px;
+
+    gap: 13px;
+
+    border: 1px solid var(--borda);
+    border-radius: 12px;
+
+    background: var(--superficie-suave);
+}
+
+/*
+|--------------------------------------------------------------------------
+| Botões
+|--------------------------------------------------------------------------
+*/
+
+.acoes-arquivo-cliente {
+    display: flex;
+    flex-wrap: wrap;
+
+    gap: 8px;
+}
+
+.botao-arquivo-cliente {
+    display: inline-flex;
+
+    min-height: 36px;
+
+    align-items: center;
+    justify-content: center;
+
+    padding: 0 12px;
+
+    gap: 7px;
+
+    border: 1px solid var(--borda);
+    border-radius: 9px;
+
+    background: var(--superficie);
+    color: var(--texto);
+
+    font: inherit;
+    font-size: 0.65rem;
+    font-weight: 700;
+
+    cursor: pointer;
+
+    transition:
+        border-color 150ms ease,
+        background-color 150ms ease,
+        color 150ms ease;
+}
+
+.botao-arquivo-cliente:hover {
+    border-color: var(--borda-forte);
+    background: var(--superficie-suave);
+}
+
+.botao-arquivo-cliente:focus-visible {
+    outline: none;
+
+    box-shadow:
+        0 0 0 3px
+        rgba(0, 0, 0, 0.07);
+}
+
+.botao-arquivo-cliente svg {
+    width: 15px;
+    height: 15px;
+}
+
+.botao-remover-arquivo {
+    color: var(--perigo, #c63737);
+}
+
+.botao-remover-arquivo:hover {
+    border-color:
+        rgba(198, 55, 55, 0.35);
+
+    background:
+        rgba(198, 55, 55, 0.06);
+}
+
+/*
+|--------------------------------------------------------------------------
+| Mensagens
+|--------------------------------------------------------------------------
+*/
+
+.mensagem-arquivo-cliente {
+    color: var(--texto-suave);
+
+    font-size: 0.61rem;
+    line-height: 1.45;
+}
+
+.mensagem-arquivo-cliente.erro {
+    color: var(--perigo, #c63737);
+}
+
+.mensagem-arquivo-cliente.sucesso {
+    color: var(--sucesso, #16834b);
+}
+
+/*
+|--------------------------------------------------------------------------
+| Responsividade
+|--------------------------------------------------------------------------
+*/
+
+@media (max-width: 600px) {
+    .conteudo-colar-logo {
+        flex-direction: column;
+
+        text-align: center;
+    }
+
+    .acoes-arquivo-cliente {
+        display: grid;
+        grid-template-columns: 1fr;
+    }
+
+    .botao-arquivo-cliente {
+        width: 100%;
+    }
+
+    .area-colar-logo {
+        min-height: 145px;
+    }
+
+    .preview-logo-colada {
+        height: 190px;
+    }
+}
+
+/*
+|--------------------------------------------------------------------------
+| Ocultar barra de rolagem de todos os modais
+|--------------------------------------------------------------------------
+*/
+
+.modal-conteudo {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.modal-conteudo::-webkit-scrollbar {
+    display: none;
+
+    width: 0;
+    height: 0;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Visualização da ordem
+|--------------------------------------------------------------------------
+*/
+
+#modalDetalhesOrdem .modal-visualizacao-ordem {
+    display: flex;
+    width: min(920px, calc(100vw - 32px));
+    max-width: 920px;
+    max-height: calc(100vh - 40px);
+    padding: 0;
+    overflow: hidden;
+    flex-direction: column;
+
+    border: 1px solid var(--borda);
+    border-radius: 18px;
+
+    background: var(--superficie);
+    box-shadow:
+        0 28px 80px
+        rgba(0, 0, 0, 0.28);
+}
+
+/*
+|--------------------------------------------------------------------------
+| Cabeçalho
+|--------------------------------------------------------------------------
+*/
+
+#modalDetalhesOrdem .ordem-detalhes-cabecalho {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: flex-start;
+    justify-content: space-between;
+
+    padding: 24px 26px 22px;
+    gap: 24px;
+
+    border-bottom: 1px solid var(--borda);
+    background: var(--superficie);
+}
+
+#modalDetalhesOrdem .ordem-detalhes-identificacao {
+    display: grid;
+    min-width: 0;
+    gap: 6px;
+}
+
+#modalDetalhesOrdem .ordem-detalhes-rotulo {
+    color: var(--texto-suave);
+
+    font-size: 0.65rem;
+    font-weight: 750;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+#modalDetalhesOrdem .ordem-detalhes-linha-titulo {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+#modalDetalhesOrdem .ordem-detalhes-linha-titulo h2 {
+    min-width: 0;
+    margin: 0;
+
+    color: var(--texto);
+
+    font-size: 1.18rem;
+    font-weight: 760;
+    line-height: 1.25;
+    word-break: break-word;
+}
+
+#modalDetalhesOrdem .ordem-detalhes-identificacao > p {
+    margin: 0;
+
+    color: var(--texto-suave);
+
+    font-size: 0.7rem;
+    line-height: 1.5;
+}
+
+#modalDetalhesOrdem #statusDetalhesOrdem {
+    display: inline-flex;
+    min-height: 25px;
+    align-items: center;
+    justify-content: center;
+
+    padding: 0 9px;
+
+    border: 1px solid var(--borda);
+    border-radius: 999px;
+
+    background: var(--superficie-suave);
+    color: var(--texto);
+
+    font-size: 0.61rem;
+    font-weight: 750;
+    white-space: nowrap;
+}
+
+#modalDetalhesOrdem .ordem-detalhes-fechar {
+    flex: 0 0 auto;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Área rolável
+|--------------------------------------------------------------------------
+*/
+
+#modalDetalhesOrdem .ordem-detalhes-conteudo {
+    display: grid;
+    flex: 1 1 auto;
+    min-height: 0;
+
+    padding: 22px 26px 28px;
+    gap: 18px;
+
+    overflow-y: auto;
+    overscroll-behavior: contain;
+
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+#modalDetalhesOrdem
+.ordem-detalhes-conteudo::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Resumo principal
+|--------------------------------------------------------------------------
+*/
+
+#modalDetalhesOrdem .ordem-resumo-grade {
+    display: grid;
+    grid-template-columns:
+        repeat(3, minmax(0, 1fr));
+
+    gap: 10px;
+}
+
+#modalDetalhesOrdem .ordem-resumo-item {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+
+    padding: 14px;
+    gap: 11px;
+
+    border: 1px solid var(--borda);
+    border-radius: 12px;
+
+    background: var(--superficie-suave);
+}
+
+#modalDetalhesOrdem .ordem-resumo-icone {
+    display: inline-flex;
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
+
+    align-items: center;
+    justify-content: center;
+
+    border: 1px solid var(--borda);
+    border-radius: 10px;
+
+    background: var(--superficie);
+    color: var(--texto-suave);
+}
+
+#modalDetalhesOrdem .ordem-resumo-icone svg {
+    width: 17px;
+    height: 17px;
+}
+
+#modalDetalhesOrdem .ordem-resumo-item > div {
+    display: grid;
+    min-width: 0;
+    gap: 3px;
+}
+
+#modalDetalhesOrdem .ordem-resumo-item span {
+    color: var(--texto-suave);
+
+    font-size: 0.61rem;
+    font-weight: 650;
+}
+
+#modalDetalhesOrdem .ordem-resumo-item strong {
+    overflow: hidden;
+
+    color: var(--texto);
+
+    font-size: 0.73rem;
+    font-weight: 750;
+
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Seções
+|--------------------------------------------------------------------------
+*/
+
+#modalDetalhesOrdem .ordem-detalhes-secao {
+    display: grid;
+
+    padding: 18px;
+    gap: 16px;
+
+    border: 1px solid var(--borda);
+    border-radius: 14px;
+
+    background: var(--superficie);
+}
+
+#modalDetalhesOrdem .ordem-detalhes-secao-cabecalho {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+}
+
+#modalDetalhesOrdem .ordem-detalhes-secao-icone {
+    display: inline-flex;
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+
+    align-items: center;
+    justify-content: center;
+
+    border: 1px solid var(--borda);
+    border-radius: 9px;
+
+    background: var(--superficie-suave);
+    color: var(--texto-suave);
+}
+
+#modalDetalhesOrdem
+.ordem-detalhes-secao-icone svg {
+    width: 16px;
+    height: 16px;
+}
+
+#modalDetalhesOrdem
+.ordem-detalhes-secao-cabecalho > div {
+    display: grid;
+    min-width: 0;
+    gap: 2px;
+}
+
+#modalDetalhesOrdem
+.ordem-detalhes-secao-cabecalho h3 {
+    margin: 0;
+
+    color: var(--texto);
+
+    font-size: 0.75rem;
+    font-weight: 750;
+}
+
+#modalDetalhesOrdem
+.ordem-detalhes-secao-cabecalho p {
+    margin: 0;
+
+    color: var(--texto-suave);
+
+    font-size: 0.62rem;
+    line-height: 1.45;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Grade de informações
+|--------------------------------------------------------------------------
+*/
+
+#modalDetalhesOrdem .ordem-detalhes-grade {
+    display: grid;
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+
+    gap: 10px;
+}
+
+#modalDetalhesOrdem .ordem-detalhe {
+    display: grid;
+    min-width: 0;
+
+    padding: 12px 13px;
+    gap: 5px;
+
+    border: 1px solid var(--borda);
+    border-radius: 10px;
+
+    background: var(--superficie-suave);
+}
+
+#modalDetalhesOrdem .ordem-detalhe-largo {
+    grid-column: 1 / -1;
+}
+
+#modalDetalhesOrdem .ordem-detalhe > span {
+    color: var(--texto-suave);
+
+    font-size: 0.59rem;
+    font-weight: 680;
+}
+
+#modalDetalhesOrdem .ordem-detalhe > strong {
+    color: var(--texto);
+
+    font-size: 0.69rem;
+    font-weight: 700;
+    line-height: 1.55;
+
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+#modalDetalhesOrdem .ordem-detalhe-linhas {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Arquivos
+|--------------------------------------------------------------------------
+*/
+
+#modalDetalhesOrdem .ordem-arquivos-grade {
+    display: grid;
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+
+    gap: 10px;
+}
+
+#modalDetalhesOrdem .ordem-arquivo {
+    display: grid;
+    min-width: 0;
+
+    grid-template-columns:
+        auto
+        minmax(0, 1fr)
+        auto;
+
+    align-items: center;
+
+    padding: 13px;
+    gap: 11px;
+
+    border: 1px solid var(--borda);
+    border-radius: 11px;
+
+    background: var(--superficie-suave);
+}
+
+#modalDetalhesOrdem .ordem-arquivo-icone {
+    display: inline-flex;
+    width: 34px;
+    height: 34px;
+
+    align-items: center;
+    justify-content: center;
+
+    border: 1px solid var(--borda);
+    border-radius: 9px;
+
+    background: var(--superficie);
+    color: var(--texto-suave);
+}
+
+#modalDetalhesOrdem .ordem-arquivo-icone svg {
+    width: 16px;
+    height: 16px;
+}
+
+#modalDetalhesOrdem .ordem-arquivo-informacoes {
+    display: grid;
+    min-width: 0;
+    gap: 3px;
+}
+
+#modalDetalhesOrdem
+.ordem-arquivo-informacoes span {
+    color: var(--texto-suave);
+
+    font-size: 0.58rem;
+    font-weight: 680;
+}
+
+#modalDetalhesOrdem
+.ordem-arquivo-informacoes strong {
+    overflow: hidden;
+
+    color: var(--texto);
+
+    font-size: 0.66rem;
+    font-weight: 700;
+
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#modalDetalhesOrdem .ordem-arquivo-acao {
+    display: inline-flex;
+    min-height: 31px;
+    align-items: center;
+    justify-content: center;
+
+    padding: 0 10px;
+    gap: 6px;
+
+    border: 1px solid var(--borda);
+    border-radius: 8px;
+
+    background: var(--superficie);
+    color: var(--texto);
+
+    font-size: 0.61rem;
+    font-weight: 700;
+    text-decoration: none;
+
+    transition:
+        border-color 150ms ease,
+        background-color 150ms ease;
+}
+
+#modalDetalhesOrdem .ordem-arquivo-acao:hover {
+    border-color: var(--borda-forte);
+    background: var(--superficie-suave);
+}
+
+#modalDetalhesOrdem .ordem-arquivo-acao svg {
+    width: 14px;
+    height: 14px;
+}
+
+#modalDetalhesOrdem .ordem-arquivo-status {
+    color: var(--texto-suave);
+
+    font-size: 0.58rem;
+    font-weight: 650;
+    white-space: nowrap;
+}
+
+#modalDetalhesOrdem .ordem-arquivo-ausente {
+    opacity: 0.72;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Observações
+|--------------------------------------------------------------------------
+*/
+
+#modalDetalhesOrdem .ordem-observacoes {
+    min-height: 76px;
+
+    padding: 14px;
+
+    border: 1px solid var(--borda);
+    border-radius: 10px;
+
+    background: var(--superficie-suave);
+    color: var(--texto);
+
+    font-size: 0.68rem;
+    line-height: 1.65;
+
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Rodapé
+|--------------------------------------------------------------------------
+*/
+
+#modalDetalhesOrdem .ordem-detalhes-rodape {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 16px 26px;
+    gap: 18px;
+
+    border-top: 1px solid var(--borda);
+    background: var(--superficie);
+}
+
+#modalDetalhesOrdem .ordem-detalhes-atualizacao {
+    display: grid;
+    min-width: 0;
+    gap: 3px;
+}
+
+#modalDetalhesOrdem
+.ordem-detalhes-atualizacao span {
+    color: var(--texto-suave);
+
+    font-size: 0.57rem;
+    font-weight: 650;
+}
+
+#modalDetalhesOrdem
+.ordem-detalhes-atualizacao strong {
+    color: var(--texto);
+
+    font-size: 0.64rem;
+    font-weight: 700;
+}
+
+#modalDetalhesOrdem .ordem-detalhes-acoes {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+#modalDetalhesOrdem
+.ordem-detalhes-acoes .botao {
+    min-height: 38px;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Responsividade
+|--------------------------------------------------------------------------
+*/
+
+@media (max-width: 760px) {
+    #modalDetalhesOrdem .modal-visualizacao-ordem {
+        width: calc(100vw - 20px);
+        max-height: calc(100vh - 20px);
+
+        border-radius: 14px;
+    }
+
+    #modalDetalhesOrdem .ordem-detalhes-cabecalho {
+        padding: 19px 18px 17px;
+    }
+
+    #modalDetalhesOrdem .ordem-detalhes-conteudo {
+        padding: 16px 18px 20px;
+        gap: 14px;
+    }
+
+    #modalDetalhesOrdem .ordem-resumo-grade {
+        grid-template-columns: 1fr;
+    }
+
+    #modalDetalhesOrdem .ordem-detalhes-grade {
+        grid-template-columns: 1fr;
+    }
+
+    #modalDetalhesOrdem .ordem-detalhe-largo {
+        grid-column: auto;
+    }
+
+    #modalDetalhesOrdem .ordem-arquivos-grade {
+        grid-template-columns: 1fr;
+    }
+
+    #modalDetalhesOrdem .ordem-detalhes-rodape {
+        align-items: stretch;
+        flex-direction: column;
+
+        padding: 14px 18px;
+        gap: 12px;
+    }
+
+    #modalDetalhesOrdem .ordem-detalhes-acoes {
+        display: grid;
+        width: 100%;
+
+        grid-template-columns:
+            repeat(3, minmax(0, 1fr));
+    }
+
+    #modalDetalhesOrdem
+    .ordem-detalhes-acoes .botao {
+        width: 100%;
+    }
+}
+
+@media (max-width: 520px) {
+    #modalDetalhesOrdem .ordem-detalhes-linha-titulo {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 7px;
+    }
+
+    #modalDetalhesOrdem .ordem-detalhes-secao {
+        padding: 14px;
+    }
+
+    #modalDetalhesOrdem .ordem-detalhes-acoes {
+        grid-template-columns: 1fr;
+    }
+
+    #modalDetalhesOrdem .ordem-detalhes-atualizacao {
+        text-align: center;
+    }
+}
+
+/*
+|--------------------------------------------------------------------------
+| Modal da ordem — correção dos campos internos
+|--------------------------------------------------------------------------
+*/
+
+#modalDetalhesOrdem .ordem-detalhes-secao {
+    padding: 16px;
+    gap: 14px;
+
+    border-radius: 13px;
+}
+
+#modalDetalhesOrdem .ordem-detalhes-grade {
+    display: grid;
+
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+
+    align-items: start;
+    gap: 9px;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Campos compactos
+|--------------------------------------------------------------------------
+*/
+
+#modalDetalhesOrdem .ordem-detalhe {
+    display: grid !important;
+
+    width: 100%;
+    min-width: 0;
+    min-height: 0 !important;
+    height: auto !important;
+
+    align-content: start !important;
+    align-items: start !important;
+    justify-content: start !important;
+    justify-items: start !important;
+
+    padding: 12px 14px !important;
+    gap: 5px !important;
+
+    border: 1px solid var(--borda);
+    border-radius: 10px;
+
+    background: var(--superficie-suave);
+
+    text-align: left !important;
+}
+
+#modalDetalhesOrdem .ordem-detalhe-largo {
+    grid-column: 1 / -1;
+
+    min-height: 0 !important;
+    height: auto !important;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Rótulo
+|--------------------------------------------------------------------------
+*/
+
+#modalDetalhesOrdem .ordem-detalhe > span {
+    display: block;
+
+    width: 100%;
+    margin: 0;
+
+    color: var(--texto-suave);
+
+    font-size: 0.59rem;
+    font-weight: 680;
+    line-height: 1.4;
+
+    text-align: left !important;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Valor
+|--------------------------------------------------------------------------
+*/
+
+#modalDetalhesOrdem .ordem-detalhe > strong {
+    display: block !important;
+
+    width: 100%;
+    margin: 0 !important;
+    padding: 0 !important;
+
+    color: var(--texto);
+
+    font-size: 0.7rem;
+    font-weight: 700;
+    line-height: 1.5;
+
+    text-align: left !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Descrição do serviço
+|--------------------------------------------------------------------------
+*/
+
+#modalDetalhesOrdem
+.ordem-detalhe-largo:first-child {
+    padding-top: 13px !important;
+    padding-bottom: 13px !important;
+}
+
+#modalDetalhesOrdem
+.ordem-detalhe-largo:first-child > strong {
+    font-size: 0.72rem;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Linhas utilizadas
+|--------------------------------------------------------------------------
+*/
+
+#modalDetalhesOrdem .ordem-detalhe-linhas {
+    display: flex;
+
+    width: 100%;
+
+    align-items: center;
+    justify-content: flex-start;
+
+    flex-wrap: wrap;
+    gap: 6px;
+
+    text-align: left;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Celular
+|--------------------------------------------------------------------------
+*/
+
+@media (max-width: 680px) {
+    #modalDetalhesOrdem .ordem-detalhes-grade {
+        grid-template-columns: 1fr;
+    }
+
+    #modalDetalhesOrdem .ordem-detalhe-largo {
+        grid-column: auto;
+    }
+}
+
+/*
+|--------------------------------------------------------------------------
+| Arquivos original e convertido no modal da ordem
+|--------------------------------------------------------------------------
+*/
+
+.logo-cliente-ordem.logo-cliente-ordem-lista {
+    display: grid;
+
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+
+    min-height: 0;
+
+    align-items: stretch;
+
+    padding: 0;
+    gap: 10px;
+
+    border: 0;
+
+    background: transparent;
+}
+
+.arquivo-cliente-ordem {
+    display: grid;
+
+    grid-template-columns:
+        112px
+        minmax(0, 1fr)
+        auto;
+
+    min-width: 0;
+    min-height: 126px;
+
+    align-items: center;
+
+    padding: 14px;
+    gap: 16px;
+
+    border: 1px solid var(--borda);
+    border-radius: 12px;
+
+    background: var(--superficie-suave);
+}
+
+.arquivo-cliente-ordem-vazio {
+    grid-template-columns:
+        42px
+        minmax(0, 1fr);
+
+    background: var(--superficie);
+}
+
+.arquivo-cliente-ordem-indisponivel {
+    opacity: 0.75;
+}
+
+.logo-cliente-ordem-status {
+    display: inline-flex;
+
+    min-height: 32px;
+
+    align-items: center;
+    justify-content: center;
+
+    padding: 0 10px;
+
+    border: 1px solid var(--borda);
+    border-radius: 8px;
+
+    background: var(--superficie);
+    color: var(--texto-suave);
+
+    font-size: 0.65rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Responsividade
+|--------------------------------------------------------------------------
+*/
+
+@media (max-width: 980px) {
+    .logo-cliente-ordem.logo-cliente-ordem-lista {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 680px) {
+    .logo-cliente-ordem.logo-cliente-ordem-lista {
+        grid-template-columns: 1fr;
+
+        padding: 0;
+        gap: 9px;
+    }
+
+    .arquivo-cliente-ordem {
+        grid-template-columns:
+            84px
+            minmax(0, 1fr);
+
+        padding: 12px;
+        gap: 12px;
+    }
+
+    .arquivo-cliente-ordem-vazio {
+        grid-template-columns:
+            42px
+            minmax(0, 1fr);
+    }
+
+    .arquivo-cliente-ordem
+    .logo-cliente-ordem-acoes {
+        grid-column: 1 / -1;
+
+        display: flex;
+        width: 100%;
+
+        flex-direction: row;
+    }
+
+    .arquivo-cliente-ordem
+    .logo-cliente-ordem-botao {
+        min-width: 0;
+
+        flex: 1;
+    }
+}
+
+/*
+|--------------------------------------------------------------------------
+| Alerta central de prazos
+|--------------------------------------------------------------------------
+*/
+
+#modalAlertaPrazosOrdens .alerta-prazos-conteudo {
+    display: flex;
+
+    width: min(
+        640px,
+        calc(100vw - 32px)
+    );
+
+    max-width: 640px;
+    max-height: calc(100vh - 40px);
+
+    padding: 0;
+    overflow: hidden;
+    flex-direction: column;
+
+    border: 1px solid var(--borda);
+    border-radius: 18px;
+
+    background: var(--superficie);
+
+    box-shadow:
+        0 30px 90px
+        rgba(0, 0, 0, 0.34);
+}
+
+/*
+|--------------------------------------------------------------------------
+| Cabeçalho
+|--------------------------------------------------------------------------
+*/
+
+#modalAlertaPrazosOrdens .alerta-prazos-cabecalho {
+    display: grid;
+
+    grid-template-columns:
+        auto
+        minmax(0, 1fr)
+        auto;
+
+    align-items: start;
+
+    padding: 22px 24px 20px;
+    gap: 14px;
+
+    border-bottom: 1px solid var(--borda);
+}
+
+#modalAlertaPrazosOrdens .alerta-prazos-icone {
+    display: inline-flex;
+
+    width: 42px;
+    height: 42px;
+
+    align-items: center;
+    justify-content: center;
+
+    border: 1px solid var(--borda);
+    border-radius: 12px;
+
+    background: var(--superficie-suave);
+    color: var(--texto);
+}
+
+#modalAlertaPrazosOrdens .alerta-prazos-icone svg {
+    width: 19px;
+    height: 19px;
+}
+
+#modalAlertaPrazosOrdens .alerta-prazos-titulos {
+    display: grid;
+    min-width: 0;
+    gap: 4px;
+}
+
+#modalAlertaPrazosOrdens .alerta-prazos-titulos > span {
+    color: var(--texto-suave);
+
+    font-size: 0.61rem;
+    font-weight: 750;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+#modalAlertaPrazosOrdens .alerta-prazos-titulos h2 {
+    margin: 0;
+
+    color: var(--texto);
+
+    font-size: 1rem;
+    font-weight: 760;
+}
+
+#modalAlertaPrazosOrdens .alerta-prazos-titulos p {
+    margin: 0;
+
+    color: var(--texto-suave);
+
+    font-size: 0.67rem;
+    line-height: 1.5;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Resumo
+|--------------------------------------------------------------------------
+*/
+
+#modalAlertaPrazosOrdens .alerta-prazos-resumo {
+    display: grid;
+
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+
+    padding: 18px 24px 0;
+    gap: 9px;
+}
+
+#modalAlertaPrazosOrdens .alerta-prazo-resumo-item {
+    display: flex;
+
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 13px 14px;
+    gap: 12px;
+
+    border: 1px solid var(--borda);
+    border-radius: 11px;
+
+    background: var(--superficie-suave);
+}
+
+#modalAlertaPrazosOrdens
+.alerta-prazo-resumo-item span {
+    color: var(--texto-suave);
+
+    font-size: 0.64rem;
+    font-weight: 680;
+}
+
+#modalAlertaPrazosOrdens
+.alerta-prazo-resumo-item strong {
+    color: var(--texto);
+
+    font-size: 1rem;
+    font-weight: 780;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Lista de ordens
+|--------------------------------------------------------------------------
+*/
+
+#modalAlertaPrazosOrdens .alerta-prazos-lista {
+    display: grid;
+
+    flex: 1 1 auto;
+    min-height: 0;
+
+    padding: 14px 24px 20px;
+    gap: 9px;
+
+    overflow-y: auto;
+    overscroll-behavior: contain;
+
+    scrollbar-width: none;
+}
+
+#modalAlertaPrazosOrdens
+.alerta-prazos-lista::-webkit-scrollbar {
+    display: none;
+}
+
+#modalAlertaPrazosOrdens .alerta-prazo-ordem {
+    display: grid;
+
+    padding: 14px;
+    gap: 12px;
+
+    border: 1px solid var(--borda);
+    border-radius: 12px;
+
+    background: var(--superficie);
+}
+
+#modalAlertaPrazosOrdens
+.alerta-prazo-ordem-atrasada {
+    border-left:
+        3px solid
+        var(--perigo, #d84b4b);
+}
+
+#modalAlertaPrazosOrdens
+.alerta-prazo-ordem-proxima {
+    border-left:
+        3px solid
+        var(--aviso, #d89c3f);
+}
+
+#modalAlertaPrazosOrdens
+.alerta-prazo-ordem-principal {
+    display: flex;
+
+    align-items: flex-start;
+    justify-content: space-between;
+
+    gap: 14px;
+}
+
+#modalAlertaPrazosOrdens
+.alerta-prazo-ordem-identificacao {
+    display: grid;
+    min-width: 0;
+    gap: 3px;
+}
+
+#modalAlertaPrazosOrdens
+.alerta-prazo-ordem-identificacao strong {
+    color: var(--texto);
+
+    font-size: 0.72rem;
+    font-weight: 760;
+}
+
+#modalAlertaPrazosOrdens
+.alerta-prazo-ordem-identificacao span {
+    overflow: hidden;
+
+    color: var(--texto-suave);
+
+    font-size: 0.64rem;
+
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#modalAlertaPrazosOrdens .alerta-prazo-situacao {
+    display: inline-flex;
+
+    min-height: 26px;
+
+    align-items: center;
+    justify-content: center;
+
+    padding: 0 9px;
+
+    border: 1px solid var(--borda);
+    border-radius: 999px;
+
+    font-size: 0.59rem;
+    font-weight: 740;
+    white-space: nowrap;
+}
+
+#modalAlertaPrazosOrdens
+.alerta-prazo-situacao.atrasada {
+    background:
+        rgba(216, 75, 75, 0.1);
+
+    color:
+        var(--perigo, #d84b4b);
+}
+
+#modalAlertaPrazosOrdens
+.alerta-prazo-situacao.proxima {
+    background:
+        rgba(216, 156, 63, 0.1);
+
+    color:
+        var(--aviso, #d89c3f);
+}
+
+#modalAlertaPrazosOrdens
+.alerta-prazo-ordem-detalhes {
+    display: grid;
+
+    grid-template-columns:
+        repeat(3, minmax(0, 1fr));
+
+    gap: 8px;
+}
+
+#modalAlertaPrazosOrdens
+.alerta-prazo-ordem-detalhes > div {
+    display: grid;
+
+    padding: 9px 10px;
+    gap: 3px;
+
+    border-radius: 8px;
+
+    background: var(--superficie-suave);
+}
+
+#modalAlertaPrazosOrdens
+.alerta-prazo-ordem-detalhes span {
+    color: var(--texto-suave);
+
+    font-size: 0.55rem;
+    font-weight: 650;
+}
+
+#modalAlertaPrazosOrdens
+.alerta-prazo-ordem-detalhes strong {
+    color: var(--texto);
+
+    font-size: 0.63rem;
+    font-weight: 700;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Rodapé
+|--------------------------------------------------------------------------
+*/
+
+#modalAlertaPrazosOrdens .alerta-prazos-rodape {
+    display: flex;
+
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 15px 24px;
+    gap: 16px;
+
+    border-top: 1px solid var(--borda);
+}
+
+#modalAlertaPrazosOrdens .alerta-prazos-rodape small {
+    max-width: 390px;
+
+    color: var(--texto-suave);
+
+    font-size: 0.58rem;
+    line-height: 1.45;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Celular
+|--------------------------------------------------------------------------
+*/
+
+@media (max-width: 600px) {
+    #modalAlertaPrazosOrdens .alerta-prazos-conteudo {
+        width: calc(100vw - 20px);
+        max-height: calc(100vh - 20px);
+
+        border-radius: 14px;
+    }
+
+    #modalAlertaPrazosOrdens .alerta-prazos-cabecalho {
+        padding: 18px;
+    }
+
+    #modalAlertaPrazosOrdens .alerta-prazos-resumo {
+        grid-template-columns: 1fr;
+
+        padding:
+            14px
+            18px
+            0;
+    }
+
+    #modalAlertaPrazosOrdens .alerta-prazos-lista {
+        padding:
+            12px
+            18px
+            16px;
+    }
+
+    #modalAlertaPrazosOrdens
+    .alerta-prazo-ordem-principal {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    #modalAlertaPrazosOrdens
+    .alerta-prazo-situacao {
+        align-self: flex-start;
+    }
+
+    #modalAlertaPrazosOrdens
+    .alerta-prazo-ordem-detalhes {
+        grid-template-columns: 1fr;
+    }
+
+    #modalAlertaPrazosOrdens .alerta-prazos-rodape {
+        align-items: stretch;
+        flex-direction: column;
+
+        padding: 14px 18px;
+    }
+
+    #modalAlertaPrazosOrdens .alerta-prazos-rodape .botao {
+        width: 100%;
     }
 }
