@@ -208,7 +208,6 @@ banco.exec(`
         cpf TEXT NOT NULL,
 
         cpf_numeros TEXT
-            NOT NULL
             UNIQUE,
 
         telefone TEXT NOT NULL,
@@ -284,6 +283,168 @@ garantirColunaCliente(
     "logo_convertida_arquivo",
     "TEXT NOT NULL DEFAULT ''"
 );
+
+/*
+|--------------------------------------------------------------------------
+| Migração: CPF/CNPJ opcional
+|--------------------------------------------------------------------------
+*/
+
+function permitirDocumentoOpcionalClientes() {
+    const colunaDocumento =
+        banco
+            .prepare(
+                "PRAGMA table_info(clientes)"
+            )
+            .all()
+            .find(
+                coluna =>
+                    coluna.name ===
+                    "cpf_numeros"
+            );
+
+    if (
+        !colunaDocumento ||
+        Number(
+            colunaDocumento.notnull
+        ) === 0
+    ) {
+        return;
+    }
+
+    banco.exec(`
+        PRAGMA foreign_keys = OFF;
+    `);
+
+    try {
+        banco.exec(`
+            BEGIN IMMEDIATE;
+
+            CREATE TABLE clientes_nova (
+                id TEXT PRIMARY KEY,
+
+                nome TEXT NOT NULL,
+
+                cpf TEXT
+                    NOT NULL
+                    DEFAULT '',
+
+                cpf_numeros TEXT
+                    UNIQUE,
+
+                telefone TEXT
+                    NOT NULL
+                    DEFAULT '',
+
+                telefone_numeros TEXT
+                    NOT NULL
+                    DEFAULT '',
+
+                linha TEXT
+                    NOT NULL
+                    DEFAULT '',
+
+                logo_original TEXT
+                    NOT NULL
+                    DEFAULT '',
+
+                logo_original_arquivo TEXT
+                    NOT NULL
+                    DEFAULT '',
+
+                logo_convertida TEXT
+                    NOT NULL
+                    DEFAULT '',
+
+                logo_convertida_arquivo TEXT
+                    NOT NULL
+                    DEFAULT '',
+
+                observacoes TEXT
+                    NOT NULL
+                    DEFAULT '',
+
+                criado_em TEXT NOT NULL,
+
+                atualizado_em TEXT NOT NULL
+            ) STRICT;
+
+            INSERT INTO clientes_nova (
+                id,
+                nome,
+                cpf,
+                cpf_numeros,
+                telefone,
+                telefone_numeros,
+                linha,
+                logo_original,
+                logo_original_arquivo,
+                logo_convertida,
+                logo_convertida_arquivo,
+                observacoes,
+                criado_em,
+                atualizado_em
+            )
+            SELECT
+                id,
+                nome,
+                cpf,
+                NULLIF(
+                    cpf_numeros,
+                    ''
+                ),
+                telefone,
+                telefone_numeros,
+                linha,
+                logo_original,
+                logo_original_arquivo,
+                logo_convertida,
+                logo_convertida_arquivo,
+                observacoes,
+                criado_em,
+                atualizado_em
+            FROM clientes;
+
+            DROP TABLE clientes;
+
+            ALTER TABLE clientes_nova
+            RENAME TO clientes;
+
+            CREATE INDEX IF NOT EXISTS
+                indice_clientes_nome
+
+            ON clientes(nome);
+
+            CREATE INDEX IF NOT EXISTS
+                indice_clientes_telefone
+
+            ON clientes(telefone_numeros);
+
+            CREATE INDEX IF NOT EXISTS
+                indice_clientes_criado_em
+
+            ON clientes(criado_em);
+
+            COMMIT;
+        `);
+    } catch (erro) {
+        try {
+            banco.exec(`
+                ROLLBACK;
+            `);
+        } catch {
+            // Nenhuma ação necessária.
+        }
+
+        throw erro;
+    } finally {
+        banco.exec(`
+            PRAGMA foreign_keys = ON;
+        `);
+    }
+}
+
+permitirDocumentoOpcionalClientes();
 
 const CAMPOS_CLIENTE_SQL = `
     id,
@@ -930,16 +1091,29 @@ function validarDadosCliente(
             dados.cpf
         );
 
+    const tipoPessoaRecebido =
+        limparTexto(
+            dados.tipoPessoa
+        ).toLowerCase();
+
     const tipoPessoa =
-        identificarTipoPessoaPorDocumento(
-            documentoRecebido
-        );
+        tipoPessoaRecebido ===
+        "juridica"
+            ? "juridica"
+            : tipoPessoaRecebido ===
+                "fisica"
+                ? "fisica"
+                : identificarTipoPessoaPorDocumento(
+                    documentoRecebido
+                );
 
     const documentoNormalizado =
-        normalizarDocumentoPorTipo(
-            documentoRecebido,
-            tipoPessoa
-        );
+        documentoRecebido
+            ? normalizarDocumentoPorTipo(
+                documentoRecebido,
+                tipoPessoa
+            )
+            : "";
 
     const rotuloDocumento =
         tipoPessoa ===
@@ -953,30 +1127,29 @@ function validarDadosCliente(
         );
 
     const linhasRecebidas =
-    String(
-        dados.linha || ""
-    )
-        .split(
-            /\r?\n/
+        String(
+            dados.linha || ""
         )
-        .map(
-            limparTexto
-        )
-        .filter(
-            Boolean
-        );
+            .split(
+                /\r?\n/
+            )
+            .map(
+                limparTexto
+            )
+            .filter(
+                Boolean
+            );
 
-const linhasUnicas =
-    [
+    const linhasUnicas = [
         ...new Set(
             linhasRecebidas
         )
     ];
 
-const linha =
-    linhasUnicas.join(
-        "\n"
-    );
+    const linha =
+        linhasUnicas.join(
+            "\n"
+        );
 
     const observacoes =
         limparTexto(
@@ -992,30 +1165,43 @@ const linha =
         );
     }
 
-    const documentoValido =
-        tipoPessoa ===
-        "juridica"
-            ? validarCnpj(
-                documentoNormalizado
-            )
-            : validarCpf(
-                documentoNormalizado
-            );
+    /*
+     * CPF/CNPJ é opcional.
+     * Só validamos quando foi preenchido.
+     */
+    if (documentoNormalizado) {
+        const documentoValido =
+            tipoPessoa ===
+            "juridica"
+                ? validarCnpj(
+                    documentoNormalizado
+                )
+                : validarCpf(
+                    documentoNormalizado
+                );
 
-    if (!documentoValido) {
-        throw new ErroHttp(
-            400,
-            `O ${rotuloDocumento} informado não é válido.`
-        );
+        if (!documentoValido) {
+            throw new ErroHttp(
+                400,
+                `O ${rotuloDocumento} informado não é válido.`
+            );
+        }
     }
 
+    /*
+     * Telefone é opcional.
+     * Só validamos quando foi preenchido.
+     */
     if (
-        telefoneNumeros.length < 10 ||
-        telefoneNumeros.length > 11
+        telefoneNumeros &&
+        (
+            telefoneNumeros.length < 10 ||
+            telefoneNumeros.length > 11
+        )
     ) {
         throw new ErroHttp(
             400,
-            "Informe um telefone válido."
+            "Informe um telefone válido ou deixe o campo vazio."
         );
     }
 
@@ -1029,17 +1215,17 @@ const linha =
     }
 
     if (
-    linhasUnicas.some(
-        item =>
-            item.length > 200
-    ) ||
-    linha.length > 2000
-) {
-    throw new ErroHttp(
-        400,
-        "As linhas selecionadas ultrapassaram o limite permitido."
-    );
-}
+        linhasUnicas.some(
+            item =>
+                item.length > 200
+        ) ||
+        linha.length > 2000
+    ) {
+        throw new ErroHttp(
+            400,
+            "As linhas selecionadas ultrapassaram o limite permitido."
+        );
+    }
 
     if (
         observacoes.length > 3000
@@ -1053,23 +1239,28 @@ const linha =
     return {
         nome,
 
-        /*
-         * Mantemos estes nomes para não
-         * precisar alterar as consultas SQL.
-         */
         cpf:
-            formatarDocumentoPorTipo(
-                documentoNormalizado,
-                tipoPessoa
-            ),
+            documentoNormalizado
+                ? formatarDocumentoPorTipo(
+                    documentoNormalizado,
+                    tipoPessoa
+                )
+                : "",
 
+        /*
+         * NULL permite cadastrar vários
+         * clientes sem documento.
+         */
         cpfNumeros:
-            documentoNormalizado,
+            documentoNormalizado ||
+            null,
 
         telefone:
-            formatarTelefone(
-                telefoneNumeros
-            ),
+            telefoneNumeros
+                ? formatarTelefone(
+                    telefoneNumeros
+                )
+                : "",
 
         telefoneNumeros,
 
@@ -1094,17 +1285,17 @@ function converterCliente(
             cliente.nome,
 
         cpf:
-            cliente.cpf,
+            cliente.cpf || "",
 
         telefone:
-            cliente.telefone,
+            cliente.telefone || "",
 
         linha:
-            cliente.linha,
+            cliente.linha || "",
 
         logoOriginal:
             cliente
-                .logo_original,
+                .logo_original || "",
 
         logoOriginalUrl:
             cliente
@@ -1120,7 +1311,7 @@ function converterCliente(
 
         logoConvertida:
             cliente
-                .logo_convertida,
+                .logo_convertida || "",
 
         logoConvertidaUrl:
             cliente
@@ -1135,7 +1326,7 @@ function converterCliente(
                 : "",
 
         observacoes:
-            cliente.observacoes,
+            cliente.observacoes || "",
 
         criadoEm:
             cliente.criado_em,
@@ -1359,20 +1550,25 @@ async function lerDadosRecebidos(
 
         return {
             dados: {
-                nome:
-                    texto(
-                        "nome"
-                    ),
+    nome:
+        texto(
+            "nome"
+        ),
 
-                cpf:
-                    texto(
-                        "cpf"
-                    ),
+    tipoPessoa:
+        texto(
+            "tipoPessoa"
+        ),
 
-                telefone:
-                    texto(
-                        "telefone"
-                    ),
+    cpf:
+        texto(
+            "cpf"
+        ),
+
+    telefone:
+        texto(
+            "telefone"
+        ),
 
                 linha:
                     texto(
@@ -2011,11 +2207,12 @@ async function criarCliente(
         );
 
     if (
-        consultasClientes
-            .cpfExistente
-            .get(
-                dados.cpfNumeros
-            )
+    dados.cpfNumeros &&
+    consultasClientes
+        .cpfExistente
+        .get(
+            dados.cpfNumeros
+        )
     ) {
         throw new ErroHttp(
             409,
@@ -2166,13 +2363,14 @@ async function editarCliente(
         );
 
     if (
-        consultasClientes
-            .cpfOutroCliente
-            .get(
-                dados.cpfNumeros,
-                id
-            )
-    ) {
+    dados.cpfNumeros &&
+    consultasClientes
+        .cpfOutroCliente
+        .get(
+            dados.cpfNumeros,
+            id
+        )
+) {
         throw new ErroHttp(
             409,
             "Este CPF ou CNPJ já está cadastrado para outro cliente."
