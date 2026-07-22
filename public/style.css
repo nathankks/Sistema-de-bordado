@@ -12889,3 +12889,131 @@ html[data-theme="dark"]
         overflow-y: auto;
     }
 }
+
+/*
+|--------------------------------------------------------------------------
+| Cadastro rápido de cliente na ordem
+|--------------------------------------------------------------------------
+*/
+
+.botao-cadastrar-cliente-ordem {
+    display: inline-flex;
+
+    width: max-content;
+
+    align-items: center;
+    gap: 6px;
+
+    padding: 3px 2px;
+
+    background: transparent;
+    border: 0;
+
+    color: var(--texto-suave);
+
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+
+    cursor: pointer;
+
+    transition:
+        color 160ms ease,
+        transform 160ms ease;
+}
+
+.botao-cadastrar-cliente-ordem svg {
+    width: 14px;
+    height: 14px;
+}
+
+.botao-cadastrar-cliente-ordem:hover {
+    color: var(--principal);
+
+    transform: translateX(2px);
+}
+
+.botao-cadastrar-cliente-ordem:focus-visible {
+    outline: 2px solid var(--principal);
+    outline-offset: 3px;
+
+    border-radius: 4px;
+}
+
+/*
+| Faz o modal de cliente aparecer
+| por cima do modal da ordem.
+*/
+
+#modalCliente.modal-cliente-sobre-ordem {
+    z-index: 200;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Botão para abrir ordem pelo alerta
+|--------------------------------------------------------------------------
+*/
+
+#modalAlertaPrazosOrdens
+.alerta-prazo-ordem-acoes {
+    display: flex;
+
+    align-items: center;
+    justify-content: flex-end;
+
+    padding-top: 2px;
+}
+
+#modalAlertaPrazosOrdens
+.botao-abrir-ordem-alerta {
+    display: inline-flex;
+
+    min-height: 30px;
+
+    align-items: center;
+    justify-content: center;
+
+    padding: 0 10px;
+    gap: 6px;
+
+    border: 1px solid var(--borda);
+    border-radius: 8px;
+
+    background: transparent;
+    color: var(--texto-suave);
+
+    font: inherit;
+    font-size: 0.6rem;
+    font-weight: 720;
+
+    cursor: pointer;
+
+    transition:
+        border-color 160ms ease,
+        background 160ms ease,
+        color 160ms ease,
+        transform 160ms ease;
+}
+
+#modalAlertaPrazosOrdens
+.botao-abrir-ordem-alerta svg {
+    width: 14px;
+    height: 14px;
+}
+
+#modalAlertaPrazosOrdens
+.botao-abrir-ordem-alerta:hover {
+    border-color: var(--principal);
+
+    background: var(--superficie-suave);
+    color: var(--principal);
+
+    transform: translateY(-1px);
+}
+
+#modalAlertaPrazosOrdens
+.botao-abrir-ordem-alerta:focus-visible {
+    outline: 2px solid var(--principal);
+    outline-offset: 2px;
+}
