@@ -657,6 +657,9 @@ const totalConfiguracoes =
 const campoCpf =
     $("#cpf");
 
+const campoTipoPessoaCliente =
+    $("#tipoPessoaCliente");
+
 const rotuloDocumentoCliente =
     $("#rotuloDocumentoCliente");
 
@@ -726,8 +729,41 @@ const iconeTema =
 const campoLogoOriginal =
     $("#logoOriginal");
 
+const areaColarLogo =
+    $("#areaColarLogo");
+
+const conteudoColarLogo =
+    $("#conteudoColarLogo");
+
+const previewLogoColada =
+    $("#previewLogoColada");
+
+const botaoSelecionarLogoOriginal =
+    $("#botaoSelecionarLogoOriginal");
+
+const botaoRemoverLogoOriginal =
+    $("#botaoRemoverLogoOriginal");
+
+const mensagemLogoOriginal =
+    $("#mensagemLogoOriginal");
+
 const campoLogoConvertida =
     $("#logoConvertida");
+
+const nomeArquivoConvertido =
+    $("#nomeArquivoConvertido");
+
+const descricaoArquivoConvertido =
+    $("#descricaoArquivoConvertido");
+
+const botaoSelecionarLogoConvertida =
+    $("#botaoSelecionarLogoConvertida");
+
+const botaoRemoverLogoConvertida =
+    $("#botaoRemoverLogoConvertida");
+
+const mensagemLogoConvertida =
+    $("#mensagemLogoConvertida");
 
 /*
 |--------------------------------------------------------------------------
@@ -857,7 +893,7 @@ async function requisicaoApi(
         );
     } catch {
         throw new Error(
-            "Não foi possível conectar ao servidor. Confirme se o comando node server.js está em execução."
+            "Não foi possível conectar ao servidor."
         );
     }
 
@@ -1391,6 +1427,11 @@ function definirTipoPessoaCliente(
         tipoPessoaCliente ===
         "juridica";
 
+    if (campoTipoPessoaCliente) {
+    campoTipoPessoaCliente.value =
+        tipoPessoaCliente;
+    }
+
     if (
         rotuloDocumentoCliente
     ) {
@@ -1482,9 +1523,12 @@ function atualizarEstadoDocumento() {
         "valido"
     );
 
+    /*
+     * O documento é opcional.
+     */
     if (!documento) {
         mensagemCpf.textContent =
-            `Digite um ${rotulo} válido.`;
+            `Informe um ${rotulo} válido.`;
 
         return;
     }
@@ -1493,6 +1537,10 @@ function atualizarEstadoDocumento() {
         documento.length <
         quantidadeEsperada
     ) {
+        campoCpf.classList.add(
+            "invalido"
+        );
+
         mensagemCpf.textContent =
             `O ${rotulo} precisa ter ${quantidadeEsperada} caracteres.`;
 
@@ -1525,6 +1573,10 @@ function atualizarEstadoDocumento() {
     const duplicado =
         clientes.some(
             cliente => {
+                if (!cliente.cpf) {
+                    return false;
+                }
+
                 const tipoCliente =
                     identificarTipoPessoaPorDocumento(
                         cliente.cpf
@@ -1661,6 +1713,701 @@ function validarArquivosSelecionados() {
             );
         }
     }
+}
+
+/*
+|--------------------------------------------------------------------------
+| Colar e visualizar a logo original
+|--------------------------------------------------------------------------
+*/
+
+const TIPOS_IMAGEM_COLADA = {
+    "image/png": "png",
+    "image/jpeg": "jpg",
+    "image/webp": "webp",
+    "image/svg+xml": "svg"
+};
+
+let urlPreviewLogoOriginal = "";
+
+function definirMensagemLogoOriginal(
+    mensagem,
+    estado = ""
+) {
+    if (!mensagemLogoOriginal) {
+        return;
+    }
+
+    mensagemLogoOriginal.textContent =
+        mensagem;
+
+    mensagemLogoOriginal.classList.remove(
+        "erro",
+        "sucesso"
+    );
+
+    if (estado) {
+        mensagemLogoOriginal.classList.add(
+            estado
+        );
+    }
+}
+
+function liberarPreviewLogoOriginal() {
+    if (!urlPreviewLogoOriginal) {
+        return;
+    }
+
+    URL.revokeObjectURL(
+        urlPreviewLogoOriginal
+    );
+
+    urlPreviewLogoOriginal = "";
+}
+
+function restaurarConteudoAreaLogo() {
+    if (!conteudoColarLogo) {
+        return;
+    }
+
+    const titulo =
+        conteudoColarLogo.querySelector(
+            "strong"
+        );
+
+    const descricao =
+        conteudoColarLogo.querySelector(
+            "p"
+        );
+
+    const observacao =
+        conteudoColarLogo.querySelector(
+            "small"
+        );
+
+    if (titulo) {
+        titulo.textContent =
+            "Nenhum arquivo selecionado.";
+    }
+
+    if (descricao) {
+        descricao.innerHTML = `
+            Clique nesta área e pressione
+            <kbd>Ctrl</kbd> + <kbd>V</kbd>
+        `;
+    }
+
+    if (observacao) {
+        observacao.textContent =
+            "PNG, JPG, WEBP, SVG ou PDF · Máximo de 12 MB";
+    }
+}
+
+function limparLogoOriginalSelecionada(
+    limparCampo = true
+) {
+    liberarPreviewLogoOriginal();
+
+    if (
+        limparCampo &&
+        campoLogoOriginal
+    ) {
+        campoLogoOriginal.value = "";
+    }
+
+    if (previewLogoColada) {
+        previewLogoColada.src = "";
+        previewLogoColada.hidden =
+            true;
+    }
+
+    if (conteudoColarLogo) {
+        conteudoColarLogo.hidden =
+            false;
+    }
+
+    if (botaoRemoverLogoOriginal) {
+        botaoRemoverLogoOriginal.hidden =
+            true;
+    }
+
+    restaurarConteudoAreaLogo();
+
+    definirMensagemLogoOriginal(
+        "PNG, JPG, WEBP, SVG ou PDF. Máximo de 12 MB."
+    );
+}
+
+function mostrarLogoOriginalSalva(
+    cliente
+) {
+    if (
+        !cliente?.logoOriginal ||
+        !cliente?.logoOriginalUrl
+    ) {
+        return;
+    }
+
+    liberarPreviewLogoOriginal();
+
+    const extensao =
+        obterExtensao(
+            cliente.logoOriginal
+        );
+
+    const formatosComPreview = [
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".webp",
+        ".svg"
+    ];
+
+    const podeMostrarImagem =
+        formatosComPreview.includes(
+            extensao
+        );
+
+    if (
+        podeMostrarImagem &&
+        previewLogoColada
+    ) {
+        previewLogoColada.src =
+            cliente.logoOriginalUrl;
+
+        previewLogoColada.hidden =
+            false;
+
+        previewLogoColada.onerror =
+            () => {
+                previewLogoColada.src =
+                    "";
+
+                previewLogoColada.hidden =
+                    true;
+
+                if (conteudoColarLogo) {
+                    conteudoColarLogo.hidden =
+                        false;
+                }
+            };
+
+        if (conteudoColarLogo) {
+            conteudoColarLogo.hidden =
+                true;
+        }
+    } else {
+        if (previewLogoColada) {
+            previewLogoColada.src =
+                "";
+
+            previewLogoColada.hidden =
+                true;
+        }
+
+        if (conteudoColarLogo) {
+            conteudoColarLogo.hidden =
+                false;
+
+            const titulo =
+                conteudoColarLogo.querySelector(
+                    "strong"
+                );
+
+            const descricao =
+                conteudoColarLogo.querySelector(
+                    "p"
+                );
+
+            const observacao =
+                conteudoColarLogo.querySelector(
+                    "small"
+                );
+
+            if (titulo) {
+                titulo.textContent =
+                    "Logo original salva";
+            }
+
+            if (descricao) {
+                descricao.textContent =
+                    cliente.logoOriginal;
+            }
+
+            if (observacao) {
+                observacao.textContent =
+                    "Selecione outro arquivo somente para substituir.";
+            }
+        }
+    }
+
+    if (botaoRemoverLogoOriginal) {
+        botaoRemoverLogoOriginal.hidden =
+            false;
+    }
+
+    definirMensagemLogoOriginal(
+        `Logo atual: ${cliente.logoOriginal}. Selecione outra somente para substituir.`,
+        "sucesso"
+    );
+}
+
+function validarLogoOriginalRecebida(
+    arquivo
+) {
+    if (!arquivo) {
+        throw new Error(
+            "Nenhum arquivo foi encontrado."
+        );
+    }
+
+    const extensao =
+        obterExtensao(
+            arquivo.name
+        );
+
+    const extensoesPermitidas = [
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".webp",
+        ".svg",
+        ".pdf"
+    ];
+
+    if (
+        !extensoesPermitidas.includes(
+            extensao
+        )
+    ) {
+        throw new Error(
+            "O formato da logo original não é permitido."
+        );
+    }
+
+    const tamanhoMaximo =
+        12 * 1024 * 1024;
+
+    if (
+        arquivo.size >
+        tamanhoMaximo
+    ) {
+        throw new Error(
+            "A logo original deve ter no máximo 12 MB."
+        );
+    }
+}
+
+function mostrarPreviewLogoOriginal(
+    arquivo
+) {
+    if (!arquivo) {
+        return;
+    }
+
+    liberarPreviewLogoOriginal();
+
+    const extensao =
+        obterExtensao(
+            arquivo.name
+        );
+
+    const formatosComPreview = [
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".webp",
+        ".svg"
+    ];
+
+    const podeExibirPreview =
+        arquivo.type.startsWith(
+            "image/"
+        ) ||
+        formatosComPreview.includes(
+            extensao
+        );
+
+    if (
+        podeExibirPreview &&
+        previewLogoColada
+    ) {
+        urlPreviewLogoOriginal =
+            URL.createObjectURL(
+                arquivo
+            );
+
+        previewLogoColada.src =
+            urlPreviewLogoOriginal;
+
+        previewLogoColada.hidden =
+            false;
+
+        if (conteudoColarLogo) {
+            conteudoColarLogo.hidden =
+                true;
+        }
+    } else {
+        if (previewLogoColada) {
+            previewLogoColada.src =
+                "";
+
+            previewLogoColada.hidden =
+                true;
+        }
+
+        if (conteudoColarLogo) {
+            conteudoColarLogo.hidden =
+                false;
+
+            const titulo =
+                conteudoColarLogo.querySelector(
+                    "strong"
+                );
+
+            const descricao =
+                conteudoColarLogo.querySelector(
+                    "p"
+                );
+
+            const observacao =
+                conteudoColarLogo.querySelector(
+                    "small"
+                );
+
+            if (titulo) {
+                titulo.textContent =
+                    "Arquivo selecionado";
+            }
+
+            if (descricao) {
+                descricao.textContent =
+                    arquivo.name;
+            }
+
+            if (observacao) {
+                observacao.textContent =
+                    "O arquivo será enviado ao salvar o cliente.";
+            }
+        }
+    }
+
+    if (botaoRemoverLogoOriginal) {
+        botaoRemoverLogoOriginal.hidden =
+            false;
+    }
+
+    definirMensagemLogoOriginal(
+        `${arquivo.name} foi selecionado.`,
+        "sucesso"
+    );
+}
+
+function definirArquivoLogoOriginal(
+    arquivo
+) {
+    try {
+        validarLogoOriginalRecebida(
+            arquivo
+        );
+
+        const transferencia =
+            new DataTransfer();
+
+        transferencia.items.add(
+            arquivo
+        );
+
+        campoLogoOriginal.files =
+            transferencia.files;
+
+        mostrarPreviewLogoOriginal(
+            arquivo
+        );
+
+        return true;
+    } catch (erro) {
+        definirMensagemLogoOriginal(
+            erro.message,
+            "erro"
+        );
+
+        mostrarNotificacao(
+            "Logo inválida",
+            erro.message,
+            "erro"
+        );
+
+        return false;
+    }
+}
+
+function criarArquivoDaImagemColada(
+    imagem
+) {
+    const extensao =
+        TIPOS_IMAGEM_COLADA[
+            imagem.type
+        ];
+
+    if (!extensao) {
+        throw new Error(
+            "A imagem copiada precisa ser PNG, JPG, WEBP ou SVG."
+        );
+    }
+
+    const identificador =
+        new Date()
+            .toISOString()
+            .replace(
+                /[:.]/g,
+                "-"
+            );
+
+    return new File(
+        [imagem],
+        `logo-colada-${identificador}.${extensao}`,
+        {
+            type:
+                imagem.type,
+
+            lastModified:
+                Date.now()
+        }
+    );
+}
+
+function obterImagemTransferida(
+    transferencia
+) {
+    const itens =
+        Array.from(
+            transferencia?.items ||
+            []
+        );
+
+    for (
+        const item of itens
+    ) {
+        if (
+            item.kind === "file" &&
+            item.type.startsWith(
+                "image/"
+            )
+        ) {
+            return item.getAsFile();
+        }
+    }
+
+    const arquivos =
+        Array.from(
+            transferencia?.files ||
+            []
+        );
+
+    return arquivos.find(
+        arquivo =>
+            arquivo.type.startsWith(
+                "image/"
+            )
+    ) || null;
+}
+
+function colarLogoOriginal(
+    evento
+) {
+    const imagem =
+        obterImagemTransferida(
+            evento.clipboardData
+        );
+
+    if (!imagem) {
+        definirMensagemLogoOriginal(
+            "A área de transferência não contém uma imagem.",
+            "erro"
+        );
+
+        return;
+    }
+
+    evento.preventDefault();
+
+    try {
+        const arquivo =
+            criarArquivoDaImagemColada(
+                imagem
+            );
+
+        definirArquivoLogoOriginal(
+            arquivo
+        );
+    } catch (erro) {
+        definirMensagemLogoOriginal(
+            erro.message,
+            "erro"
+        );
+
+        mostrarNotificacao(
+            "Não foi possível colar",
+            erro.message,
+            "erro"
+        );
+    }
+}
+
+/*
+|--------------------------------------------------------------------------
+| Controle do arquivo convertido
+|--------------------------------------------------------------------------
+*/
+
+function definirMensagemLogoConvertida(
+    mensagem,
+    estado = ""
+) {
+    if (!mensagemLogoConvertida) {
+        return;
+    }
+
+    mensagemLogoConvertida.textContent =
+        mensagem;
+
+    mensagemLogoConvertida.classList.remove(
+        "erro",
+        "sucesso"
+    );
+
+    if (estado) {
+        mensagemLogoConvertida.classList.add(
+            estado
+        );
+    }
+}
+
+function formatarTamanhoArquivoConvertido(
+    tamanho
+) {
+    const bytes =
+        Number(tamanho) || 0;
+
+    if (bytes < 1024) {
+        return `${bytes} bytes`;
+    }
+
+    if (
+        bytes <
+        1024 * 1024
+    ) {
+        return `${
+            (
+                bytes /
+                1024
+            ).toFixed(1)
+        } KB`;
+    }
+
+    return `${
+        (
+            bytes /
+            (1024 * 1024)
+        ).toFixed(1)
+    } MB`;
+}
+
+function mostrarLogoConvertidaSalva(
+    cliente
+) {
+    if (
+        !cliente ||
+        !cliente.logoConvertida
+    ) {
+        limparLogoConvertidaSelecionada(
+            false
+        );
+
+        return;
+    }
+
+    if (nomeArquivoConvertido) {
+        nomeArquivoConvertido.textContent =
+            cliente.logoConvertida;
+    }
+
+    if (descricaoArquivoConvertido) {
+        descricaoArquivoConvertido.textContent =
+            "Arquivo convertido salvo no cadastro";
+    }
+
+    if (botaoRemoverLogoConvertida) {
+        botaoRemoverLogoConvertida.hidden =
+            false;
+    }
+
+    definirMensagemLogoConvertida(
+        "Este é o arquivo convertido atual. Selecione outro somente para substituir.",
+        "sucesso"
+    );
+}
+
+function mostrarArquivoConvertido(
+    arquivo
+) {
+    if (!arquivo) {
+        return;
+    }
+
+    if (nomeArquivoConvertido) {
+        nomeArquivoConvertido.textContent =
+            arquivo.name;
+    }
+
+    if (descricaoArquivoConvertido) {
+        descricaoArquivoConvertido.textContent =
+            `${formatarTamanhoArquivoConvertido(
+                arquivo.size
+            )} · pronto para envio`;
+    }
+
+    if (botaoRemoverLogoConvertida) {
+        botaoRemoverLogoConvertida.hidden =
+            false;
+    }
+
+    definirMensagemLogoConvertida(
+        `${arquivo.name} foi selecionado.`,
+        "sucesso"
+    );
+}
+
+function limparLogoConvertidaSelecionada(
+    limparCampo = true
+) {
+    if (
+        limparCampo &&
+        campoLogoConvertida
+    ) {
+        campoLogoConvertida.value =
+            "";
+    }
+
+    if (nomeArquivoConvertido) {
+        nomeArquivoConvertido.textContent =
+            "Nenhum arquivo selecionado.";
+    }
+
+    if (descricaoArquivoConvertido) {
+        descricaoArquivoConvertido.textContent =
+            "Selecione o arquivo pronto para bordado";
+    }
+
+    if (botaoRemoverLogoConvertida) {
+        botaoRemoverLogoConvertida.hidden =
+            true;
+    }
+
+    definirMensagemLogoConvertida(
+        "O arquivo convertido será enviado ao salvar o cliente."
+    );
 }
 
 /*
@@ -3081,6 +3828,13 @@ if (
 }
 
     formularioCliente.reset();
+    limparLogoOriginalSelecionada(
+    false
+    );
+
+    limparLogoConvertidaSelecionada(
+    false
+);
 
     const tipoDocumentoCliente =
     cliente
@@ -3113,7 +3867,7 @@ definirTipoPessoaCliente(
     );
 
 mensagemCpf.textContent =
-    `Digite um ${
+    `Informe um ${
         obterRotuloDocumentoAtual()
     } válido.`;
 
@@ -3138,13 +3892,32 @@ mensagemCpf.textContent =
         tipoDocumentoCliente
     );
 
+mostrarLogoOriginalSalva(
+    cliente
+);
+
+mostrarLogoConvertidaSalva(
+    cliente
+);
+
+campoTelefone.value =
+    cliente.telefone || "";
+mostrarLogoConvertidaSalva(
+    cliente
+);
+
         campoTelefone.value =
-            cliente.telefone || "";
+    cliente.telefone || "";
 
-        $("#observacoes").value =
-            cliente.observacoes || "";
+const campoObservacoesCliente =
+    $("#observacoes");
 
-        atualizarEstadoDocumento();
+if (campoObservacoesCliente) {
+    campoObservacoesCliente.value =
+        cliente.observacoes || "";
+}
+
+atualizarEstadoDocumento();
     } else {
         tituloModalCliente.textContent =
             "Novo cliente";
@@ -4774,15 +5547,24 @@ if (
             clienteId.value || ""
         ).trim();
 
-    const documento =
+const documento =
     campoCpf.value.trim();
 
 const rotuloDocumento =
     obterRotuloDocumentoAtual();
 
-if (
-    !validarDocumentoAtual(
+const documentoNormalizado =
+    normalizarDocumentoPorTipo(
         documento
+    );
+
+/*
+ * Só valida quando o usuário preencher.
+ */
+if (
+    documentoNormalizado &&
+    !validarDocumentoAtual(
+        documentoNormalizado
     )
 ) {
     campoCpf.classList.add(
@@ -4811,14 +5593,17 @@ if (
     return;
 }
 
-    const documentoNormalizado =
-    normalizarDocumentoPorTipo(
-        documento
-    );
-
+/*
+ * Só procura duplicidade quando existe documento.
+ */
 const duplicado =
+    documentoNormalizado &&
     clientes.some(
         cliente => {
+            if (!cliente.cpf) {
+                return false;
+            }
+
             const tipoCliente =
                 identificarTipoPessoaPorDocumento(
                     cliente.cpf
@@ -4883,11 +5668,13 @@ if (duplicado) {
             formularioCliente
         );
 
-    dadosFormulario.set(
+dadosFormulario.set(
     "cpf",
-    formatarDocumentoPorTipo(
-        documento
-    )
+    documentoNormalizado
+        ? formatarDocumentoPorTipo(
+            documentoNormalizado
+        )
+        : ""
 );
 
     dadosFormulario.delete(
@@ -4944,12 +5731,12 @@ if (duplicado) {
             "Os dados e arquivos foram salvos."
         );
     } catch (erro) {
-        mostrarNotificacao(
-            "Não foi possível salvar",
-            erro.message,
-            "erro"
-        );
-    } finally {
+    mostrarNotificacao(
+        "Não foi possível salvar",
+        erro.message,
+        "erro"
+    );
+} finally {
         botaoSalvarCliente.disabled =
             false;
 
@@ -5387,7 +6174,7 @@ function limparBackupSelecionado() {
     if (nomeBackupSelecionado) {
         nomeBackupSelecionado
             .textContent =
-                "Nenhum arquivo selecionado";
+                "Nenhum arquivo selecionado.";
     }
 
     if (botaoRestaurarBackup) {
@@ -5490,7 +6277,9 @@ const confirmou =
             [
                 `Arquivo selecionado: ${arquivo.name}`,
 
-                "Todos os clientes, ordens e arquivos atuais serão substituídos pelos dados do backup.",
+                "Clientes, linhas, ordens, usuários e arquivos atuais serão substituídos pelos dados do backup.",
+
+                "Após a restauração, será necessário entrar novamente no sistema.",
 
                 "Esta ação não poderá ser desfeita."
             ].join("\n\n"),
@@ -5550,26 +6339,37 @@ const confirmou =
 
         limparBackupSelecionado();
 
-        await carregarClientesDoServidor(
-            {
-                mostrarErro: false
-            }
-        );
-
-        await carregarStatusBackup();
+        const restauracao =
+            resposta.restauracao || {};
 
         const clientesRestaurados =
-            resposta.restauracao
-                ?.clientes ?? 0;
+            restauracao.clientes ?? 0;
+
+        const linhasRestauradas =
+            restauracao.linhas ?? 0;
+
+        const ordensRestauradas =
+            restauracao.ordens ?? 0;
 
         const arquivosRestaurados =
-            resposta.restauracao
-                ?.arquivos ?? 0;
+            restauracao.arquivos ?? 0;
 
         mostrarNotificacao(
             "Backup restaurado",
-            `${clientesRestaurados} clientes e ${arquivosRestaurados} arquivos foram recuperados.`
+            [
+                `${clientesRestaurados} clientes`,
+                `${linhasRestauradas} linhas`,
+                `${ordensRestauradas} ordens`,
+                `${arquivosRestaurados} arquivos`
+            ].join(", ") +
+            " foram recuperados. Entre novamente para continuar."
         );
+
+        window.setTimeout(() => {
+            window.location.replace(
+                "/login.html"
+            );
+        }, 2200);
     } catch (erro) {
         mostrarNotificacao(
             "Erro ao restaurar",
@@ -6454,35 +7254,215 @@ campoTelefone.addEventListener(
     }
 );
 
-campoLogoOriginal.addEventListener(
-    "change",
-    () => {
-        const arquivo =
-            campoLogoOriginal.files[0];
+campoLogoOriginal
+    ?.addEventListener(
+        "change",
+        () => {
+            const arquivo =
+                campoLogoOriginal
+                    .files?.[0];
 
-        if (arquivo) {
-            mostrarNotificacao(
-                "Logo selecionada",
-                arquivo.name
+            if (!arquivo) {
+                limparLogoOriginalSelecionada(
+                    false
+                );
+
+                return;
+            }
+
+            try {
+                validarLogoOriginalRecebida(
+                    arquivo
+                );
+
+                mostrarPreviewLogoOriginal(
+                    arquivo
+                );
+            } catch (erro) {
+                campoLogoOriginal.value =
+                    "";
+
+                limparLogoOriginalSelecionada(
+                    false
+                );
+
+                definirMensagemLogoOriginal(
+                    erro.message,
+                    "erro"
+                );
+
+                mostrarNotificacao(
+                    "Logo inválida",
+                    erro.message,
+                    "erro"
+                );
+            }
+        }
+    );
+
+botaoSelecionarLogoOriginal
+    ?.addEventListener(
+        "click",
+        () => {
+            campoLogoOriginal?.click();
+        }
+    );
+
+botaoRemoverLogoOriginal
+    ?.addEventListener(
+        "click",
+        () => {
+            limparLogoOriginalSelecionada();
+
+            areaColarLogo?.focus();
+        }
+    );
+
+areaColarLogo
+    ?.addEventListener(
+        "click",
+        () => {
+            areaColarLogo.focus();
+        }
+    );
+
+areaColarLogo
+    ?.addEventListener(
+        "paste",
+        colarLogoOriginal
+    );
+
+areaColarLogo
+    ?.addEventListener(
+        "keydown",
+        evento => {
+            if (
+                evento.key !== "Enter" &&
+                evento.key !== " "
+            ) {
+                return;
+            }
+
+            evento.preventDefault();
+
+            campoLogoOriginal?.click();
+        }
+    );
+
+areaColarLogo
+    ?.addEventListener(
+        "dragenter",
+        evento => {
+            evento.preventDefault();
+
+            areaColarLogo.classList.add(
+                "arrastando"
             );
         }
-    }
-);
+    );
 
-campoLogoConvertida.addEventListener(
-    "change",
-    () => {
-        const arquivo =
-            campoLogoConvertida.files[0];
+areaColarLogo
+    ?.addEventListener(
+        "dragover",
+        evento => {
+            evento.preventDefault();
 
-        if (arquivo) {
-            mostrarNotificacao(
-                "Arquivo selecionado",
-                arquivo.name
+            evento.dataTransfer.dropEffect =
+                "copy";
+
+            areaColarLogo.classList.add(
+                "arrastando"
             );
         }
-    }
-);
+    );
+
+areaColarLogo
+    ?.addEventListener(
+        "dragleave",
+        evento => {
+            if (
+                areaColarLogo.contains(
+                    evento.relatedTarget
+                )
+            ) {
+                return;
+            }
+
+            areaColarLogo.classList.remove(
+                "arrastando"
+            );
+        }
+    );
+
+areaColarLogo
+    ?.addEventListener(
+        "drop",
+        evento => {
+            evento.preventDefault();
+
+            areaColarLogo.classList.remove(
+                "arrastando"
+            );
+
+            const arquivo =
+                evento.dataTransfer
+                    ?.files?.[0];
+
+            if (!arquivo) {
+                definirMensagemLogoOriginal(
+                    "Nenhum arquivo foi encontrado.",
+                    "erro"
+                );
+
+                return;
+            }
+
+            definirArquivoLogoOriginal(
+                arquivo
+            );
+        }
+    );
+
+campoLogoConvertida
+    ?.addEventListener(
+        "change",
+        () => {
+            const arquivo =
+                campoLogoConvertida
+                    .files?.[0];
+
+            if (!arquivo) {
+                limparLogoConvertidaSelecionada(
+                    false
+                );
+
+                return;
+            }
+
+            mostrarArquivoConvertido(
+                arquivo
+            );
+        }
+    );
+
+botaoSelecionarLogoConvertida
+    ?.addEventListener(
+        "click",
+        () => {
+            campoLogoConvertida?.click();
+        }
+    );
+
+botaoRemoverLogoConvertida
+    ?.addEventListener(
+        "click",
+        () => {
+            limparLogoConvertidaSelecionada();
+
+            botaoSelecionarLogoConvertida
+                ?.focus();
+        }
+    );
 
 buscaGlobal
     ?.addEventListener(
