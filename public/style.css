@@ -12831,12 +12831,61 @@ html[data-theme="dark"]
     }
 }
 
+/*
+|--------------------------------------------------------------------------
+| Zoom de 125% no computador
+|--------------------------------------------------------------------------
+*/
+
 @media (min-width: 1024px) {
     html {
         zoom: 1.25;
     }
 
-    body {
-        overflow-x: hidden;
+    /*
+    | Como o site está ampliado em 1.25,
+    | os modais precisam usar 80% da tela.
+    | 80% × 1.25 = 100%.
+    */
+
+    .modal,
+    .confirmacao-modal {
+        top: 0;
+        left: 0;
+        right: auto;
+        bottom: auto;
+
+        width: 80vw;
+        height: 80vh;
+    }
+
+    .modal-conteudo,
+    .modal-usuario {
+        max-height: calc(80vh - 32px);
+    }
+
+    #modalDetalhesOrdem
+    .modal-visualizacao-ordem {
+        width: min(
+            920px,
+            calc(80vw - 28px)
+        );
+
+        max-height: calc(80vh - 32px);
+    }
+
+    #modalAlertaPrazosOrdens
+    .alerta-prazos-conteudo {
+        width: min(
+            640px,
+            calc(80vw - 28px)
+        );
+
+        max-height: calc(80vh - 32px);
+    }
+
+    .confirmacao-conteudo {
+        max-height: calc(80vh - 40px);
+        overflow-y: auto;
     }
 }
