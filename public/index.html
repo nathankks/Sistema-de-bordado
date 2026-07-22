@@ -1879,8 +1879,8 @@
                     </h2>
 
                     <p>
-                        Proteja clientes, logos originais,
-                        arquivos convertidos e o banco de dados.
+                        Proteja clientes, linhas, ordens,
+                        usuários, logos e arquivos do sistema.
                     </p>
                 </div>
             </header>
@@ -1941,8 +1941,8 @@
                             </strong>
 
                             <p>
-                                Gere uma cópia completa dos clientes,
-                                arquivos e configurações.
+                                Gere uma cópia completa dos dados,
+                                usuários, permissões e arquivos.
                             </p>
                         </div>
                     </div>
@@ -2029,8 +2029,8 @@
                         </svg>
 
                         <p>
-                            A restauração substituirá todos os
-                            clientes e arquivos atuais.
+                            A restauração substituirá clientes,
+                            linhas, ordens, usuários e arquivos atuais.
                         </p>
                     </div>
 
@@ -2279,13 +2279,13 @@
 
     <div class="campo campo-largo campo-logo-ordem">
     <div class="campo-logo-ordem-cabecalho">
-        <span>
-            Logo do cliente
-        </span>
+    <span>
+        Arquivos do cliente
+    </span>
 
-        <small>
-            Carregada automaticamente do cadastro
-        </small>
+    <small>
+        Carregados automaticamente do cadastro
+    </small>
     </div>
 
     <div
@@ -2505,6 +2505,128 @@
     </div>
 </div>
 
+<!-- MODALSubstitua por:
+
+```html
+<!-- MODAL DE VISUALIZAÇÃO DA ORDEM -->
+
+<div
+    class="modal"
+    id="modalDetalhesOrdem"
+    aria-hidden="true"
+>
+    <div
+        class="modal-fundo"
+        data-fechar-detalhes-ordem
+    ></div>
+
+    <section
+        class="modal-conteudo modal-visualizacao-ordem"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="tituloDetalhesOrdem"
+    >
+        <!-- Cabeçalho -->
+
+        <header class="ordem-detalhes-cabecalho">
+            <div class="ordem-detalhes-identificacao">
+                <span class="ordem-detalhes-rotulo">
+                    Ordem de serviço
+                </span>
+
+                <div class="ordem-detalhes-linha-titulo">
+                    <h2 id="tituloDetalhesOrdem">
+                        Detalhes da ordem
+                    </h2>
+
+                    <span
+                        class="status-ordem"
+                        id="statusDetalhesOrdem"
+                    >
+                        Status
+                    </span>
+                </div>
+
+                <p id="resumoDetalhesOrdem">
+                    Informações completas da produção.
+                </p>
+            </div>
+
+            <button
+                class="botao-icone ordem-detalhes-fechar"
+                id="botaoFecharDetalhesOrdem"
+                data-fechar-detalhes-ordem
+                type="button"
+                aria-label="Fechar detalhes da ordem"
+                title="Fechar"
+            >
+                <svg aria-hidden="true">
+                    <use href="#icon-x"></use>
+                </svg>
+            </button>
+        </header>
+
+        <!-- Conteúdo preenchido pelo JavaScript -->
+
+        <div
+            class="ordem-detalhes-conteudo"
+            id="conteudoDetalhesOrdem"
+        ></div>
+
+        <!-- Rodapé -->
+
+        <footer class="ordem-detalhes-rodape">
+            <div class="ordem-detalhes-atualizacao">
+                <span>
+                    Última atualização
+                </span>
+
+                <strong id="atualizacaoDetalhesOrdem">
+                    Não informada
+                </strong>
+            </div>
+
+            <div class="ordem-detalhes-acoes">
+                <button
+                    class="botao botao-secundario"
+                    data-fechar-detalhes-ordem
+                    type="button"
+                >
+                    Fechar
+                </button>
+
+                <button
+                    class="botao botao-secundario"
+                    id="botaoImprimirDetalhesOrdem"
+                    type="button"
+                >
+                    <svg aria-hidden="true">
+                        <use href="#icon-file"></use>
+                    </svg>
+
+                    <span>
+                        Imprimir ficha
+                    </span>
+                </button>
+
+                <button
+                    class="botao botao-principal"
+                    id="botaoEditarDetalhesOrdem"
+                    type="button"
+                >
+                    <svg aria-hidden="true">
+                        <use href="#icon-edit"></use>
+                    </svg>
+
+                    <span>
+                        Editar ordem
+                    </span>
+                </button>
+            </div>
+        </footer>
+    </section>
+</div>
+
     <!-- MODAL DE CADASTRO -->
 
     <div
@@ -2612,8 +2734,10 @@
 </div>
 
 <label class="campo documento-campo">
-    <span id="rotuloDocumentoCliente">
-        CPF
+    <span>
+        <span id="rotuloDocumentoCliente">
+            CPF
+        </span>
     </span>
 
     <input
@@ -2626,35 +2750,32 @@
         autocomplete="off"
         autocapitalize="off"
         spellcheck="false"
-        required
     >
 
     <small id="mensagemCpf">
-        Digite um CPF válido.
+        Informe um CPF válido.
     </small>
 </label>
 
-                    <label class="campo">
-                        <span>Telefone</span>
+<label class="campo">
+    <span>
+        Telefone
+    </span>
 
-                        <input
-                            id="telefone"
-                            name="telefone"
-                            type="text"
-                            inputmode="numeric"
-                            maxlength="15"
-                            placeholder="(00) 00000-0000"
-                            required
-                        >
-                    </label>
+    <input
+        id="telefone"
+        name="telefone"
+        type="text"
+        inputmode="numeric"
+        maxlength="15"
+        placeholder="(00) 00000-0000"
+        autocomplete="tel"
+    >
+</label>
 
 <div class="campo campo-largo">
     <span>
         Linhas utilizadas
-
-        <small class="campo-opcional">
-            Opcional
-        </small>
     </span>
 
     <div
@@ -2762,46 +2883,173 @@
     </small>
 </div>
 
-                    <label class="campo">
-                        <span>Logo original</span>
+<!-- Logo original -->
+<div class="campo campo-largo campo-logo-original">
+    <div class="campo-arquivo-cabecalho">
+        <span>Logo original</span>
+    </div>
 
-                        <input
-                            id="logoOriginal"
-                            name="logoOriginal"
-                            type="file"
-                            accept=".png,.jpg,.jpeg,.webp,.svg,.pdf"
-                        >
+    <input
+        id="logoOriginal"
+        name="logoOriginal"
+        type="file"
+        accept=".png,.jpg,.jpeg,.webp,.svg,.pdf"
+        hidden
+    >
 
-                        <small>
-                            PNG, JPG, SVG ou PDF
-                        </small>
-                    </label>
+    <div
+        class="area-colar-logo"
+        id="areaColarLogo"
+        tabindex="0"
+        role="button"
+        aria-label="Colar ou arrastar a logo original"
+    >
+        <div
+            class="conteudo-colar-logo"
+            id="conteudoColarLogo"
+        >
+            <span class="arquivo-cliente-icone">
+                <svg aria-hidden="true">
+                    <use href="#icon-file"></use>
+                </svg>
+            </span>
 
-                    <label class="campo">
-                        <span>Arquivo convertido</span>
+            <div class="arquivo-cliente-textos">
+                <strong>
+                    Cole ou arraste a logo
+                </strong>
 
-                        <input
-                            id="logoConvertida"
-                            name="logoConvertida"
-                            type="file"
-                            accept=".dst,.pes,.jef,.exp,.vp3,.zip"
-                        >
+                <p>
+                    Clique nesta área e pressione
+                    <kbd>Ctrl</kbd> + <kbd>V</kbd>
+                </p>
 
-                        <small>
-                            DST, PES, JEF, EXP, VP3 ou ZIP
-                        </small>
-                    </label>
+                <small>
+                    PNG, JPG, WEBP, SVG ou PDF · Máximo de 12 MB
+                </small>
+            </div>
+        </div>
 
-                    <label class="campo campo-largo">
-                        <span>Observações</span>
+        <img
+            class="preview-logo-colada"
+            id="previewLogoColada"
+            alt="Pré-visualização da logo original"
+            hidden
+        >
+    </div>
 
-                        <textarea
-                            id="observacoes"
-                            name="observacoes"
-                            rows="4"
-                            placeholder="Informações importantes sobre o bordado"
-                        ></textarea>
-                    </label>
+    <div class="acoes-arquivo-cliente">
+        <button
+            class="botao-arquivo-cliente"
+            id="botaoSelecionarLogoOriginal"
+            type="button"
+        >
+            <svg aria-hidden="true">
+                <use href="#icon-folder"></use>
+            </svg>
+
+            <span>
+                Escolher arquivo
+            </span>
+        </button>
+
+        <button
+            class="botao-arquivo-cliente botao-remover-arquivo"
+            id="botaoRemoverLogoOriginal"
+            type="button"
+            hidden
+        >
+            <svg aria-hidden="true">
+                <use href="#icon-trash"></use>
+            </svg>
+
+            <span>
+                Remover
+            </span>
+        </button>
+    </div>
+
+    <small
+        class="mensagem-arquivo-cliente"
+        id="mensagemLogoOriginal"
+        hidden
+    ></small>
+</div>
+
+<!-- Arquivo convertido -->
+<div class="campo campo-largo campo-logo-convertida">
+    <div class="campo-arquivo-cabecalho">
+        <span>Arquivo convertido</span>
+    </div>
+
+    <input
+        id="logoConvertida"
+        name="logoConvertida"
+        type="file"
+        accept=".dst,.pes,.jef,.exp,.vp3,.zip"
+        hidden
+    >
+
+    <div class="cartao-arquivo-convertido">
+        <span class="arquivo-cliente-icone">
+            <svg aria-hidden="true">
+                <use href="#icon-check-file"></use>
+            </svg>
+        </span>
+
+        <div class="arquivo-cliente-textos">
+            <strong id="nomeArquivoConvertido">
+                Nenhum arquivo selecionado
+            </strong>
+
+            <p id="descricaoArquivoConvertido">
+                Selecione o arquivo pronto para bordado
+            </p>
+
+            <small>
+                DST, PES, JEF, EXP, VP3 ou ZIP
+            </small>
+        </div>
+    </div>
+
+    <div class="acoes-arquivo-cliente">
+        <button
+            class="botao-arquivo-cliente"
+            id="botaoSelecionarLogoConvertida"
+            type="button"
+        >
+            <svg aria-hidden="true">
+                <use href="#icon-folder"></use>
+            </svg>
+
+            <span>
+                Escolher arquivo
+            </span>
+        </button>
+
+        <button
+            class="botao-arquivo-cliente botao-remover-arquivo"
+            id="botaoRemoverLogoConvertida"
+            type="button"
+            hidden
+        >
+            <svg aria-hidden="true">
+                <use href="#icon-trash"></use>
+            </svg>
+
+            <span>
+                Remover
+            </span>
+        </button>
+    </div>
+
+    <small
+        class="mensagem-arquivo-cliente"
+        id="mensagemLogoConvertida"
+    >
+    </small>
+</div>
+
                 </div>
 
                 <div class="modal-acoes">
@@ -3127,10 +3375,6 @@
 <label class="campo">
     <span>
         Fornecedor
-
-        <small class="campo-opcional">
-            Opcional
-        </small>
     </span>
 
     <input
@@ -3145,10 +3389,6 @@
 <label class="campo">
     <span>
         Valor
-
-        <small class="campo-opcional">
-            Opcional
-        </small>
     </span>
 
     <div class="campo-valor-linha">
@@ -4052,6 +4292,102 @@
             </div>
         </form>
     </div>
+</div>
+
+<!-- ALERTA CENTRAL DE PRAZOS DAS ORDENS -->
+
+<div
+    class="modal alerta-prazos-modal"
+    id="modalAlertaPrazosOrdens"
+    aria-hidden="true"
+>
+    <div
+        class="modal-fundo"
+        data-fechar-alerta-prazos
+    ></div>
+
+    <section
+        class="modal-conteudo alerta-prazos-conteudo"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="tituloAlertaPrazos"
+    >
+        <header class="alerta-prazos-cabecalho">
+            <div class="alerta-prazos-icone">
+                <svg aria-hidden="true">
+                    <use href="#icon-clock"></use>
+                </svg>
+            </div>
+
+            <div class="alerta-prazos-titulos">
+                <span>
+                    Controle de prazos
+                </span>
+
+                <h2 id="tituloAlertaPrazos">
+                    Atenção às ordens
+                </h2>
+
+                <p>
+                    Algumas ordens precisam da sua atenção.
+                </p>
+            </div>
+
+            <button
+                class="botao-icone"
+                id="botaoFecharAlertaPrazos"
+                data-fechar-alerta-prazos
+                type="button"
+                title="Fechar"
+                aria-label="Fechar alerta de prazos"
+            >
+                <svg aria-hidden="true">
+                    <use href="#icon-x"></use>
+                </svg>
+            </button>
+        </header>
+
+        <div class="alerta-prazos-resumo">
+            <article class="alerta-prazo-resumo-item">
+                <span>
+                    Ordens atrasadas
+                </span>
+
+                <strong id="quantidadeOrdensAtrasadas">
+                    0
+                </strong>
+            </article>
+
+            <article class="alerta-prazo-resumo-item">
+                <span>
+                    Próximas do prazo
+                </span>
+
+                <strong id="quantidadeOrdensProximas">
+                    0
+                </strong>
+            </article>
+        </div>
+
+        <div
+            class="alerta-prazos-lista"
+            id="listaAlertaPrazosOrdens"
+        ></div>
+
+        <footer class="alerta-prazos-rodape">
+            <small>
+                Ordens concluídas, entregues ou canceladas não aparecem neste alerta.
+            </small>
+
+            <button
+                class="botao botao-principal"
+                data-fechar-alerta-prazos
+                type="button"
+            >
+                Entendi
+            </button>
+        </footer>
+    </section>
 </div>
 
         <script src="app.js"></script>
