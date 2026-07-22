@@ -2173,7 +2173,7 @@
             >
 
            <div class="grade-formulario">
-<label class="campo campo-largo">
+<div class="campo campo-largo">
     <span>Cliente</span>
 
     <div
@@ -2246,10 +2246,25 @@
         </div>
     </div>
 
-    <small id="mensagemClienteOrdem">
-        Selecione o cliente vinculado à ordem.
-    </small>
-</label>
+    <button
+    class="botao-cadastrar-cliente-ordem"
+    id="botaoCadastrarClienteOrdem"
+    data-permissao-exigida="clientes.criar"
+    type="button"
+>
+    <svg aria-hidden="true">
+        <use href="#icon-plus"></use>
+    </svg>
+
+    <span>
+        Cadastrar novo cliente
+    </span>
+</button>
+
+<small id="mensagemClienteOrdem">
+    Selecione o cliente vinculado à ordem.
+</small>
+</div>
 
     <label class="campo campo-largo">
         <span>Descrição do serviço</span>
