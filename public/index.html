@@ -986,7 +986,7 @@
                     class="coluna-telefone-clientes"
                     data-permissao-exigida="clientes.dados_pessoais"
                 >
-                    Telefone
+                    Contato
                 </th>
 
                 <th
@@ -2292,15 +2292,111 @@
         >
     </label>
 
-    <div class="campo campo-largo campo-logo-ordem">
+<div class="campo campo-largo campo-logo-ordem">
     <div class="campo-logo-ordem-cabecalho">
-    <span>
-        Arquivos do cliente
-    </span>
+        <span>
+            Arquivos desta ordem
+        </span>
 
-    <small>
-        Carregados automaticamente do cadastro
-    </small>
+        <small>
+            Escolha os arquivos específicos do cliente
+        </small>
+    </div>
+
+    <div class="seletores-arquivos-ordem">
+        <label class="seletor-arquivo-ordem">
+            <span>
+                Logo original
+            </span>
+
+            <div
+                class="select-arquivo-custom"
+                data-select-custom
+            >
+                <select
+                    id="ordemArquivoOriginalId"
+                    class="select-arquivo-nativo"
+                    disabled
+                >
+                    <option value="">
+                        Selecione um cliente
+                    </option>
+                </select>
+
+                <button
+                    class="select-arquivo-gatilho"
+                    type="button"
+                    aria-haspopup="listbox"
+                    aria-expanded="false"
+                >
+                    <span class="select-arquivo-valor">
+                        Selecione um cliente
+                    </span>
+
+                    <span
+                        class="select-arquivo-seta"
+                        aria-hidden="true"
+                    ></span>
+                </button>
+
+                <div
+                    class="select-arquivo-menu"
+                    role="listbox"
+                    hidden
+                ></div>
+            </div>
+
+            <small>
+                Imagem utilizada como referência.
+            </small>
+        </label>
+
+        <label class="seletor-arquivo-ordem">
+            <span>
+                Arquivo convertido
+            </span>
+
+            <div
+                class="select-arquivo-custom"
+                data-select-custom
+            >
+                <select
+                    id="ordemArquivoConvertidoId"
+                    class="select-arquivo-nativo"
+                    disabled
+                >
+                    <option value="">
+                        Selecione um cliente
+                    </option>
+                </select>
+
+                <button
+                    class="select-arquivo-gatilho"
+                    type="button"
+                    aria-haspopup="listbox"
+                    aria-expanded="false"
+                >
+                    <span class="select-arquivo-valor">
+                        Selecione um cliente
+                    </span>
+
+                    <span
+                        class="select-arquivo-seta"
+                        aria-hidden="true"
+                    ></span>
+                </button>
+
+                <div
+                    class="select-arquivo-menu"
+                    role="listbox"
+                    hidden
+                ></div>
+            </div>
+
+            <small>
+                Arquivo preparado para o bordado.
+            </small>
+        </label>
     </div>
 
     <div
@@ -2319,7 +2415,7 @@
             </strong>
 
             <span>
-                A logo cadastrada aparecerá aqui.
+                Os arquivos cadastrados aparecerão aqui.
             </span>
         </div>
     </div>
@@ -2748,7 +2844,7 @@
     </div>
 </div>
 
-<label class="campo documento-campo">
+<label class="campo campo-largo documento-campo">
     <span>
         <span id="rotuloDocumentoCliente">
             CPF
@@ -2780,6 +2876,22 @@
     <input
         id="telefone"
         name="telefone"
+        type="text"
+        inputmode="numeric"
+        maxlength="15"
+        placeholder="(00) 0000-0000"
+        autocomplete="tel"
+    >
+</label>
+
+<label class="campo">
+    <span>
+        Celular
+    </span>
+
+    <input
+        id="celular"
+        name="celular"
         type="text"
         inputmode="numeric"
         maxlength="15"
@@ -2823,7 +2935,7 @@
                 </strong>
 
                 <span id="subtextoLinhaCliente">
-                    Campo opcional — clique para selecionar
+                    Clique para selecionar
                 </span>
             </span>
 
@@ -2905,11 +3017,12 @@
     </div>
 
     <input
-        id="logoOriginal"
-        name="logoOriginal"
-        type="file"
-        accept=".png,.jpg,.jpeg,.webp,.svg,.pdf"
-        hidden
+    id="logoOriginal"
+    name="logoOriginal"
+    type="file"
+    accept=".png,.jpg,.jpeg,.webp,.svg,.pdf"
+    multiple
+    hidden
     >
 
     <div
@@ -2953,6 +3066,12 @@
         >
     </div>
 
+    <div
+    class="lista-arquivos-cliente"
+    id="listaLogosOriginaisCliente"
+    hidden
+    ></div>
+
     <div class="acoes-arquivo-cliente">
         <button
             class="botao-arquivo-cliente"
@@ -2964,7 +3083,7 @@
             </svg>
 
             <span>
-                Escolher arquivo
+                Escolher arquivos
             </span>
         </button>
 
@@ -2998,11 +3117,12 @@
     </div>
 
     <input
-        id="logoConvertida"
-        name="logoConvertida"
-        type="file"
-        accept=".dst,.pes,.jef,.exp,.vp3,.zip"
-        hidden
+    id="logoConvertida"
+    name="logoConvertida"
+    type="file"
+    accept=".dst,.pes,.jef,.exp,.vp3,.zip"
+    multiple
+    hidden
     >
 
     <div class="cartao-arquivo-convertido">
@@ -3027,6 +3147,12 @@
         </div>
     </div>
 
+    <div
+    class="lista-arquivos-cliente"
+    id="listaArquivosConvertidosCliente"
+    hidden
+    ></div>
+
     <div class="acoes-arquivo-cliente">
         <button
             class="botao-arquivo-cliente"
@@ -3038,7 +3164,7 @@
             </svg>
 
             <span>
-                Escolher arquivo
+                Escolher arquivos
             </span>
         </button>
 
@@ -3064,6 +3190,24 @@
     >
     </small>
 </div>
+
+<label class="campo campo-largo">
+    <span>
+        Informações adicionais
+    </span>
+
+    <textarea
+        id="observacoes"
+        name="observacoes"
+        rows="4"
+        maxlength="3000"
+        placeholder="Preferências do cliente, instruções, informações comerciais ou outros detalhes importantes"
+    ></textarea>
+
+    <small>
+         · Máximo de 3.000 caracteres
+    </small>
+</label>
 
                 </div>
 
@@ -3160,6 +3304,14 @@
                     </div>
 
                     <div class="detalhe-item">
+                        <span>Celular</span>
+
+                        <strong id="detalhesCelular">
+                            —
+                        </strong>
+                    </div>
+
+                    <div class="detalhe-item">
                         <span>Linhas utilizadas</span>
 
                         <strong id="detalhesLinha">
@@ -3192,10 +3344,10 @@
                     </div>
 
                     <div class="detalhe-item detalhe-largo">
-                        <span>Observações</span>
+                        <span>Informações adicionais</span>
 
                         <strong id="detalhesObservacoes">
-                            Nenhuma observação.
+                            Nenhuma informação adicional.
                         </strong>
                     </div>
                 </div>
