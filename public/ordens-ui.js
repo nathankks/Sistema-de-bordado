@@ -107,6 +107,373 @@ const botaoCadastrarClienteOrdem =
 const logoClienteOrdem =
     $("#logoClienteOrdem");
 
+const ordemArquivoOriginalId =
+    $("#ordemArquivoOriginalId");
+
+const ordemArquivoConvertidoId =
+    $("#ordemArquivoConvertidoId");
+
+const controlesSelectCustomOrdem =
+    new Map();
+
+function fecharOutrosSelectsCustomOrdem(
+    excecao = null
+) {
+    for (
+        const controle
+        of controlesSelectCustomOrdem.values()
+    ) {
+        if (controle !== excecao) {
+            controle.fechar();
+        }
+    }
+}
+
+function inicializarSelectCustomOrdem(
+    campo
+) {
+    if (!campo) {
+        return;
+    }
+
+    const raiz =
+        campo.closest(
+            "[data-select-custom]"
+        );
+
+    if (!raiz) {
+        return;
+    }
+
+    const gatilho =
+        raiz.querySelector(
+            ".select-arquivo-gatilho"
+        );
+
+    const valor =
+        raiz.querySelector(
+            ".select-arquivo-valor"
+        );
+
+    const menu =
+        raiz.querySelector(
+            ".select-arquivo-menu"
+        );
+
+    if (
+        !gatilho ||
+        !valor ||
+        !menu
+    ) {
+        return;
+    }
+
+    function fechar() {
+        menu.hidden = true;
+
+        raiz.classList.remove(
+            "aberto"
+        );
+
+        gatilho.setAttribute(
+            "aria-expanded",
+            "false"
+        );
+    }
+
+    function selecionar(
+        novoValor
+    ) {
+        campo.value =
+            String(
+                novoValor
+            );
+
+        campo.dispatchEvent(
+            new Event(
+                "change",
+                {
+                    bubbles: true
+                }
+            )
+        );
+
+        atualizar();
+        fechar();
+        gatilho.focus();
+    }
+
+    function criarOpcaoVisual(
+        opcao
+    ) {
+        const item =
+            document.createElement(
+                "button"
+            );
+
+        item.type =
+            "button";
+
+        item.className =
+            "select-arquivo-opcao";
+
+        item.setAttribute(
+            "role",
+            "option"
+        );
+
+        item.setAttribute(
+            "aria-selected",
+            opcao.value === campo.value
+                ? "true"
+                : "false"
+        );
+
+        item.disabled =
+            opcao.disabled;
+
+        item.dataset.valor =
+            opcao.value;
+
+        item.textContent =
+            opcao.textContent.trim();
+
+        item.addEventListener(
+            "click",
+            () => {
+                selecionar(
+                    opcao.value
+                );
+            }
+        );
+
+        return item;
+    }
+
+    function atualizar() {
+        const opcoes = [
+            ...campo.options
+        ];
+
+        const selecionada =
+            opcoes.find(
+                opcao =>
+                    opcao.value ===
+                    campo.value
+            ) ||
+            opcoes[0] ||
+            null;
+
+        valor.textContent =
+            selecionada
+                ?.textContent
+                ?.trim() ||
+            "Selecione";
+
+        valor.title =
+            valor.textContent;
+
+        gatilho.disabled =
+            campo.disabled;
+
+        menu.replaceChildren(
+            ...opcoes.map(
+                criarOpcaoVisual
+            )
+        );
+
+        if (campo.disabled) {
+            fechar();
+        }
+    }
+
+    function abrir() {
+        if (campo.disabled) {
+            return;
+        }
+
+        fecharOutrosSelectsCustomOrdem(
+            controle
+        );
+
+        menu.hidden = false;
+
+        raiz.classList.add(
+            "aberto"
+        );
+
+        gatilho.setAttribute(
+            "aria-expanded",
+            "true"
+        );
+
+        const selecionada =
+            menu.querySelector(
+                '[aria-selected="true"]'
+            );
+
+        const primeira =
+            menu.querySelector(
+                ".select-arquivo-opcao:not(:disabled)"
+            );
+
+        (
+            selecionada ||
+            primeira
+        )?.focus();
+    }
+
+    function alternar() {
+        if (menu.hidden) {
+            abrir();
+        } else {
+            fechar();
+        }
+    }
+
+    const controle = {
+        campo,
+        raiz,
+        atualizar,
+        abrir,
+        fechar
+    };
+
+    controlesSelectCustomOrdem.set(
+        campo,
+        controle
+    );
+
+    gatilho.addEventListener(
+        "click",
+        alternar
+    );
+
+    raiz.addEventListener(
+        "keydown",
+        evento => {
+            const opcoesVisuais = [
+                ...menu.querySelectorAll(
+                    ".select-arquivo-opcao:not(:disabled)"
+                )
+            ];
+
+            const indiceAtual =
+                opcoesVisuais.indexOf(
+                    document.activeElement
+                );
+
+            if (
+                evento.key === "Enter" ||
+                evento.key === " "
+            ) {
+                if (
+                    document.activeElement ===
+                    gatilho
+                ) {
+                    evento.preventDefault();
+                    alternar();
+                }
+
+                return;
+            }
+
+            if (evento.key === "Escape") {
+                evento.preventDefault();
+
+                fechar();
+                gatilho.focus();
+
+                return;
+            }
+
+            if (
+                evento.key === "ArrowDown"
+            ) {
+                evento.preventDefault();
+
+                if (menu.hidden) {
+                    abrir();
+
+                    return;
+                }
+
+                const proximoIndice =
+                    Math.min(
+                        indiceAtual + 1,
+                        opcoesVisuais.length - 1
+                    );
+
+                opcoesVisuais[
+                    proximoIndice
+                ]?.focus();
+
+                return;
+            }
+
+            if (
+                evento.key === "ArrowUp"
+            ) {
+                evento.preventDefault();
+
+                if (menu.hidden) {
+                    abrir();
+
+                    return;
+                }
+
+                const indiceAnterior =
+                    indiceAtual <= 0
+                        ? 0
+                        : indiceAtual - 1;
+
+                opcoesVisuais[
+                    indiceAnterior
+                ]?.focus();
+            }
+        }
+    );
+
+    document.addEventListener(
+        "click",
+        evento => {
+            if (
+                !raiz.contains(
+                    evento.target
+                )
+            ) {
+                fechar();
+            }
+        }
+    );
+
+    const observador =
+        new MutationObserver(
+            atualizar
+        );
+
+    observador.observe(
+        campo,
+        {
+            childList: true,
+            subtree: true,
+            attributes: true
+        }
+    );
+
+    atualizar();
+}
+
+function atualizarSelectCustomOrdem(
+    campo
+) {
+    controlesSelectCustomOrdem
+        .get(
+            campo
+        )
+        ?.atualizar();
+}
+
 const ordemDescricao =
     $("#ordemDescricao");
 
@@ -266,16 +633,21 @@ function formatarPrazoOrdem(
 }
 
 function obterStatusInicialOrdem(
-    cliente
+    arquivoOriginalId,
+    arquivoConvertidoId
 ) {
     if (
-        cliente?.logoConvertida
+        String(
+            arquivoConvertidoId || ""
+        ).trim()
     ) {
         return "pronto-producao";
     }
 
     if (
-        cliente?.logoOriginal
+        String(
+            arquivoOriginalId || ""
+        ).trim()
     ) {
         return "aguardando-aprovacao";
     }
@@ -1239,30 +1611,290 @@ function obterRotuloExtensaoLogoOrdem(
     );
 }
 
+function obterArquivosClienteOrdem(
+    cliente,
+    tipo
+) {
+    if (!cliente) {
+        return [];
+    }
+
+    const arquivos =
+        tipo === "original"
+            ? cliente.arquivosOriginais
+            : cliente.arquivosConvertidos;
+
+    if (
+        !Array.isArray(
+            arquivos
+        )
+    ) {
+        return [];
+    }
+
+    return arquivos.filter(
+        arquivo =>
+            arquivo &&
+            arquivo.id &&
+            arquivo.nome
+    );
+}
+
+function encontrarArquivoSelecionadoOrdem(
+    cliente,
+    tipo,
+    arquivoId
+) {
+    const id =
+        String(
+            arquivoId || ""
+        ).trim();
+
+    if (!id) {
+        return null;
+    }
+
+    return (
+        obterArquivosClienteOrdem(
+            cliente,
+            tipo
+        ).find(
+            arquivo =>
+                String(
+                    arquivo.id
+                ) === id
+        ) ||
+        null
+    );
+}
+
+function resolverArquivoParaSeletorOrdem({
+    arquivos,
+    arquivoId,
+    arquivoNome,
+    usarPrimeiro
+}) {
+    const id =
+        String(
+            arquivoId || ""
+        ).trim();
+
+    if (id) {
+        const encontradoPorId =
+            arquivos.find(
+                arquivo =>
+                    String(
+                        arquivo.id
+                    ) === id
+            );
+
+        if (encontradoPorId) {
+            return encontradoPorId;
+        }
+    }
+
+    const nome =
+        String(
+            arquivoNome || ""
+        ).trim();
+
+    if (nome) {
+        const encontradoPorNome =
+            arquivos.find(
+                arquivo =>
+                    String(
+                        arquivo.nome || ""
+                    ) === nome
+            );
+
+        if (encontradoPorNome) {
+            return encontradoPorNome;
+        }
+    }
+
+    if (usarPrimeiro) {
+        return arquivos[0] || null;
+    }
+
+    return null;
+}
+
+function preencherSeletorArquivoOrdem({
+    campo,
+    arquivos,
+    tipo,
+    arquivoId,
+    arquivoNome,
+    usarPrimeiro
+}) {
+    if (!campo) {
+        return;
+    }
+
+    const original =
+        tipo === "original";
+
+    if (!arquivos.length) {
+        campo.innerHTML = `
+            <option value="">
+                ${
+                    original
+                        ? "Nenhuma logo original cadastrada"
+                        : "Nenhum arquivo convertido cadastrado"
+                }
+            </option>
+        `;
+
+        campo.value = "";
+        campo.disabled = true;
+
+        atualizarSelectCustomOrdem(
+            campo
+        );
+
+        return;
+    }
+
+    const arquivoSelecionado =
+        resolverArquivoParaSeletorOrdem({
+            arquivos,
+            arquivoId,
+            arquivoNome,
+            usarPrimeiro
+        });
+
+    campo.innerHTML = `
+        <option value="">
+            ${
+                original
+                    ? "Não usar logo original"
+                    : "Não usar arquivo convertido"
+            }
+        </option>
+
+        ${arquivos
+            .map(
+                arquivo => `
+                    <option
+                        value="${escaparHtml(
+                            arquivo.id
+                        )}"
+                    >
+                        ${escaparHtml(
+                            arquivo.nome
+                        )}
+                    </option>
+                `
+            )
+            .join("")}
+    `;
+
+    campo.disabled = false;
+
+    campo.value =
+        arquivoSelecionado
+            ?.id ||
+        "";
+
+    atualizarSelectCustomOrdem(
+        campo
+    );
+}
+
+
+
+function preencherArquivosDaOrdem(
+    cliente,
+    {
+        arquivoOriginalId = "",
+        arquivoOriginalNome = "",
+        arquivoConvertidoId = "",
+        arquivoConvertidoNome = "",
+        usarPrimeiros = false
+    } = {}
+) {
+    const arquivosOriginais =
+        obterArquivosClienteOrdem(
+            cliente,
+            "original"
+        );
+
+    const arquivosConvertidos =
+        obterArquivosClienteOrdem(
+            cliente,
+            "convertido"
+        );
+
+    preencherSeletorArquivoOrdem({
+        campo:
+            ordemArquivoOriginalId,
+
+        arquivos:
+            arquivosOriginais,
+
+        tipo:
+            "original",
+
+        arquivoId:
+            arquivoOriginalId,
+
+        arquivoNome:
+            arquivoOriginalNome,
+
+        usarPrimeiro:
+            usarPrimeiros
+    });
+
+    preencherSeletorArquivoOrdem({
+        campo:
+            ordemArquivoConvertidoId,
+
+        arquivos:
+            arquivosConvertidos,
+
+        tipo:
+            "convertido",
+
+        arquivoId:
+            arquivoConvertidoId,
+
+        arquivoNome:
+            arquivoConvertidoNome,
+
+        usarPrimeiro:
+            usarPrimeiros
+    });
+
+    renderizarLogoClienteOrdem();
+}
+
 function criarCartaoArquivoClienteOrdem(
     cliente,
     tipo,
-    podeAcessarArquivos
+    podeAcessarArquivos,
+    arquivoSelecionado = null
 ) {
     const original =
         tipo === "original";
 
+    const arquivosDisponiveis =
+        obterArquivosClienteOrdem(
+            cliente,
+            tipo
+        );
+
     const nomeArquivo =
         String(
-            (
-                original
-                    ? cliente.logoOriginal
-                    : cliente.logoConvertida
-            ) || ""
+            arquivoSelecionado
+                ?.nome ||
+            ""
         ).trim();
 
     const urlArquivo =
         String(
-            (
-                original
-                    ? cliente.logoOriginalUrl
-                    : cliente.logoConvertidaUrl
-            ) || ""
+            arquivoSelecionado
+                ?.url ||
+            ""
         ).trim();
 
     const titulo =
@@ -1311,13 +1943,21 @@ function criarCartaoArquivoClienteOrdem(
                     </span>
 
                     <strong>
-                        Nenhum arquivo cadastrado
+                        ${
+                            arquivosDisponiveis.length
+                                ? "Nenhum arquivo selecionado"
+                                : "Nenhum arquivo cadastrado"
+                        }
                     </strong>
 
                     <small>
-                        ${escaparHtml(
-                            descricao
-                        )}
+                        ${
+                            arquivosDisponiveis.length
+                                ? "Escolha um arquivo no seletor acima."
+                                : escaparHtml(
+                                    descricao
+                                )
+                        }
                     </small>
                 </div>
             </article>
@@ -1526,6 +2166,22 @@ function renderizarLogoClienteOrdem() {
         return;
     }
 
+    const arquivoOriginalSelecionado =
+    encontrarArquivoSelecionadoOrdem(
+        cliente,
+        "original",
+        ordemArquivoOriginalId
+            ?.value
+    );
+
+    const arquivoConvertidoSelecionado =
+    encontrarArquivoSelecionadoOrdem(
+        cliente,
+        "convertido",
+        ordemArquivoConvertidoId
+            ?.value
+    );
+
     const podeAcessarArquivos =
         typeof window
             .possuiPermissaoSistema !==
@@ -1543,13 +2199,15 @@ function renderizarLogoClienteOrdem() {
         ${criarCartaoArquivoClienteOrdem(
             cliente,
             "original",
-            podeAcessarArquivos
+            podeAcessarArquivos,
+            arquivoOriginalSelecionado
         )}
 
         ${criarCartaoArquivoClienteOrdem(
             cliente,
             "convertido",
-            podeAcessarArquivos
+            podeAcessarArquivos,
+            arquivoConvertidoSelecionado
         )}
     `;
 
@@ -1819,7 +2477,15 @@ function selecionarClienteDaOrdem(
      * da ordem são preservados.
      */
     if (!ordemId.value) {
-        atualizarDadosPeloCliente();
+    atualizarDadosPeloCliente();
+    } else {
+    preencherArquivosDaOrdem(
+        cliente,
+        {
+            usarPrimeiros:
+                true
+        }
+        );
     }
 }
 
@@ -1837,8 +2503,20 @@ function atualizarDadosPeloCliente() {
         ordemStatus.value =
             "aguardando-arquivo";
 
+        preencherArquivosDaOrdem(
+            null
+        );
+
         return;
     }
+
+    preencherArquivosDaOrdem(
+    cliente,
+    {
+        usarPrimeiros:
+            true
+    }
+    );
 
     /*
      * A linha cadastrada no cliente entra
@@ -1850,9 +2528,13 @@ function atualizarDadosPeloCliente() {
     );
 
     ordemStatus.value =
-        obterStatusInicialOrdem(
-            cliente
-        );
+    obterStatusInicialOrdem(
+        ordemArquivoOriginalId
+            ?.value,
+
+        ordemArquivoConvertidoId
+            ?.value
+    );
 }
 
 /*
@@ -2528,8 +3210,37 @@ function abrirModalOrdem(
             ordem.id;
 
         preencherClientesDaOrdem(
+                ordem.clienteId
+            );
+
+            const clienteDaOrdem =
+        encontrarClienteDaOrdem(
             ordem.clienteId
         );
+
+        preencherArquivosDaOrdem(
+        clienteDaOrdem,
+        {
+            arquivoOriginalId:
+                ordem.arquivoOriginalId ||
+                "",
+
+            arquivoOriginalNome:
+                ordem.arquivoOriginal ||
+                "",
+
+            arquivoConvertidoId:
+                ordem.arquivoConvertidoId ||
+                "",
+
+            arquivoConvertidoNome:
+                ordem.arquivoConvertido ||
+                "",
+
+            usarPrimeiros:
+                false
+        }
+    );
 
         ordemDescricao.value =
             ordem.descricao || "";
@@ -2558,6 +3269,9 @@ preencherLinhaOrdem(
     ordemQuantidade.value = 1;
 
     preencherClientesDaOrdem();
+    preencherArquivosDaOrdem(
+    null
+    );
     preencherLinhaOrdem("");
 }
 
@@ -3213,6 +3927,16 @@ if (
         clienteId:
             ordemCliente.value,
 
+        arquivoOriginalId:
+            ordemArquivoOriginalId
+                ?.value ||
+            "",
+
+        arquivoConvertidoId:
+            ordemArquivoConvertidoId
+                ?.value ||
+            "",
+
         descricao:
             ordemDescricao.value,
 
@@ -3226,6 +3950,7 @@ if (
         ordemLinha.value ||
         ""
     ).trim(),
+
 
         prazoEntrega:
             ordemPrazo.value,
@@ -4902,6 +5627,42 @@ listaOrdensAtrasadasDashboard
             );
         }
     );
+
+[
+    ordemArquivoOriginalId,
+    ordemArquivoConvertidoId
+].forEach(
+    campo => {
+        campo?.addEventListener(
+            "change",
+            () => {
+                renderizarLogoClienteOrdem();
+
+                /*
+                 * Atualiza automaticamente
+                 * somente em ordens novas.
+                 */
+                if (!ordemId.value) {
+                    ordemStatus.value =
+                        obterStatusInicialOrdem(
+                            ordemArquivoOriginalId
+                                ?.value,
+
+                            ordemArquivoConvertidoId
+                                ?.value
+                        );
+                }
+            }
+        );
+    }
+);
+
+[
+    ordemArquivoOriginalId,
+    ordemArquivoConvertidoId
+].forEach(
+    inicializarSelectCustomOrdem
+);
 
 formularioOrdem
     ?.addEventListener(
