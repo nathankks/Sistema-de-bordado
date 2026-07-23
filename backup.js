@@ -900,6 +900,20 @@ function validarBancoRecebido(
         }
     };
 
+    const configuracaoArquivosClientes = {
+    tabela:
+        "cliente_arquivos",
+
+    colunas: [
+        "id",
+        "cliente_id",
+        "tipo",
+        "nome_original",
+        "caminho_arquivo",
+        "criado_em"
+    ]
+};
+
     function protegerIdentificador(
         valor
     ) {
@@ -982,24 +996,625 @@ function validarBancoRecebido(
             .all();
     }
 
-    const dadosRecebidos = {};
+    function tabelaExiste(
+    nomeTabela
+) {
+    return Boolean(
+        bancoRecebido
+            .prepare(`
+                SELECT name
+
+                FROM sqlite_master
+
+                WHERE
+                    type = 'table'
+                    AND name = ?
+
+                LIMIT 1
+            `)
+            .get(
+                nomeTabela
+            )
+    );
+}
+
+const dadosRecebidos = {};
+
+for (
+    const [
+        identificador,
+        configuracao
+    ]
+    of Object.entries(
+        tabelasObrigatorias
+    )
+) {
+    dadosRecebidos[
+        identificador
+    ] =
+        lerTabelaObrigatoria(
+            configuracao
+        );
+}
+
+/*
+ * Celular é opcional para permitir
+ * a restauração de backups antigos.
+ */
+
+const colunasClientesBackup =
+    bancoRecebido
+        .prepare(`
+            PRAGMA table_info(
+                ${
+                    protegerIdentificador(
+                        "clientes"
+                    )
+                }
+            )
+        `)
+        .all()
+        .map(
+            coluna =>
+                coluna.name
+        );
+
+const backupPossuiCelular =
+    colunasClientesBackup.includes(
+        "celular"
+    );
+
+const backupPossuiCelularNumeros =
+    colunasClientesBackup.includes(
+        "celular_numeros"
+    );
+
+const celularesBackup =
+    bancoRecebido
+        .prepare(`
+            SELECT
+                id,
+
+                ${
+                    backupPossuiCelular
+                        ? protegerIdentificador(
+                            "celular"
+                        )
+                        : "NULL"
+                }
+                    AS celular,
+
+                ${
+                    backupPossuiCelularNumeros
+                        ? protegerIdentificador(
+                            "celular_numeros"
+                        )
+                        : "NULL"
+                }
+                    AS celular_numeros
+
+            FROM ${
+                protegerIdentificador(
+                    "clientes"
+                )
+            }
+        `)
+        .all();
+
+const celularesPorCliente =
+    new Map(
+        celularesBackup.map(
+            cliente => [
+                cliente.id,
+                cliente
+            ]
+        )
+    );
+
+const backupNovoContatos =
+    backupPossuiCelular ||
+    backupPossuiCelularNumeros;
+
+dadosRecebidos.clientes =
+    dadosRecebidos.clientes.map(
+        cliente => {
+            const contato =
+                celularesPorCliente.get(
+                    cliente.id
+                );
+
+            if (!backupNovoContatos) {
+                return {
+                    ...cliente,
+
+                    celular:
+                        cliente.telefone ||
+                        "",
+
+                    celular_numeros:
+                        cliente
+                            .telefone_numeros ||
+                        "",
+
+                    telefone:
+                        "",
+
+                    telefone_numeros:
+                        ""
+                };
+            }
+
+            return {
+                ...cliente,
+
+                celular:
+                    contato?.celular ||
+                    "",
+
+                celular_numeros:
+                    contato
+                        ?.celular_numeros ||
+                    ""
+            };
+        }
+    );
+
+/*
+ * As colunas de seleção da ordem são
+ * opcionais para manter compatibilidade
+ * com backups antigos.
+ */
+
+const colunasOrdensBackup =
+    bancoRecebido
+        .prepare(`
+            PRAGMA table_info(
+                ${
+                    protegerIdentificador(
+                        "ordens"
+                    )
+                }
+            )
+        `)
+        .all()
+        .map(
+            coluna =>
+                coluna.name
+        );
+
+const backupPossuiArquivoOriginalId =
+    colunasOrdensBackup.includes(
+        "arquivo_original_id"
+    );
+
+const backupPossuiArquivoConvertidoId =
+    colunasOrdensBackup.includes(
+        "arquivo_convertido_id"
+    );
+
+const idsArquivosOrdens =
+    bancoRecebido
+        .prepare(`
+            SELECT
+                id,
+
+                ${
+                    backupPossuiArquivoOriginalId
+                        ? protegerIdentificador(
+                            "arquivo_original_id"
+                        )
+                        : "NULL"
+                }
+                    AS arquivo_original_id,
+
+                ${
+                    backupPossuiArquivoConvertidoId
+                        ? protegerIdentificador(
+                            "arquivo_convertido_id"
+                        )
+                        : "NULL"
+                }
+                    AS arquivo_convertido_id
+
+            FROM ${
+                protegerIdentificador(
+                    "ordens"
+                )
+            }
+        `)
+        .all();
+
+const idsArquivosPorOrdem =
+    new Map(
+        idsArquivosOrdens.map(
+            ordem => [
+                ordem.id,
+                ordem
+            ]
+        )
+    );
+
+dadosRecebidos.ordens =
+    dadosRecebidos.ordens.map(
+        ordem => {
+            const ids =
+                idsArquivosPorOrdem.get(
+                    ordem.id
+                );
+
+            return {
+                ...ordem,
+
+                arquivo_original_id:
+                    ids
+                        ?.arquivo_original_id ||
+                    null,
+
+                arquivo_convertido_id:
+                    ids
+                        ?.arquivo_convertido_id ||
+                    null
+            };
+        }
+    );
+
+    /*
+ * Backups novos possuem a tabela completa.
+ * Backups antigos são convertidos usando
+ * os arquivos principais dos clientes.
+ */
+
+if (
+    tabelaExiste(
+        configuracaoArquivosClientes
+            .tabela
+    )
+) {
+    dadosRecebidos.clienteArquivos =
+        lerTabelaObrigatoria(
+            configuracaoArquivosClientes
+        );
+} else {
+    dadosRecebidos.clienteArquivos =
+        [];
+
+    const caminhosIncluidos =
+        new Set();
 
     for (
-        const [
-            identificador,
-            configuracao
-        ]
-        of Object.entries(
-            tabelasObrigatorias
+        const cliente
+        of dadosRecebidos.clientes
+    ) {
+        const arquivosLegados = [
+            {
+                tipo:
+                    "original",
+
+                nome:
+                    cliente
+                        .logo_original,
+
+                caminho:
+                    cliente
+                        .logo_original_arquivo
+            },
+            {
+                tipo:
+                    "convertido",
+
+                nome:
+                    cliente
+                        .logo_convertida,
+
+                caminho:
+                    cliente
+                        .logo_convertida_arquivo
+            }
+        ];
+
+        for (
+            const arquivo
+            of arquivosLegados
+        ) {
+            if (!arquivo.caminho) {
+                continue;
+            }
+
+            const caminhoNormalizado =
+                normalizarCaminhoRelativo(
+                    arquivo.caminho
+                );
+
+            if (
+                caminhosIncluidos.has(
+                    caminhoNormalizado
+                )
+            ) {
+                continue;
+            }
+
+            caminhosIncluidos.add(
+                caminhoNormalizado
+            );
+
+            dadosRecebidos
+                .clienteArquivos
+                .push({
+                    id:
+                        randomUUID(),
+
+                    cliente_id:
+                        cliente.id,
+
+                    tipo:
+                        arquivo.tipo,
+
+                    nome_original:
+                        arquivo.nome ||
+                        (
+                            arquivo.tipo ===
+                                "original"
+
+                                ? "logo-original"
+                                : "arquivo-convertido"
+                        ),
+
+                    caminho_arquivo:
+                        caminhoNormalizado,
+
+                    criado_em:
+                        cliente.criado_em ||
+                        new Date()
+                            .toISOString()
+                });
+        }
+    }
+}
+
+dadosRecebidos.clientes =
+    dadosRecebidos.clientes.map(
+        cliente => ({
+            ...cliente,
+
+            logo_original_arquivo:
+                cliente
+                    .logo_original_arquivo
+
+                    ? normalizarCaminhoRelativo(
+                        cliente
+                            .logo_original_arquivo
+                    )
+
+                    : "",
+
+            logo_convertida_arquivo:
+                cliente
+                    .logo_convertida_arquivo
+
+                    ? normalizarCaminhoRelativo(
+                        cliente
+                            .logo_convertida_arquivo
+                    )
+
+                    : ""
+        })
+    );
+
+dadosRecebidos.clienteArquivos =
+    dadosRecebidos
+        .clienteArquivos
+        .map(
+            arquivo => ({
+                ...arquivo,
+
+                caminho_arquivo:
+                    normalizarCaminhoRelativo(
+                        arquivo
+                            .caminho_arquivo
+                    )
+            })
+        );
+
+/*
+ * Preserva a seleção dos backups novos.
+ *
+ * Para backups antigos, tenta localizar
+ * o arquivo pelo cliente, tipo e nome.
+ */
+
+const arquivosClientesPorId =
+    new Map(
+        dadosRecebidos
+            .clienteArquivos
+            .map(
+                arquivo => [
+                    arquivo.id,
+                    arquivo
+                ]
+            )
+    );
+
+const arquivosPorClienteTipo =
+    new Map();
+
+for (
+    const arquivo
+    of dadosRecebidos
+        .clienteArquivos
+) {
+    const chave =
+        `${
+            arquivo.cliente_id
+        }\u0000${
+            arquivo.tipo
+        }`;
+
+    if (
+        !arquivosPorClienteTipo.has(
+            chave
         )
     ) {
-        dadosRecebidos[
-            identificador
-        ] =
-            lerTabelaObrigatoria(
-                configuracao
-            );
+        arquivosPorClienteTipo.set(
+            chave,
+            []
+        );
     }
+
+    arquivosPorClienteTipo
+        .get(
+            chave
+        )
+        .push(
+            arquivo
+        );
+}
+
+function resolverArquivoOrdemRestaurada(
+    ordem,
+    tipo,
+    backupPossuiColuna
+) {
+    const original =
+        tipo === "original";
+
+    const campoId =
+        original
+            ? "arquivo_original_id"
+            : "arquivo_convertido_id";
+
+    const campoNome =
+        original
+            ? "arquivo_original"
+            : "arquivo_convertido";
+
+    const idRecebido =
+        String(
+            ordem[
+                campoId
+            ] || ""
+        ).trim();
+
+    /*
+     * Em backups novos, inclusive uma
+     * seleção vazia precisa ser respeitada.
+     */
+
+    if (backupPossuiColuna) {
+        if (!idRecebido) {
+            return null;
+        }
+
+        const arquivo =
+            arquivosClientesPorId.get(
+                idRecebido
+            );
+
+        if (
+            !arquivo ||
+            arquivo.cliente_id !==
+                ordem.cliente_id ||
+            arquivo.tipo !== tipo
+        ) {
+            throw new ErroHttp(
+                400,
+
+                original
+                    ? "O backup possui uma ordem vinculada a uma logo original inválida."
+                    : "O backup possui uma ordem vinculada a um arquivo convertido inválido."
+            );
+        }
+
+        return arquivo;
+    }
+
+    /*
+     * Backups antigos não possuíam os IDs.
+     * Quando há nome, recuperamos o vínculo.
+     */
+
+    const nomeRecebido =
+        String(
+            ordem[
+                campoNome
+            ] || ""
+        ).trim();
+
+    if (
+        !ordem.cliente_id ||
+        !nomeRecebido
+    ) {
+        return null;
+    }
+
+    const chave =
+        `${
+            ordem.cliente_id
+        }\u0000${tipo}`;
+
+    const arquivosDisponiveis =
+        arquivosPorClienteTipo.get(
+            chave
+        ) || [];
+
+    return (
+        arquivosDisponiveis.find(
+            arquivo =>
+                arquivo.nome_original ===
+                    nomeRecebido
+        ) ||
+
+        arquivosDisponiveis[0] ||
+
+        null
+    );
+}
+
+dadosRecebidos.ordens =
+    dadosRecebidos.ordens.map(
+        ordem => {
+            const arquivoOriginal =
+                resolverArquivoOrdemRestaurada(
+                    ordem,
+                    "original",
+                    backupPossuiArquivoOriginalId
+                );
+
+            const arquivoConvertido =
+                resolverArquivoOrdemRestaurada(
+                    ordem,
+                    "convertido",
+                    backupPossuiArquivoConvertidoId
+                );
+
+            return {
+                ...ordem,
+
+                arquivo_original_id:
+                    arquivoOriginal
+                        ?.id ||
+                    null,
+
+                arquivo_original:
+                    arquivoOriginal
+                        ?.nome_original ||
+                    ordem
+                        .arquivo_original ||
+                    "",
+
+                arquivo_convertido_id:
+                    arquivoConvertido
+                        ?.id ||
+                    null,
+
+                arquivo_convertido:
+                    arquivoConvertido
+                        ?.nome_original ||
+                    ordem
+                        .arquivo_convertido ||
+                    ""
+            };
+        }
+    );
 
     /*
      * Impede restaurar um banco que
@@ -1038,9 +1653,10 @@ function validarBancoRecebido(
     */
 
     async function prepararArquivosRecebidos(
-        arquivos,
-        clientes,
-        pastaPreparacao
+    arquivos,
+    clientes,
+    arquivosClientes,
+    pastaPreparacao
     ) {
         const caminhosEncontrados =
             new Set();
@@ -1161,43 +1777,49 @@ function validarBancoRecebido(
             );
         }
 
-        /*
-         * Confere se todo arquivo referenciado
-         * pelos clientes existe no pacote.
-         */
-        for (
-            const cliente
-            of clientes
-        ) {
-            const caminhosCliente = [
-                cliente
-                    .logo_original_arquivo,
+/*
+ * Confere todos os arquivos principais
+ * e adicionais referenciados no banco.
+ */
 
-                cliente
-                    .logo_convertida_arquivo
-            ].filter(Boolean);
+const caminhosReferenciados = [
+    ...clientes.flatMap(
+        cliente => [
+            cliente
+                .logo_original_arquivo,
 
-            for (
-                const caminho
-                of caminhosCliente
-            ) {
-                const caminhoSeguro =
-                    normalizarCaminhoRelativo(
-                        caminho
-                    );
+            cliente
+                .logo_convertida_arquivo
+        ]
+    ),
 
-                if (
-                    !caminhosEncontrados.has(
-                        caminhoSeguro
-                    )
-                ) {
-                    throw new ErroHttp(
-                        400,
-                        `O backup não contém o arquivo ${caminhoSeguro}.`
-                    );
-                }
-            }
-        }
+    ...arquivosClientes.map(
+        arquivo =>
+            arquivo
+                .caminho_arquivo
+    )
+].filter(Boolean);
+
+for (
+    const caminho
+    of caminhosReferenciados
+) {
+    const caminhoSeguro =
+        normalizarCaminhoRelativo(
+            caminho
+        );
+
+    if (
+        !caminhosEncontrados.has(
+            caminhoSeguro
+        )
+    ) {
+        throw new ErroHttp(
+            400,
+            `O backup não contém o arquivo ${caminhoSeguro}.`
+        );
+    }
+}
 
         return {
             quantidade:
@@ -1243,6 +1865,8 @@ function validarBancoRecebido(
                     "cpf_numeros",
                     "telefone",
                     "telefone_numeros",
+                    "celular",
+                    "celular_numeros",
                     "linha",
                     "logo_original",
                     "logo_original_arquivo",
@@ -1255,6 +1879,25 @@ function validarBancoRecebido(
                 registros:
                     dadosRecebidos.clientes
             },
+
+            {
+    tabela:
+        "cliente_arquivos",
+
+    colunas: [
+        "id",
+        "cliente_id",
+        "tipo",
+        "nome_original",
+        "caminho_arquivo",
+        "criado_em"
+    ],
+
+    registros:
+        dadosRecebidos
+            .clienteArquivos
+},
+
             {
                 tabela: "catalogo_linhas",
                 colunas: [
@@ -1290,7 +1933,9 @@ function validarBancoRecebido(
                     "prazo_entrega",
                     "valor_centavos",
                     "status",
+                    "arquivo_original_id",
                     "arquivo_original",
+                    "arquivo_convertido_id",
                     "arquivo_convertido",
                     "observacoes",
                     "criado_em",
@@ -1366,14 +2011,16 @@ function validarBancoRecebido(
              * novamente com os usuários do backup.
              */
             banco.exec(`
-                DELETE FROM sessoes;
-                DELETE FROM tentativas_login;
-                DELETE FROM ordens;
-                DELETE FROM clientes;
-                DELETE FROM catalogo_linhas;
-                DELETE FROM usuarios;
-                DELETE FROM sqlite_sequence
-                WHERE name = 'ordens';
+            DELETE FROM sessoes;
+            DELETE FROM tentativas_login;
+            DELETE FROM ordens;
+            DELETE FROM cliente_arquivos;
+            DELETE FROM clientes;
+            DELETE FROM catalogo_linhas;
+            DELETE FROM usuarios;
+
+            DELETE FROM sqlite_sequence
+            WHERE name = 'ordens';
             `);
 
             for (
@@ -1747,11 +2394,13 @@ async function restaurarBackup(
          * em uma pasta temporária.
          */
         const resumoArquivos =
-            await prepararArquivosRecebidos(
-                pacote.arquivos,
-                dadosRecebidos.clientes,
-                pastaPreparacao
-            );
+        await prepararArquivosRecebidos(
+        pacote.arquivos,
+        dadosRecebidos.clientes,
+        dadosRecebidos
+            .clienteArquivos,
+        pastaPreparacao
+        );
 
         /*
          * Mantém a pasta uploads original
@@ -1870,7 +2519,12 @@ async function restaurarBackup(
                         dadosRecebidos.usuarios.length,
 
                     clientes:
-                        dadosRecebidos.clientes.length,
+                    dadosRecebidos.clientes.length,
+
+                    arquivosClientes:
+                    dadosRecebidos
+                    .clienteArquivos
+                    .length,
 
                     linhas:
                         dadosRecebidos.linhas.length,
