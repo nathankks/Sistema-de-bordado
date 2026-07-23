@@ -102,13 +102,21 @@ function criarServicoOrdens({
                     )
                 ),
 
-            arquivo_original TEXT
-                NOT NULL
-                DEFAULT '',
+            arquivo_original_id TEXT
+    REFERENCES cliente_arquivos(id)
+    ON DELETE SET NULL,
 
-            arquivo_convertido TEXT
-                NOT NULL
-                DEFAULT '',
+arquivo_original TEXT
+    NOT NULL
+    DEFAULT '',
+
+arquivo_convertido_id TEXT
+    REFERENCES cliente_arquivos(id)
+    ON DELETE SET NULL,
+
+arquivo_convertido TEXT
+    NOT NULL
+    DEFAULT '',
 
             observacoes TEXT
                 NOT NULL
@@ -138,197 +146,252 @@ function criarServicoOrdens({
         ON ordens(criado_em);
     `);
 
-    /*
+    function garantirColunaOrdem(
+    nome,
+    definicao
+) {
+    const existe =
+        banco
+            .prepare(
+                "PRAGMA table_info(ordens)"
+            )
+            .all()
+            .some(
+                coluna =>
+                    coluna.name === nome
+            );
+
+    if (existe) {
+        return false;
+    }
+
+    banco.exec(`
+        ALTER TABLE ordens
+        ADD COLUMN ${nome}
+        ${definicao}
+    `);
+
+    return true;
+}
+
+const colunaArquivoOriginalCriada =
+    garantirColunaOrdem(
+        "arquivo_original_id",
+        `
+            TEXT
+            REFERENCES cliente_arquivos(id)
+            ON DELETE SET NULL
+        `
+    );
+
+const colunaArquivoConvertidoCriada =
+    garantirColunaOrdem(
+        "arquivo_convertido_id",
+        `
+            TEXT
+            REFERENCES cliente_arquivos(id)
+            ON DELETE SET NULL
+        `
+    );
+
+const precisaMigrarArquivosOrdens =
+    colunaArquivoOriginalCriada ||
+    colunaArquivoConvertidoCriada;
+
+/*
 |--------------------------------------------------------------------------
-| Status automático conforme os arquivos do cliente
+| Migração dos arquivos das ordens existentes
 |--------------------------------------------------------------------------
 */
+
+if (precisaMigrarArquivosOrdens) {
 
 banco.exec(`
     DROP TRIGGER IF EXISTS
         sincronizar_ordens_apos_alterar_arquivos_cliente;
 
-    CREATE TRIGGER
-        sincronizar_ordens_apos_alterar_arquivos_cliente
-
-    AFTER UPDATE OF
-        logo_original,
-        logo_convertida
-
-    ON clientes
-
-    BEGIN
-        UPDATE ordens
-        SET
-            arquivo_original =
-                COALESCE(
-                    NEW.logo_original,
-                    ''
-                ),
-
-            arquivo_convertido =
-                COALESCE(
-                    NEW.logo_convertida,
-                    ''
-                ),
-
-            status =
-                CASE
-                    WHEN
-                        COALESCE(
-                            NEW.logo_convertida,
-                            ''
-                        ) <> ''
-                    THEN
-                        'pronto-producao'
-
-                    WHEN
-                        COALESCE(
-                            NEW.logo_original,
-                            ''
-                        ) <> ''
-                    THEN
-                        'aguardando-aprovacao'
-
-                    ELSE
-                        'aguardando-arquivo'
-                END,
-
-            atualizado_em =
-                strftime(
-                    '%Y-%m-%dT%H:%M:%fZ',
-                    'now'
-                )
-
-        WHERE
-            cliente_id = NEW.id
-
-            AND status IN (
-                'aguardando-arquivo',
-                'aguardando-aprovacao',
-                'pronto-producao'
-            );
-    END;
-`);
-
-/*
-|--------------------------------------------------------------------------
-| Sincronização inicial das ordens existentes
-|--------------------------------------------------------------------------
-*/
-
-banco.exec(`
     UPDATE ordens
 
-    SET
-        arquivo_original =
-            COALESCE(
-                (
-                    SELECT
-                        clientes.logo_original
+    SET arquivo_original_id =
+        COALESCE(
+            (
+                SELECT
+                    arquivo.id
 
-                    FROM clientes
+                FROM cliente_arquivos
+                    AS arquivo
 
-                    WHERE
-                        clientes.id =
+                WHERE
+                    arquivo.cliente_id =
                         ordens.cliente_id
-                ),
-                ''
+
+                    AND arquivo.tipo =
+                        'original'
+
+                    AND arquivo.nome_original =
+                        ordens.arquivo_original
+
+                ORDER BY
+                    arquivo.criado_em ASC,
+                    arquivo.id ASC
+
+                LIMIT 1
             ),
 
-        arquivo_convertido =
-            COALESCE(
-                (
-                    SELECT
-                        clientes.logo_convertida
+            (
+                SELECT
+                    arquivo.id
 
-                    FROM clientes
+                FROM cliente_arquivos
+                    AS arquivo
 
-                    WHERE
-                        clientes.id =
+                WHERE
+                    arquivo.cliente_id =
                         ordens.cliente_id
-                ),
-                ''
-            ),
 
-        status =
-            CASE
-                WHEN
-                    COALESCE(
-                        (
-                            SELECT
-                                clientes.logo_convertida
+                    AND arquivo.tipo =
+                        'original'
 
-                            FROM clientes
+                ORDER BY
+                    arquivo.criado_em ASC,
+                    arquivo.id ASC
 
-                            WHERE
-                                clientes.id =
-                                ordens.cliente_id
-                        ),
-                        ''
-                    ) <> ''
-                THEN
-                    'pronto-producao'
-
-                WHEN
-                    COALESCE(
-                        (
-                            SELECT
-                                clientes.logo_original
-
-                            FROM clientes
-
-                            WHERE
-                                clientes.id =
-                                ordens.cliente_id
-                        ),
-                        ''
-                    ) <> ''
-                THEN
-                    'aguardando-aprovacao'
-
-                ELSE
-                    'aguardando-arquivo'
-            END
+                LIMIT 1
+            )
+        )
 
     WHERE
         cliente_id IS NOT NULL
 
-        AND status IN (
-            'aguardando-arquivo',
-            'aguardando-aprovacao',
-            'pronto-producao'
+        AND COALESCE(
+            arquivo_original_id,
+            ''
+        ) = '';
+
+    UPDATE ordens
+
+    SET arquivo_convertido_id =
+        COALESCE(
+            (
+                SELECT
+                    arquivo.id
+
+                FROM cliente_arquivos
+                    AS arquivo
+
+                WHERE
+                    arquivo.cliente_id =
+                        ordens.cliente_id
+
+                    AND arquivo.tipo =
+                        'convertido'
+
+                    AND arquivo.nome_original =
+                        ordens.arquivo_convertido
+
+                ORDER BY
+                    arquivo.criado_em ASC,
+                    arquivo.id ASC
+
+                LIMIT 1
+            ),
+
+            (
+                SELECT
+                    arquivo.id
+
+                FROM cliente_arquivos
+                    AS arquivo
+
+                WHERE
+                    arquivo.cliente_id =
+                        ordens.cliente_id
+
+                    AND arquivo.tipo =
+                        'convertido'
+
+                ORDER BY
+                    arquivo.criado_em ASC,
+                    arquivo.id ASC
+
+                LIMIT 1
+            )
         )
 
-        AND EXISTS (
-            SELECT 1
+    WHERE
+        cliente_id IS NOT NULL
 
-            FROM clientes
+        AND COALESCE(
+            arquivo_convertido_id,
+            ''
+        ) = '';
 
-            WHERE
-                clientes.id =
-                ordens.cliente_id
-        );
-`);
+    UPDATE ordens
 
-    const CAMPOS_ORDEM_SQL = `
-        numero,
-        id,
-        cliente_id,
-        cliente_nome,
-        cliente_cpf,
-        descricao,
-        quantidade,
-        linha,
-        prazo_entrega,
-        valor_centavos,
-        status,
-        arquivo_original,
-        arquivo_convertido,
-        observacoes,
-        criado_em,
-        atualizado_em
-    `;
+    SET arquivo_original =
+        COALESCE(
+            (
+                SELECT
+                    arquivo.nome_original
+
+                FROM cliente_arquivos
+                    AS arquivo
+
+                WHERE
+                    arquivo.id =
+                        ordens.arquivo_original_id
+            ),
+
+            arquivo_original
+        )
+
+    WHERE
+        arquivo_original_id IS NOT NULL;
+
+    UPDATE ordens
+
+    SET arquivo_convertido =
+        COALESCE(
+            (
+                SELECT
+                    arquivo.nome_original
+
+                FROM cliente_arquivos
+                    AS arquivo
+
+                WHERE
+                    arquivo.id =
+                        ordens.arquivo_convertido_id
+            ),
+
+            arquivo_convertido
+        )
+
+    WHERE
+        arquivo_convertido_id IS NOT NULL;
+    `);
+}
+
+const CAMPOS_ORDEM_SQL = `
+    numero,
+    id,
+    cliente_id,
+    cliente_nome,
+    cliente_cpf,
+    descricao,
+    quantidade,
+    linha,
+    prazo_entrega,
+    valor_centavos,
+    status,
+    arquivo_original_id,
+    arquivo_original,
+    arquivo_convertido_id,
+    arquivo_convertido,
+    observacoes,
+    criado_em,
+    atualizado_em
+`;
 
     /*
     |--------------------------------------------------------------------------
@@ -357,69 +420,120 @@ banco.exec(`
             WHERE id = ?
         `);
 
-    const inserirOrdem =
-        banco.prepare(`
-            INSERT INTO ordens (
-                id,
-                cliente_id,
-                cliente_nome,
-                cliente_cpf,
-                descricao,
-                quantidade,
-                linha,
-                prazo_entrega,
-                valor_centavos,
-                status,
-                arquivo_original,
-                arquivo_convertido,
-                observacoes,
-                criado_em,
-                atualizado_em
-            )
-            VALUES (
-                ?,
-                ?,
-                ?,
-                ?,
-                ?,
-                ?,
-                ?,
-                ?,
-                ?,
-                ?,
-                ?,
-                ?,
-                ?,
-                ?,
-                ?
-            )
-        `);
+const inserirOrdem =
+    banco.prepare(`
+        INSERT INTO ordens (
+            id,
+            cliente_id,
+            cliente_nome,
+            cliente_cpf,
+            descricao,
+            quantidade,
+            linha,
+            prazo_entrega,
+            valor_centavos,
+            status,
+            arquivo_original_id,
+            arquivo_original,
+            arquivo_convertido_id,
+            arquivo_convertido,
+            observacoes,
+            criado_em,
+            atualizado_em
+        )
+        VALUES (
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?
+        )
+    `);
 
-    const atualizarOrdem =
-        banco.prepare(`
-            UPDATE ordens
-            SET
-                cliente_id = ?,
-                cliente_nome = ?,
-                cliente_cpf = ?,
-                descricao = ?,
-                quantidade = ?,
-                linha = ?,
-                prazo_entrega = ?,
-                valor_centavos = ?,
-                status = ?,
-                arquivo_original = ?,
-                arquivo_convertido = ?,
-                observacoes = ?,
-                atualizado_em = ?
-            WHERE id = ?
-        `);
+const atualizarOrdem =
+    banco.prepare(`
+        UPDATE ordens
+
+        SET
+            cliente_id = ?,
+            cliente_nome = ?,
+            cliente_cpf = ?,
+            descricao = ?,
+            quantidade = ?,
+            linha = ?,
+            prazo_entrega = ?,
+            valor_centavos = ?,
+            status = ?,
+            arquivo_original_id = ?,
+            arquivo_original = ?,
+            arquivo_convertido_id = ?,
+            arquivo_convertido = ?,
+            observacoes = ?,
+            atualizado_em = ?
+
+        WHERE id = ?
+    `);
 
     const excluirOrdem =
         banco.prepare(`
             DELETE FROM ordens
             WHERE id = ?
         `);
+
+    const consultaArquivoClientePorId =
+    banco.prepare(`
+        SELECT
+            id,
+            cliente_id,
+            tipo,
+            nome_original,
+            caminho_arquivo,
+            criado_em
+
+        FROM cliente_arquivos
+
+        WHERE
+            id = ?
+            AND cliente_id = ?
+            AND tipo = ?
+
+        LIMIT 1
+    `);
+
+const consultaPrimeiroArquivoCliente =
+    banco.prepare(`
+        SELECT
+            id,
+            cliente_id,
+            tipo,
+            nome_original,
+            caminho_arquivo,
+            criado_em
+
+        FROM cliente_arquivos
+
+        WHERE
+            cliente_id = ?
+            AND tipo = ?
+
+        ORDER BY
+            criado_em ASC,
+            id ASC
+
+        LIMIT 1
+    `);
 
     /*
     |--------------------------------------------------------------------------
@@ -533,23 +647,108 @@ banco.exec(`
         return data;
     }
 
-    function definirStatusInicial(
-        cliente
-    ) {
-        if (
-            cliente.logo_convertida
-        ) {
-            return "pronto-producao";
-        }
-
-        if (
-            cliente.logo_original
-        ) {
-            return "aguardando-aprovacao";
-        }
-
-        return "aguardando-arquivo";
+function definirStatusInicial(
+    arquivoOriginal,
+    arquivoConvertido
+) {
+    if (arquivoConvertido) {
+        return "pronto-producao";
     }
+
+    if (arquivoOriginal) {
+        return "aguardando-aprovacao";
+    }
+
+    return "aguardando-arquivo";
+}
+
+function resolverArquivoOrdem({
+    dados,
+    ordemAtual,
+    cliente,
+    tipo
+}) {
+    const original =
+        tipo === "original";
+
+    const campoRecebido =
+        original
+            ? "arquivoOriginalId"
+            : "arquivoConvertidoId";
+
+    const colunaAtual =
+        original
+            ? "arquivo_original_id"
+            : "arquivo_convertido_id";
+
+    if (
+        Object.hasOwn(
+            dados,
+            campoRecebido
+        )
+    ) {
+        const arquivoId =
+            limparTexto(
+                dados[
+                    campoRecebido
+                ]
+            );
+
+        if (!arquivoId) {
+            return null;
+        }
+
+        const arquivo =
+            consultaArquivoClientePorId
+                .get(
+                    arquivoId,
+                    cliente.id,
+                    tipo
+                );
+
+        if (!arquivo) {
+            throw new ErroHttp(
+                400,
+
+                original
+                    ? "A logo original selecionada não pertence ao cliente."
+                    : "O arquivo convertido selecionado não pertence ao cliente."
+            );
+        }
+
+        return arquivo;
+    }
+
+    const arquivoAtualId =
+        limparTexto(
+            ordemAtual?.[
+                colunaAtual
+            ]
+        );
+
+    if (arquivoAtualId) {
+        const arquivoAtual =
+            consultaArquivoClientePorId
+                .get(
+                    arquivoAtualId,
+                    cliente.id,
+                    tipo
+                );
+
+        if (arquivoAtual) {
+            return arquivoAtual;
+        }
+    }
+
+    return (
+        consultaPrimeiroArquivoCliente
+            .get(
+                cliente.id,
+                tipo
+            ) ||
+        null
+    );
+}
 
     function validarDadosOrdem(
         dados,
@@ -572,6 +771,24 @@ banco.exec(`
                 "Selecione um cliente válido."
             );
         }
+
+        const arquivoOriginal =
+    resolverArquivoOrdem({
+        dados,
+        ordemAtual,
+        cliente,
+        tipo:
+            "original"
+    });
+
+const arquivoConvertido =
+    resolverArquivoOrdem({
+        dados,
+        ordemAtual,
+        cliente,
+        tipo:
+            "convertido"
+    });
 
         const descricao =
             limparTexto(
@@ -699,8 +916,9 @@ if (
                 dados.status ??
                 ordemAtual?.status ??
                 definirStatusInicial(
-                    cliente
-                )
+    arquivoOriginal,
+    arquivoConvertido
+)
             );
 
         if (
@@ -731,14 +949,16 @@ if (
         }
 
         return {
-            cliente,
-            descricao,
-            quantidade,
-            linha,
-            prazoEntrega,
-            valorCentavos,
-            status,
-            observacoes
+        cliente,
+        arquivoOriginal,
+        arquivoConvertido,
+        descricao,
+        quantidade,
+        linha,
+        prazoEntrega,
+        valorCentavos,
+        status,
+        observacoes
         };
     }
 
@@ -799,11 +1019,51 @@ if (
                 ] ||
                 ordem.status,
 
-            arquivoOriginal:
-                ordem.arquivo_original,
+            arquivoOriginalId:
+    ordem.arquivo_original_id ||
+    "",
 
-            arquivoConvertido:
-                ordem.arquivo_convertido,
+arquivoOriginal:
+    ordem.arquivo_original,
+
+arquivoOriginalUrl:
+    ordem.cliente_id &&
+    ordem.arquivo_original_id
+
+        ? `/api/clientes/${
+            encodeURIComponent(
+                ordem.cliente_id
+            )
+        }/arquivos/${
+            encodeURIComponent(
+                ordem.arquivo_original_id
+            )
+        }`
+
+        : "",
+
+arquivoConvertidoId:
+    ordem.arquivo_convertido_id ||
+    "",
+
+arquivoConvertido:
+    ordem.arquivo_convertido,
+
+arquivoConvertidoUrl:
+    ordem.cliente_id &&
+    ordem.arquivo_convertido_id
+
+        ? `/api/clientes/${
+            encodeURIComponent(
+                ordem.cliente_id
+            )
+        }/arquivos/${
+            encodeURIComponent(
+                ordem.arquivo_convertido_id
+            )
+        }`
+
+        : "",
 
             observacoes:
                 ordem.observacoes,
@@ -975,10 +1235,23 @@ if (
             dados.prazoEntrega,
             dados.valorCentavos,
             dados.status,
-            dados.cliente
-                .logo_original || "",
-            dados.cliente
-                .logo_convertida || "",
+
+            dados.arquivoOriginal
+                ?.id ||
+                null,
+
+            dados.arquivoOriginal
+                ?.nome_original ||
+                "",
+
+            dados.arquivoConvertido
+                ?.id ||
+                null,
+
+            dados.arquivoConvertido
+                ?.nome_original ||
+                "",
+
             dados.observacoes,
             agora,
             agora
@@ -1089,10 +1362,23 @@ if (
             dados.prazoEntrega,
             dados.valorCentavos,
             dados.status,
-            dados.cliente
-                .logo_original || "",
-            dados.cliente
-                .logo_convertida || "",
+
+            dados.arquivoOriginal
+                ?.id ||
+                null,
+
+            dados.arquivoOriginal
+                ?.nome_original ||
+                "",
+
+            dados.arquivoConvertido
+                ?.id ||
+                null,
+
+            dados.arquivoConvertido
+                ?.nome_original ||
+                "",
+
             dados.observacoes,
             agora,
             id
