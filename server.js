@@ -59,7 +59,10 @@ const LIMITE_JSON =
     2 * 1024 * 1024;
 
 const LIMITE_UPLOAD_TOTAL =
-    35 * 1024 * 1024;
+    120 * 1024 * 1024;
+
+const MAX_ARQUIVOS_POR_TIPO =
+    10;
 
 const LIMITE_LOGO_ORIGINAL =
     12 * 1024 * 1024;
@@ -265,13 +268,17 @@ function garantirColunaCliente(
                     coluna.name === nome
             );
 
-    if (!existe) {
-        banco.exec(`
-            ALTER TABLE clientes
-            ADD COLUMN ${nome}
-            ${definicao}
-        `);
+    if (existe) {
+        return false;
     }
+
+    banco.exec(`
+        ALTER TABLE clientes
+        ADD COLUMN ${nome}
+        ${definicao}
+    `);
+
+    return true;
 }
 
 garantirColunaCliente(
@@ -446,11 +453,392 @@ function permitirDocumentoOpcionalClientes() {
 
 permitirDocumentoOpcionalClientes();
 
+/*
+|--------------------------------------------------------------------------
+| Telefone e celular separados
+|--------------------------------------------------------------------------
+*/
+
+const colunaCelularCriada =
+    garantirColunaCliente(
+        "celular",
+        "TEXT NOT NULL DEFAULT ''"
+    );
+
+const colunaCelularNumerosCriada =
+    garantirColunaCliente(
+        "celular_numeros",
+        "TEXT NOT NULL DEFAULT ''"
+    );
+
+/*
+ * O campo antigo usava o formato de celular.
+ * Ao criar as colunas novas, transferimos
+ * esses valores para Celular.
+ */
+
+if (
+    colunaCelularCriada ||
+    colunaCelularNumerosCriada
+) {
+    banco.exec(`
+        UPDATE clientes
+
+        SET
+            celular = telefone,
+            celular_numeros =
+                telefone_numeros,
+            telefone = '',
+            telefone_numeros = ''
+
+        WHERE
+            celular = ''
+            AND telefone <> '';
+    `);
+}
+
+banco.exec(`
+    CREATE INDEX IF NOT EXISTS
+        indice_clientes_celular
+
+    ON clientes(
+        celular_numeros
+    );
+`);
+
+/*
+|--------------------------------------------------------------------------
+| Vários arquivos por cliente
+|--------------------------------------------------------------------------
+*/
+
+function garantirTabelaArquivosClientes() {
+    banco.exec(`
+        CREATE TABLE IF NOT EXISTS cliente_arquivos (
+            id TEXT PRIMARY KEY,
+
+            cliente_id TEXT
+                NOT NULL
+                REFERENCES clientes(id)
+                ON DELETE CASCADE,
+
+            tipo TEXT
+                NOT NULL
+                CHECK (
+                    tipo IN (
+                        'original',
+                        'convertido'
+                    )
+                ),
+
+            nome_original TEXT
+                NOT NULL,
+
+            caminho_arquivo TEXT
+                NOT NULL
+                UNIQUE,
+
+            criado_em TEXT
+                NOT NULL
+        ) STRICT;
+
+        CREATE INDEX IF NOT EXISTS
+            indice_cliente_arquivos_cliente
+
+        ON cliente_arquivos(
+            cliente_id
+        );
+
+        CREATE INDEX IF NOT EXISTS
+            indice_cliente_arquivos_tipo
+
+        ON cliente_arquivos(
+            cliente_id,
+            tipo
+        );
+
+        CREATE INDEX IF NOT EXISTS
+            indice_cliente_arquivos_criado_em
+
+        ON cliente_arquivos(
+            criado_em
+        );
+    `);
+
+    /*
+     * Transforma automaticamente as logos antigas
+     * em registros da nova tabela.
+     *
+     * INSERT OR IGNORE impede duplicação sempre que
+     * o servidor for reiniciado.
+     */
+
+    const inserirArquivoMigrado =
+        banco.prepare(`
+            INSERT OR IGNORE INTO cliente_arquivos (
+                id,
+                cliente_id,
+                tipo,
+                nome_original,
+                caminho_arquivo,
+                criado_em
+            )
+            VALUES (
+                ?,
+                ?,
+                ?,
+                ?,
+                ?,
+                ?
+            )
+        `);
+
+    const clientesComArquivos =
+        banco.prepare(`
+            SELECT
+                id,
+                logo_original,
+                logo_original_arquivo,
+                logo_convertida,
+                logo_convertida_arquivo,
+                criado_em
+
+            FROM clientes
+
+            WHERE
+                logo_original_arquivo <> ''
+
+                OR logo_convertida_arquivo <> ''
+        `).all();
+
+    banco.exec(`
+        BEGIN IMMEDIATE;
+    `);
+
+    try {
+        for (
+            const cliente
+            of clientesComArquivos
+        ) {
+            if (
+                cliente
+                    .logo_original_arquivo
+            ) {
+                inserirArquivoMigrado.run(
+                    randomUUID(),
+
+                    cliente.id,
+
+                    "original",
+
+                    cliente.logo_original ||
+                        "logo-original",
+
+                    cliente
+                        .logo_original_arquivo,
+
+                    cliente.criado_em ||
+                        new Date()
+                            .toISOString()
+                );
+            }
+
+            if (
+                cliente
+                    .logo_convertida_arquivo
+            ) {
+                inserirArquivoMigrado.run(
+                    randomUUID(),
+
+                    cliente.id,
+
+                    "convertido",
+
+                    cliente.logo_convertida ||
+                        "arquivo-convertido",
+
+                    cliente
+                        .logo_convertida_arquivo,
+
+                    cliente.criado_em ||
+                        new Date()
+                            .toISOString()
+                );
+            }
+        }
+
+        banco.exec(`
+            COMMIT;
+        `);
+    } catch (erro) {
+        try {
+            banco.exec(`
+                ROLLBACK;
+            `);
+        } catch {
+            // Nenhuma ação necessária.
+        }
+
+        throw erro;
+    }
+}
+
+garantirTabelaArquivosClientes();
+/*
+|--------------------------------------------------------------------------
+| Normalização dos caminhos armazenados
+|--------------------------------------------------------------------------
+*/
+
+function normalizarCaminhoArquivoPersistido(
+    caminho
+) {
+    return String(
+        caminho || ""
+    )
+        .replace(
+            /\\/g,
+            "/"
+        )
+        .replace(
+            /^\/+/,
+            ""
+        )
+        .trim();
+}
+
+function normalizarCaminhosArquivosSalvos() {
+    const arquivos =
+        banco.prepare(`
+            SELECT
+                id,
+                caminho_arquivo
+
+            FROM cliente_arquivos
+        `).all();
+
+    const clientesComArquivos =
+        banco.prepare(`
+            SELECT
+                id,
+                logo_original_arquivo,
+                logo_convertida_arquivo
+
+            FROM clientes
+        `).all();
+
+    const atualizarArquivo =
+        banco.prepare(`
+            UPDATE cliente_arquivos
+
+            SET caminho_arquivo = ?
+
+            WHERE id = ?
+        `);
+
+    const atualizarCliente =
+        banco.prepare(`
+            UPDATE clientes
+
+            SET
+                logo_original_arquivo = ?,
+                logo_convertida_arquivo = ?
+
+            WHERE id = ?
+        `);
+
+    let transacaoAberta =
+        false;
+
+    try {
+        banco.exec(`
+            BEGIN IMMEDIATE;
+        `);
+
+        transacaoAberta = true;
+
+        for (
+            const arquivo
+            of arquivos
+        ) {
+            const caminhoNovo =
+                normalizarCaminhoArquivoPersistido(
+                    arquivo.caminho_arquivo
+                );
+
+            if (
+                caminhoNovo &&
+                caminhoNovo !==
+                    arquivo.caminho_arquivo
+            ) {
+                atualizarArquivo.run(
+                    caminhoNovo,
+                    arquivo.id
+                );
+            }
+        }
+
+        for (
+            const cliente
+            of clientesComArquivos
+        ) {
+            const original =
+                normalizarCaminhoArquivoPersistido(
+                    cliente
+                        .logo_original_arquivo
+                );
+
+            const convertido =
+                normalizarCaminhoArquivoPersistido(
+                    cliente
+                        .logo_convertida_arquivo
+                );
+
+            if (
+                original !==
+                    cliente
+                        .logo_original_arquivo ||
+
+                convertido !==
+                    cliente
+                        .logo_convertida_arquivo
+            ) {
+                atualizarCliente.run(
+                    original,
+                    convertido,
+                    cliente.id
+                );
+            }
+        }
+
+        banco.exec(`
+            COMMIT;
+        `);
+
+        transacaoAberta = false;
+    } catch (erro) {
+        if (transacaoAberta) {
+            try {
+                banco.exec(`
+                    ROLLBACK;
+                `);
+            } catch {
+                // Mantém o erro original.
+            }
+        }
+
+        throw erro;
+    }
+}
+
+normalizarCaminhosArquivosSalvos();
+
 const CAMPOS_CLIENTE_SQL = `
     id,
     nome,
     cpf,
     telefone,
+    celular,
     linha,
     logo_original,
     logo_original_arquivo,
@@ -509,41 +897,45 @@ const consultasClientes = {
             LIMIT 1
         `),
 
-    inserir:
-        banco.prepare(`
-            INSERT INTO clientes (
-                id,
-                nome,
-                cpf,
-                cpf_numeros,
-                telefone,
-                telefone_numeros,
-                linha,
-                logo_original,
-                logo_original_arquivo,
-                logo_convertida,
-                logo_convertida_arquivo,
-                observacoes,
-                criado_em,
-                atualizado_em
-            )
-            VALUES (
-                ?,
-                ?,
-                ?,
-                ?,
-                ?,
-                ?,
-                ?,
-                ?,
-                ?,
-                ?,
-                ?,
-                ?,
-                ?,
-                ?
-            )
-        `),
+inserir:
+    banco.prepare(`
+        INSERT INTO clientes (
+            id,
+            nome,
+            cpf,
+            cpf_numeros,
+            telefone,
+            telefone_numeros,
+            celular,
+            celular_numeros,
+            linha,
+            logo_original,
+            logo_original_arquivo,
+            logo_convertida,
+            logo_convertida_arquivo,
+            observacoes,
+            criado_em,
+            atualizado_em
+        )
+        VALUES (
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?
+        )
+    `),
 
     atualizar:
         banco.prepare(`
@@ -555,6 +947,8 @@ const consultasClientes = {
                 cpf_numeros = ?,
                 telefone = ?,
                 telefone_numeros = ?,
+                celular = ?,
+                celular_numeros = ?,
                 linha = ?,
                 logo_original = ?,
                 logo_original_arquivo = ?,
@@ -564,7 +958,7 @@ const consultasClientes = {
                 atualizado_em = ?
 
             WHERE id = ?
-        `),
+    `),
 
     excluir:
         banco.prepare(`
@@ -591,16 +985,175 @@ const consultasClientes = {
         `),
 
     removerLogoConvertida:
-        banco.prepare(`
-            UPDATE clientes
+    banco.prepare(`
+        UPDATE clientes
 
-            SET
-                logo_convertida = '',
-                logo_convertida_arquivo = '',
-                atualizado_em = ?
+        SET
+            logo_convertida = '',
+            logo_convertida_arquivo = '',
+            atualizado_em = ?
+
+        WHERE id = ?
+    `),
+
+definirLogoOriginalPrincipal:
+    banco.prepare(`
+        UPDATE clientes
+
+        SET
+            logo_original = ?,
+            logo_original_arquivo = ?,
+            atualizado_em = ?
+
+        WHERE id = ?
+    `),
+
+definirLogoConvertidaPrincipal:
+    banco.prepare(`
+        UPDATE clientes
+
+        SET
+            logo_convertida = ?,
+            logo_convertida_arquivo = ?,
+            atualizado_em = ?
+
+        WHERE id = ?
+    `)
+};
+
+const consultasArquivosClientes = {
+    todos:
+        banco.prepare(`
+            SELECT
+                id,
+                cliente_id,
+                tipo,
+                nome_original,
+                caminho_arquivo,
+                criado_em
+
+            FROM cliente_arquivos
+
+            ORDER BY
+                criado_em ASC,
+                id ASC
+        `),
+
+    porCliente:
+        banco.prepare(`
+            SELECT
+                id,
+                cliente_id,
+                tipo,
+                nome_original,
+                caminho_arquivo,
+                criado_em
+
+            FROM cliente_arquivos
+
+            WHERE cliente_id = ?
+
+            ORDER BY
+                criado_em ASC,
+                id ASC
+        `),
+
+    porClienteTipo:
+        banco.prepare(`
+            SELECT
+                id,
+                cliente_id,
+                tipo,
+                nome_original,
+                caminho_arquivo,
+                criado_em
+
+            FROM cliente_arquivos
+
+            WHERE
+                cliente_id = ?
+                AND tipo = ?
+
+            ORDER BY
+                criado_em ASC,
+                id ASC
+        `),
+
+    primeiroPorClienteTipo:
+        banco.prepare(`
+            SELECT
+                id,
+                cliente_id,
+                tipo,
+                nome_original,
+                caminho_arquivo,
+                criado_em
+
+            FROM cliente_arquivos
+
+            WHERE
+                cliente_id = ?
+                AND tipo = ?
+
+            ORDER BY
+                criado_em ASC,
+                id ASC
+
+            LIMIT 1
+        `),
+
+    porId:
+        banco.prepare(`
+            SELECT
+                id,
+                cliente_id,
+                tipo,
+                nome_original,
+                caminho_arquivo,
+                criado_em
+
+            FROM cliente_arquivos
 
             WHERE id = ?
-        `)
+
+            LIMIT 1
+        `),
+
+    inserir:
+        banco.prepare(`
+            INSERT INTO cliente_arquivos (
+                id,
+                cliente_id,
+                tipo,
+                nome_original,
+                caminho_arquivo,
+                criado_em
+            )
+            VALUES (
+                ?,
+                ?,
+                ?,
+                ?,
+                ?,
+                ?
+            )
+        `),
+
+    excluirPorClienteTipo:
+    banco.prepare(`
+        DELETE FROM cliente_arquivos
+
+        WHERE
+            cliente_id = ?
+            AND tipo = ?
+    `),
+
+excluirPorId:
+    banco.prepare(`
+        DELETE FROM cliente_arquivos
+
+        WHERE id = ?
+    `)
 };
 
 /*
@@ -1126,6 +1679,11 @@ function validarDadosCliente(
             dados.telefone
         );
 
+    const celularNumeros =
+    somenteNumeros(
+        dados.celular
+    );
+
     const linhasRecebidas =
         String(
             dados.linha || ""
@@ -1206,6 +1764,19 @@ function validarDadosCliente(
     }
 
     if (
+    celularNumeros &&
+    (
+        celularNumeros.length < 10 ||
+        celularNumeros.length > 11
+        )
+    ) {
+    throw new ErroHttp(
+        400,
+        "Informe um celular válido ou deixe o campo vazio."
+        );
+    }
+
+    if (
         nome.length > 150
     ) {
         throw new ErroHttp(
@@ -1264,10 +1835,61 @@ function validarDadosCliente(
 
         telefoneNumeros,
 
+        celular:
+        celularNumeros
+        ? formatarTelefone(
+            celularNumeros
+        )
+        : "",
+
+        celularNumeros,
+
         linha,
 
         observacoes
     };
+}
+
+function converterArquivoCliente(
+    arquivo
+) {
+    return {
+        id:
+            arquivo.id,
+
+        tipo:
+            arquivo.tipo,
+
+        nome:
+            arquivo.nome_original,
+
+        url:
+            `/api/clientes/${
+                encodeURIComponent(
+                    arquivo.cliente_id
+                )
+            }/arquivos/${
+                encodeURIComponent(
+                    arquivo.id
+                )
+            }`,
+
+        criadoEm:
+            arquivo.criado_em
+    };
+}
+
+function listarArquivosCliente(
+    clienteId
+) {
+    return consultasArquivosClientes
+        .porCliente
+        .all(
+            clienteId
+        )
+        .map(
+            converterArquivoCliente
+        );
 }
 
 function converterCliente(
@@ -1276,6 +1898,25 @@ function converterCliente(
     if (!cliente) {
         return null;
     }
+
+    const arquivos =
+        listarArquivosCliente(
+            cliente.id
+        );
+
+    const arquivosOriginais =
+        arquivos.filter(
+            arquivo =>
+                arquivo.tipo ===
+                "original"
+        );
+
+    const arquivosConvertidos =
+        arquivos.filter(
+            arquivo =>
+                arquivo.tipo ===
+                "convertido"
+        );
 
     return {
         id:
@@ -1290,16 +1931,24 @@ function converterCliente(
         telefone:
             cliente.telefone || "",
 
+        celular:
+            cliente.celular || "",
+
         linha:
             cliente.linha || "",
 
+        /*
+         * Mantém compatibilidade com
+         * a interface atual.
+         */
         logoOriginal:
-            cliente
-                .logo_original || "",
+            cliente.logo_original ||
+            arquivosOriginais[0]
+                ?.nome ||
+            "",
 
         logoOriginalUrl:
-            cliente
-                .logo_original_arquivo
+            cliente.logo_original_arquivo
 
                 ? `/api/clientes/${
                     encodeURIComponent(
@@ -1310,12 +1959,13 @@ function converterCliente(
                 : "",
 
         logoConvertida:
-            cliente
-                .logo_convertida || "",
+            cliente.logo_convertida ||
+            arquivosConvertidos[0]
+                ?.nome ||
+            "",
 
         logoConvertidaUrl:
-            cliente
-                .logo_convertida_arquivo
+            cliente.logo_convertida_arquivo
 
                 ? `/api/clientes/${
                     encodeURIComponent(
@@ -1324,6 +1974,14 @@ function converterCliente(
                 }/arquivos/convertido`
 
                 : "",
+
+        /*
+         * Novas listas com todos
+         * os arquivos do cliente.
+         */
+        arquivosOriginais,
+
+        arquivosConvertidos,
 
         observacoes:
             cliente.observacoes || "",
@@ -1457,7 +2115,7 @@ async function lerFormularioMultipart(
     ) {
         throw new ErroHttp(
             413,
-            "O envio ultrapassou o limite total de 35 MB."
+            "O envio ultrapassou o limite total de 120 MB."
         );
     }
 
@@ -1492,25 +2150,43 @@ async function lerFormularioMultipart(
     }
 }
 
-function arquivoDoFormulario(
+function arquivosDoFormulario(
     formulario,
     campo
 ) {
-    const valor =
-        formulario.get(
-            campo
-        );
+    const arquivos =
+        formulario
+            .getAll(
+                campo
+            )
+            .filter(
+                valor =>
+                    typeof File !==
+                        "undefined" &&
+
+                    valor instanceof
+                        File &&
+
+                    valor.size > 0 &&
+
+                    Boolean(
+                        valor.name
+                    )
+            );
 
     if (
-        typeof File !== "undefined" &&
-        valor instanceof File &&
-        valor.size > 0 &&
-        valor.name
+        arquivos.length >
+        MAX_ARQUIVOS_POR_TIPO
     ) {
-        return valor;
+        throw new ErroHttp(
+            400,
+            `Selecione no máximo ${
+                MAX_ARQUIVOS_POR_TIPO
+            } arquivos em cada campo.`
+        );
     }
 
-    return null;
+    return arquivos;
 }
 
 async function lerDadosRecebidos(
@@ -1548,6 +2224,18 @@ async function lerDadosRecebidos(
                     : "";
             };
 
+        const arquivosOriginais =
+    arquivosDoFormulario(
+        formulario,
+        "logoOriginal"
+    );
+
+const arquivosConvertidos =
+    arquivosDoFormulario(
+        formulario,
+        "logoConvertida"
+    );
+
         return {
             dados: {
     nome:
@@ -1570,6 +2258,11 @@ async function lerDadosRecebidos(
             "telefone"
         ),
 
+    celular:
+    texto(
+        "celular"
+    ),
+
                 linha:
                     texto(
                         "linha"
@@ -1581,38 +2274,48 @@ async function lerDadosRecebidos(
                     )
             },
 
-            arquivoOriginal:
-                arquivoDoFormulario(
-                    formulario,
-                    "logoOriginal"
-                ),
+arquivosOriginais,
 
-            arquivoConvertido:
-                arquivoDoFormulario(
-                    formulario,
-                    "logoConvertida"
-                )
+arquivosConvertidos,
+
+/*
+ * Mantém compatibilidade enquanto
+ * terminamos as próximas etapas.
+ */
+arquivoOriginal:
+    arquivosOriginais[0] ||
+    null,
+
+arquivoConvertido:
+    arquivosConvertidos[0] ||
+    null
         };
     }
 
     if (
-        tipo.startsWith(
-            "application/json"
-        )
-    ) {
-        return {
-            dados:
-                await lerJson(
-                    request
-                ),
+    tipo.startsWith(
+        "application/json"
+    )
+) {
+    return {
+        dados:
+            await lerJson(
+                request
+            ),
 
-            arquivoOriginal:
-                null,
+        arquivosOriginais:
+            [],
 
-            arquivoConvertido:
-                null
-        };
-    }
+        arquivosConvertidos:
+            [],
+
+        arquivoOriginal:
+            null,
+
+        arquivoConvertido:
+            null
+    };
+}
 
     throw new ErroHttp(
         415,
@@ -1711,6 +2414,39 @@ function validarArquivo(
     };
 }
 
+function validarArquivos(
+    arquivos,
+    tipo
+) {
+    if (
+        !Array.isArray(
+            arquivos
+        )
+    ) {
+        return [];
+    }
+
+    if (
+        arquivos.length >
+        MAX_ARQUIVOS_POR_TIPO
+    ) {
+        throw new ErroHttp(
+            400,
+            `Selecione no máximo ${
+                MAX_ARQUIVOS_POR_TIPO
+            } arquivos por tipo.`
+        );
+    }
+
+    return arquivos.map(
+        arquivo =>
+            validarArquivo(
+                arquivo,
+                tipo
+            )
+    );
+}
+
 async function salvarArquivo(
     arquivoValidado
 ) {
@@ -1765,11 +2501,83 @@ async function salvarArquivo(
                 .nomeOriginal,
 
         caminhoRelativo:
-            path.join(
-                subpasta,
-                nomeArmazenado
-            )
+    `${subpasta}/${nomeArmazenado}`
     };
+}
+
+async function salvarListaArquivos(
+    arquivosValidados
+) {
+    const arquivosSalvos = [];
+
+    try {
+        for (
+            const arquivoValidado
+            of arquivosValidados
+        ) {
+            const arquivoSalvo =
+                await salvarArquivo(
+                    arquivoValidado
+                );
+
+            if (arquivoSalvo) {
+                arquivosSalvos.push(
+                    arquivoSalvo
+                );
+            }
+        }
+
+        return arquivosSalvos;
+    } catch (erro) {
+        await Promise.all(
+            arquivosSalvos.map(
+                arquivo =>
+                    apagarArquivo(
+                        arquivo
+                            .caminhoRelativo
+                    )
+            )
+        );
+
+        throw erro;
+    }
+}
+
+function registrarArquivosCliente(
+    clienteId,
+    tipo,
+    arquivosSalvos,
+    criadoEm
+) {
+    for (
+        const arquivo
+        of arquivosSalvos
+    ) {
+        consultasArquivosClientes
+            .inserir
+            .run(
+                randomUUID(),
+                clienteId,
+                tipo,
+                arquivo.nomeOriginal,
+                arquivo.caminhoRelativo,
+                criadoEm
+            );
+    }
+}
+
+async function apagarListaArquivos(
+    arquivosSalvos
+) {
+    await Promise.all(
+        arquivosSalvos.map(
+            arquivo =>
+                apagarArquivo(
+                    arquivo
+                        .caminhoRelativo
+                )
+        )
+    );
 }
 
 async function apagarArquivo(
@@ -1779,11 +2587,20 @@ async function apagarArquivo(
         return;
     }
 
+    const caminhoNormalizado =
+    normalizarCaminhoArquivoPersistido(
+        caminhoRelativo
+    );
+
+if (!caminhoNormalizado) {
+    return;
+}
+
     const caminhoAbsoluto =
-        path.resolve(
-            PASTA_UPLOADS,
-            caminhoRelativo
-        );
+    path.resolve(
+        PASTA_UPLOADS,
+        caminhoNormalizado
+    );
 
     const prefixoPermitido =
         `${path.resolve(
@@ -1847,56 +2664,42 @@ function cabecalhoDisposicao(
     }`;
 }
 
-async function servirArquivoCliente(
+async function servirArquivoArmazenado(
     request,
     response,
-    id,
-    tipo
-) {
-    const cliente =
-        consultasClientes
-            .porId
-            .get(
-                id
-            );
-
-    if (!cliente) {
-        throw new ErroHttp(
-            404,
-            "Cliente não encontrado."
-        );
+    {
+        nome,
+        caminhoRelativo,
+        permitirAbertura
     }
-
-    const original =
-        tipo === "original";
-
-    const nome =
-        original
-            ? cliente.logo_original
-            : cliente.logo_convertida;
-
-    const caminhoRelativo =
-        original
-            ? cliente
-                .logo_original_arquivo
-            : cliente
-                .logo_convertida_arquivo;
-
+) {
     if (
         !nome ||
         !caminhoRelativo
     ) {
         throw new ErroHttp(
             404,
-            "Arquivo não encontrado para este cliente."
+            "Arquivo não encontrado."
         );
     }
 
-    const caminhoAbsoluto =
-        path.resolve(
-            PASTA_UPLOADS,
-            caminhoRelativo
-        );
+const caminhoNormalizado =
+    normalizarCaminhoArquivoPersistido(
+        caminhoRelativo
+    );
+
+if (!caminhoNormalizado) {
+    throw new ErroHttp(
+        404,
+        "O caminho do arquivo não é válido."
+    );
+}
+
+const caminhoAbsoluto =
+    path.resolve(
+        PASTA_UPLOADS,
+        caminhoNormalizado
+    );
 
     const prefixoPermitido =
         `${path.resolve(
@@ -1904,10 +2707,9 @@ async function servirArquivoCliente(
         )}${path.sep}`;
 
     if (
-        !caminhoAbsoluto
-            .startsWith(
-                prefixoPermitido
-            )
+        !caminhoAbsoluto.startsWith(
+            prefixoPermitido
+        )
     ) {
         throw new ErroHttp(
             403,
@@ -1929,6 +2731,15 @@ async function servirArquivoCliente(
         );
     }
 
+    if (
+        !estatisticas.isFile()
+    ) {
+        throw new ErroHttp(
+            404,
+            "O arquivo solicitado não é válido."
+        );
+    }
+
     const extensao =
         path
             .extname(
@@ -1937,31 +2748,31 @@ async function servirArquivoCliente(
             .toLowerCase();
 
     const urlRequisicao =
-    new URL(
-        request.url,
-        "http://localhost"
-    );
+        new URL(
+            request.url,
+            "http://localhost"
+        );
 
-const forcarDownload =
-    urlRequisicao
-        .searchParams
-        .get(
-            "download"
-        ) ===
-        "1";
+    const forcarDownload =
+        urlRequisicao
+            .searchParams
+            .get(
+                "download"
+            ) ===
+            "1";
 
-const podeAbrirNoNavegador =
-    !forcarDownload &&
-    original &&
-    [
-        ".png",
-        ".jpg",
-        ".jpeg",
-        ".webp",
-        ".pdf"
-    ].includes(
-        extensao
-    );
+    const podeAbrirNoNavegador =
+        permitirAbertura &&
+        !forcarDownload &&
+        [
+            ".png",
+            ".jpg",
+            ".jpeg",
+            ".webp",
+            ".pdf"
+        ].includes(
+            extensao
+        );
 
     response.writeHead(
         200,
@@ -2007,6 +2818,7 @@ const podeAbrirNoNavegador =
         "error",
         erro => {
             console.error(
+                "Falha ao abrir arquivo:",
                 erro
             );
 
@@ -2028,6 +2840,111 @@ const podeAbrirNoNavegador =
 
     leitura.pipe(
         response
+    );
+}
+
+async function servirArquivoCliente(
+    request,
+    response,
+    id,
+    tipo
+) {
+    const cliente =
+        consultasClientes
+            .porId
+            .get(
+                id
+            );
+
+    if (!cliente) {
+        throw new ErroHttp(
+            404,
+            "Cliente não encontrado."
+        );
+    }
+
+    const original =
+        tipo === "original";
+
+    const nome =
+        original
+            ? cliente.logo_original
+            : cliente.logo_convertida;
+
+    const caminhoRelativo =
+        original
+            ? cliente
+                .logo_original_arquivo
+            : cliente
+                .logo_convertida_arquivo;
+
+    await servirArquivoArmazenado(
+        request,
+        response,
+        {
+            nome,
+            caminhoRelativo,
+
+            permitirAbertura:
+                original
+        }
+    );
+}
+
+async function servirArquivoClientePorId(
+    request,
+    response,
+    clienteId,
+    arquivoId
+) {
+    const cliente =
+        consultasClientes
+            .porId
+            .get(
+                clienteId
+            );
+
+    if (!cliente) {
+        throw new ErroHttp(
+            404,
+            "Cliente não encontrado."
+        );
+    }
+
+    const arquivo =
+        consultasArquivosClientes
+            .porId
+            .get(
+                arquivoId
+            );
+
+    if (
+        !arquivo ||
+        arquivo.cliente_id !==
+            clienteId
+    ) {
+        throw new ErroHttp(
+            404,
+            "Arquivo não encontrado para este cliente."
+        );
+    }
+
+    await servirArquivoArmazenado(
+        request,
+        response,
+        {
+            nome:
+                arquivo
+                    .nome_original,
+
+            caminhoRelativo:
+                arquivo
+                    .caminho_arquivo,
+
+            permitirAbertura:
+                arquivo.tipo ===
+                "original"
+        }
     );
 }
 
@@ -2167,9 +3084,11 @@ function listarClientes(
         sql += `
             OR cpf_numeros LIKE ?
             OR telefone_numeros LIKE ?
+            OR celular_numeros LIKE ?
         `;
 
         termos.push(
+            `%${buscaNumeros}%`,
             `%${buscaNumeros}%`,
             `%${buscaNumeros}%`
         );
@@ -2207,12 +3126,12 @@ async function criarCliente(
         );
 
     if (
-    dados.cpfNumeros &&
-    consultasClientes
-        .cpfExistente
-        .get(
-            dados.cpfNumeros
-        )
+        dados.cpfNumeros &&
+        consultasClientes
+            .cpfExistente
+            .get(
+                dados.cpfNumeros
+            )
     ) {
         throw new ErroHttp(
             409,
@@ -2220,35 +3139,35 @@ async function criarCliente(
         );
     }
 
-    const validadoOriginal =
-        validarArquivo(
+    const validadosOriginais =
+        validarArquivos(
             recebido
-                .arquivoOriginal,
+                .arquivosOriginais,
             "original"
         );
 
-    const validadoConvertido =
-        validarArquivo(
+    const validadosConvertidos =
+        validarArquivos(
             recebido
-                .arquivoConvertido,
+                .arquivosConvertidos,
             "convertido"
         );
 
-    let salvoOriginal =
-        null;
+    let salvosOriginais = [];
+    let salvosConvertidos = [];
 
-    let salvoConvertido =
-        null;
+    let transacaoAberta =
+        false;
 
     try {
-        salvoOriginal =
-            await salvarArquivo(
-                validadoOriginal
+        salvosOriginais =
+            await salvarListaArquivos(
+                validadosOriginais
             );
 
-        salvoConvertido =
-            await salvarArquivo(
-                validadoConvertido
+        salvosConvertidos =
+            await salvarListaArquivos(
+                validadosConvertidos
             );
 
         const agora =
@@ -2257,6 +3176,26 @@ async function criarCliente(
 
         const id =
             randomUUID();
+
+        /*
+         * O primeiro de cada tipo continua
+         * nas colunas antigas para manter
+         * compatibilidade temporária.
+         */
+        const principalOriginal =
+            salvosOriginais[0] ||
+            null;
+
+        const principalConvertido =
+            salvosConvertidos[0] ||
+            null;
+
+        banco.exec(`
+            BEGIN IMMEDIATE;
+        `);
+
+        transacaoAberta =
+            true;
 
         consultasClientes
             .inserir
@@ -2273,21 +3212,25 @@ async function criarCliente(
 
                 dados.telefoneNumeros,
 
+                dados.celular,
+
+                dados.celularNumeros,
+
                 dados.linha,
 
-                salvoOriginal
+                principalOriginal
                     ?.nomeOriginal ||
                     "",
 
-                salvoOriginal
+                principalOriginal
                     ?.caminhoRelativo ||
                     "",
 
-                salvoConvertido
+                principalConvertido
                     ?.nomeOriginal ||
                     "",
 
-                salvoConvertido
+                principalConvertido
                     ?.caminhoRelativo ||
                     "",
 
@@ -2297,6 +3240,27 @@ async function criarCliente(
 
                 agora
             );
+
+        registrarArquivosCliente(
+            id,
+            "original",
+            salvosOriginais,
+            agora
+        );
+
+        registrarArquivosCliente(
+            id,
+            "convertido",
+            salvosConvertidos,
+            agora
+        );
+
+        banco.exec(`
+            COMMIT;
+        `);
+
+        transacaoAberta =
+            false;
 
         enviarJson(
             response,
@@ -2319,14 +3283,21 @@ async function criarCliente(
             }
         );
     } catch (erro) {
-        await apagarArquivo(
-            salvoOriginal
-                ?.caminhoRelativo
-        );
+        if (transacaoAberta) {
+            try {
+                banco.exec(`
+                    ROLLBACK;
+                `);
+            } catch {
+                // Nenhuma ação necessária.
+            }
+        }
 
-        await apagarArquivo(
-            salvoConvertido
-                ?.caminhoRelativo
+        await apagarListaArquivos(
+            [
+                ...salvosOriginais,
+                ...salvosConvertidos
+            ]
         );
 
         throw erro;
@@ -2341,9 +3312,7 @@ async function editarCliente(
     const clienteBanco =
         consultasClientes
             .porId
-            .get(
-                id
-            );
+            .get(id);
 
     if (!clienteBanco) {
         throw new ErroHttp(
@@ -2363,78 +3332,91 @@ async function editarCliente(
         );
 
     if (
-    dados.cpfNumeros &&
-    consultasClientes
-        .cpfOutroCliente
-        .get(
-            dados.cpfNumeros,
-            id
-        )
-) {
+        dados.cpfNumeros &&
+        consultasClientes
+            .cpfOutroCliente
+            .get(
+                dados.cpfNumeros,
+                id
+            )
+    ) {
         throw new ErroHttp(
             409,
             "Este CPF ou CNPJ já está cadastrado para outro cliente."
         );
     }
 
-    const validadoOriginal =
-        validarArquivo(
-            recebido
-                .arquivoOriginal,
+    const validadosOriginais =
+        validarArquivos(
+            recebido.arquivosOriginais || [],
             "original"
         );
 
-    const validadoConvertido =
-        validarArquivo(
-            recebido
-                .arquivoConvertido,
+    const validadosConvertidos =
+        validarArquivos(
+            recebido.arquivosConvertidos || [],
             "convertido"
         );
 
-    let salvoOriginal =
-        null;
-
-    let salvoConvertido =
-        null;
+    let salvosOriginais = [];
+    let salvosConvertidos = [];
+    let transacaoAberta = false;
 
     try {
-        salvoOriginal =
-            await salvarArquivo(
-                validadoOriginal
+        salvosOriginais =
+            await salvarListaArquivos(
+                validadosOriginais
             );
 
-        salvoConvertido =
-            await salvarArquivo(
-                validadoConvertido
+        salvosConvertidos =
+            await salvarListaArquivos(
+                validadosConvertidos
             );
-
-        const nomeOriginal =
-            salvoOriginal
-                ?.nomeOriginal ||
-            clienteBanco
-                .logo_original;
-
-        const caminhoOriginal =
-            salvoOriginal
-                ?.caminhoRelativo ||
-            clienteBanco
-                .logo_original_arquivo;
-
-        const nomeConvertido =
-            salvoConvertido
-                ?.nomeOriginal ||
-            clienteBanco
-                .logo_convertida;
-
-        const caminhoConvertido =
-            salvoConvertido
-                ?.caminhoRelativo ||
-            clienteBanco
-                .logo_convertida_arquivo;
 
         const agora =
             new Date()
                 .toISOString();
+
+        banco.exec(`
+            BEGIN IMMEDIATE;
+        `);
+
+        transacaoAberta = true;
+
+        /*
+         * Os novos arquivos são adicionados.
+         * Os arquivos anteriores são mantidos.
+         */
+
+        registrarArquivosCliente(
+            id,
+            "original",
+            salvosOriginais,
+            agora
+        );
+
+        registrarArquivosCliente(
+            id,
+            "convertido",
+            salvosConvertidos,
+            agora
+        );
+
+        const principalOriginal =
+            consultasArquivosClientes
+                .primeiroPorClienteTipo
+                .get(
+                    id,
+                    "original"
+                );
+
+        const principalConvertido =
+            consultasArquivosClientes
+                .primeiroPorClienteTipo
+                .get(
+                    id,
+                    "convertido"
+                );
 
         consultasClientes
             .atualizar
@@ -2449,15 +3431,31 @@ async function editarCliente(
 
                 dados.telefoneNumeros,
 
+                dados.celular,
+
+                dados.celularNumeros,
+
                 dados.linha,
 
-                nomeOriginal,
+                principalOriginal
+                    ?.nome_original ||
+                    clienteBanco.logo_original ||
+                    "",
 
-                caminhoOriginal,
+                principalOriginal
+                    ?.caminho_arquivo ||
+                    clienteBanco.logo_original_arquivo ||
+                    "",
 
-                nomeConvertido,
+                principalConvertido
+                    ?.nome_original ||
+                    clienteBanco.logo_convertida ||
+                    "",
 
-                caminhoConvertido,
+                principalConvertido
+                    ?.caminho_arquivo ||
+                    clienteBanco.logo_convertida_arquivo ||
+                    "",
 
                 dados.observacoes,
 
@@ -2466,19 +3464,11 @@ async function editarCliente(
                 id
             );
 
-        if (salvoOriginal) {
-            await apagarArquivo(
-                clienteBanco
-                    .logo_original_arquivo
-            );
-        }
+        banco.exec(`
+            COMMIT;
+        `);
 
-        if (salvoConvertido) {
-            await apagarArquivo(
-                clienteBanco
-                    .logo_convertida_arquivo
-            );
-        }
+        transacaoAberta = false;
 
         enviarJson(
             response,
@@ -2494,25 +3484,211 @@ async function editarCliente(
                     converterCliente(
                         consultasClientes
                             .porId
-                            .get(
-                                id
-                            )
+                            .get(id)
                     )
             }
         );
     } catch (erro) {
-        await apagarArquivo(
-            salvoOriginal
-                ?.caminhoRelativo
-        );
+        if (transacaoAberta) {
+            try {
+                banco.exec(`
+                    ROLLBACK;
+                `);
+            } catch {
+                // Mantém o erro original.
+            }
+        }
 
-        await apagarArquivo(
-            salvoConvertido
-                ?.caminhoRelativo
-        );
+        /*
+         * Caso a edição falhe, remove somente
+         * os arquivos novos que acabaram de ser enviados.
+         */
+
+        await apagarListaArquivos([
+            ...salvosOriginais,
+            ...salvosConvertidos
+        ]);
 
         throw erro;
     }
+}
+
+function atualizarArquivoPrincipalCliente(
+    clienteId,
+    tipo
+) {
+    const proximoArquivo =
+        consultasArquivosClientes
+            .primeiroPorClienteTipo
+            .get(
+                clienteId,
+                tipo
+            );
+
+    const nome =
+        proximoArquivo
+            ?.nome_original ||
+        "";
+
+    const caminho =
+        proximoArquivo
+            ?.caminho_arquivo ||
+        "";
+
+    const agora =
+        new Date()
+            .toISOString();
+
+    if (
+        tipo === "original"
+    ) {
+        consultasClientes
+            .definirLogoOriginalPrincipal
+            .run(
+                nome,
+                caminho,
+                agora,
+                clienteId
+            );
+
+        return;
+    }
+
+    consultasClientes
+        .definirLogoConvertidaPrincipal
+        .run(
+            nome,
+            caminho,
+            agora,
+            clienteId
+        );
+}
+
+async function removerArquivoClientePorId(
+    response,
+    clienteId,
+    arquivoId
+) {
+    const cliente =
+        consultasClientes
+            .porId
+            .get(
+                clienteId
+            );
+
+    if (!cliente) {
+        throw new ErroHttp(
+            404,
+            "Cliente não encontrado."
+        );
+    }
+
+    const arquivo =
+        consultasArquivosClientes
+            .porId
+            .get(
+                arquivoId
+            );
+
+    if (
+        !arquivo ||
+        arquivo.cliente_id !==
+            clienteId
+    ) {
+        throw new ErroHttp(
+            404,
+            "Arquivo não encontrado para este cliente."
+        );
+    }
+
+    let transacaoAberta =
+        false;
+
+    try {
+        banco.exec(`
+            BEGIN IMMEDIATE;
+        `);
+
+        transacaoAberta =
+            true;
+
+        consultasArquivosClientes
+            .excluirPorId
+            .run(
+                arquivoId
+            );
+
+        /*
+         * Depois de remover, o próximo
+         * arquivo da lista passa a ser
+         * o arquivo principal.
+         */
+        atualizarArquivoPrincipalCliente(
+            clienteId,
+            arquivo.tipo
+        );
+
+        banco.exec(`
+            COMMIT;
+        `);
+
+        transacaoAberta =
+            false;
+    } catch (erro) {
+        if (transacaoAberta) {
+            try {
+                banco.exec(`
+                    ROLLBACK;
+                `);
+            } catch {
+                // Nenhuma ação necessária.
+            }
+        }
+
+        throw erro;
+    }
+
+    await apagarArquivo(
+        arquivo.caminho_arquivo
+    );
+
+    enviarJson(
+        response,
+        200,
+        {
+            sucesso:
+                true,
+
+            mensagem:
+                arquivo.tipo ===
+                "original"
+
+                    ? "Logo original removida com sucesso."
+
+                    : "Arquivo convertido removido com sucesso.",
+
+            arquivoRemovido: {
+                id:
+                    arquivo.id,
+
+                tipo:
+                    arquivo.tipo,
+
+                nome:
+                    arquivo
+                        .nome_original
+            },
+
+            cliente:
+                converterCliente(
+                    consultasClientes
+                        .porId
+                        .get(
+                            clienteId
+                        )
+                )
+        }
+    );
 }
 
 async function removerArquivoCliente(
@@ -2534,78 +3710,84 @@ async function removerArquivoCliente(
         );
     }
 
-    const configuracoes = {
-        original: {
-            nome:
-                cliente
-                    .logo_original,
+    const arquivo =
+        consultasArquivosClientes
+            .primeiroPorClienteTipo
+            .get(
+                id,
+                tipo
+            );
 
-            caminho:
-                cliente
-                    .logo_original_arquivo,
-
-            consulta:
-                consultasClientes
-                    .removerLogoOriginal,
-
-            mensagem:
-                "A logo original foi removida com sucesso."
-        },
-
-        convertido: {
-            nome:
-                cliente
-                    .logo_convertida,
-
-            caminho:
-                cliente
-                    .logo_convertida_arquivo,
-
-            consulta:
-                consultasClientes
-                    .removerLogoConvertida,
-
-            mensagem:
-                "O arquivo convertido foi removido com sucesso."
-        }
-    };
-
-    const configuracao =
-        configuracoes[
-            tipo
-        ];
-
-    if (!configuracao) {
-        throw new ErroHttp(
-            400,
-            "Tipo de arquivo inválido."
+    /*
+     * Quando o arquivo já está na nova
+     * tabela, usamos a remoção individual.
+     */
+    if (arquivo) {
+        await removerArquivoClientePorId(
+            response,
+            id,
+            arquivo.id
         );
+
+        return;
     }
 
+    /*
+     * Compatibilidade para algum arquivo
+     * antigo que ainda não tenha sido
+     * migrado para a nova tabela.
+     */
+
+    const original =
+        tipo === "original";
+
+    const nome =
+        original
+            ? cliente.logo_original
+            : cliente.logo_convertida;
+
+    const caminho =
+        original
+            ? cliente
+                .logo_original_arquivo
+            : cliente
+                .logo_convertida_arquivo;
+
     if (
-        !configuracao.nome &&
-        !configuracao.caminho
+        !nome &&
+        !caminho
     ) {
         throw new ErroHttp(
             404,
 
-            tipo === "original"
+            original
                 ? "Este cliente não possui uma logo original."
                 : "Este cliente não possui um arquivo convertido."
         );
     }
 
-    configuracao
-        .consulta
-        .run(
-            new Date()
-                .toISOString(),
+    const agora =
+        new Date()
+            .toISOString();
 
-            id
-        );
+    if (original) {
+        consultasClientes
+            .removerLogoOriginal
+            .run(
+                agora,
+                id
+            );
+    } else {
+        consultasClientes
+            .removerLogoConvertida
+            .run(
+                agora,
+                id
+            );
+    }
 
     await apagarArquivo(
-        configuracao.caminho
+        caminho
     );
 
     enviarJson(
@@ -2616,17 +3798,9 @@ async function removerArquivoCliente(
                 true,
 
             mensagem:
-                configuracao
-                    .mensagem,
-
-            arquivoRemovido: {
-                tipo,
-
-                nome:
-                    configuracao
-                        .nome ||
-                    ""
-            },
+                original
+                    ? "A logo original foi removida com sucesso."
+                    : "O arquivo convertido foi removido com sucesso.",
 
             cliente:
                 converterCliente(
@@ -2647,9 +3821,7 @@ async function removerCliente(
     const cliente =
         consultasClientes
             .porId
-            .get(
-                id
-            );
+            .get(id);
 
     if (!cliente) {
         throw new ErroHttp(
@@ -2658,61 +3830,45 @@ async function removerCliente(
         );
     }
 
-    consultasClientes
-        .excluir
-        .run(
-            id
-        );
+    const arquivos =
+        consultasArquivosClientes
+            .porCliente
+            .all(id);
 
-    await apagarArquivo(
-        cliente
-            .logo_original_arquivo
-    );
+    /*
+     * O Set impede tentar apagar o mesmo
+     * arquivo mais de uma vez.
+     */
 
-    await apagarArquivo(
-        cliente
-            .logo_convertida_arquivo
-    );
-
-    enviarJson(
-        response,
-        200,
-        {
-            sucesso:
-                true,
-
-            mensagem:
-                "Cliente e arquivos excluídos com sucesso."
-        }
-    );
-}
-
-async function removerTodosClientes(
-    response
-) {
-    const registros =
-        consultasClientes
-            .todos
-            .all();
-
-    const resultado =
-        consultasClientes
-            .excluirTodos
-            .run();
-
-    await Promise.all(
-        registros.flatMap(
-            cliente => [
-                apagarArquivo(
-                    cliente
-                        .logo_original_arquivo
+    const caminhos =
+        new Set(
+            [
+                ...arquivos.map(
+                    arquivo =>
+                        arquivo
+                            .caminho_arquivo
                 ),
 
-                apagarArquivo(
-                    cliente
-                        .logo_convertida_arquivo
-                )
-            ]
+                cliente
+                    .logo_original_arquivo,
+
+                cliente
+                    .logo_convertida_arquivo
+            ].filter(Boolean)
+        );
+
+    /*
+     * A tabela cliente_arquivos possui
+     * ON DELETE CASCADE.
+     */
+
+    consultasClientes
+        .excluir
+        .run(id);
+
+    await Promise.all(
+        [...caminhos].map(
+            apagarArquivo
         )
     );
 
@@ -2724,7 +3880,71 @@ async function removerTodosClientes(
                 true,
 
             mensagem:
-                "Todos os clientes e arquivos foram excluídos.",
+                "Cliente e todos os seus arquivos foram excluídos com sucesso."
+        }
+    );
+}
+
+async function removerTodosClientes(
+    response
+) {
+    const clientes =
+        consultasClientes
+            .todos
+            .all();
+
+    const arquivos =
+        consultasArquivosClientes
+            .todos
+            .all();
+
+    const caminhos =
+        new Set(
+            [
+                ...arquivos.map(
+                    arquivo =>
+                        arquivo
+                            .caminho_arquivo
+                ),
+
+                ...clientes.flatMap(
+                    cliente => [
+                        cliente
+                            .logo_original_arquivo,
+
+                        cliente
+                            .logo_convertida_arquivo
+                    ]
+                )
+            ].filter(Boolean)
+        );
+
+    /*
+     * Ao excluir os clientes, os registros
+     * de cliente_arquivos são excluídos
+     * automaticamente pelo banco.
+     */
+
+    const resultado =
+        consultasClientes
+            .excluirTodos
+            .run();
+
+    await Promise.all(
+        [...caminhos].map(
+            apagarArquivo
+        )
+    );
+
+    enviarJson(
+        response,
+        200,
+        {
+            sucesso:
+                true,
+
+            mensagem:
+                "Todos os clientes e seus arquivos foram excluídos.",
 
             quantidade:
                 resultado.changes
@@ -3912,6 +5132,72 @@ async function tratarRequest(
                 return;
             }
         }
+
+        const rotaArquivoIndividual =
+    pathname.match(
+        /^\/api\/clientes\/([^/]+)\/arquivos\/([^/]+)$/
+    );
+
+if (rotaArquivoIndividual) {
+    const clienteId =
+        decodeURIComponent(
+            rotaArquivoIndividual[
+                1
+            ]
+        );
+
+    const arquivoId =
+        decodeURIComponent(
+            rotaArquivoIndividual[
+                2
+            ]
+        );
+
+    if (
+        [
+            "GET",
+            "HEAD"
+        ].includes(
+            request.method
+        )
+    ) {
+        servicoAutenticacao
+            .exigirPermissao(
+                request,
+                response,
+                "arquivos.baixar"
+            );
+
+        await servirArquivoClientePorId(
+            request,
+            response,
+            clienteId,
+            arquivoId
+        );
+
+        return;
+    }
+
+    if (
+        request.method ===
+        "DELETE"
+    ) {
+        servicoAutenticacao
+            .exigirPermissao(
+                request,
+                response,
+                "arquivos.remover"
+            );
+
+        await removerArquivoClientePorId(
+            response,
+            clienteId,
+            arquivoId
+        );
+
+        return;
+    }
+}
 
         const rotaCliente =
             pathname.match(
