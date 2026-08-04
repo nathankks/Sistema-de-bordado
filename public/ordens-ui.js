@@ -8,8 +8,84 @@ let ordens = [];
 let carregandoOrdens = true;
 let buscaOrdemAtual = "";
 let statusOrdemAtual = "todos";
+let prioridadeOrdemAtual = "todas";
 let ordemDetalhesAtualId = "";
 let cadastrandoClientePelaOrdem = false;
+let matrizOrdemSelecionadaId = "";
+
+window.obterOrdensSistema =
+    function () {
+        return [
+            ...ordens
+        ];
+    };
+
+function emitirOrdensAtualizadas() {
+    window.dispatchEvent(
+        new CustomEvent(
+            "ordens-atualizadas",
+            {
+                detail: {
+                    ordens: [
+                        ...ordens
+                    ]
+                }
+            }
+        )
+    );
+}
+
+window.abrirOrdemSistema =
+    function (id) {
+        abrirDetalhesOrdem(
+            id
+        );
+    };
+
+window.atualizarStatusOrdemSistema =
+    async function (
+        id,
+        novoStatus
+    ) {
+        if (
+            typeof possuiPermissaoSistema ===
+                "function" &&
+            !possuiPermissaoSistema(
+                "ordens.editar"
+            )
+        ) {
+            throw new Error(
+                "Você não possui permissão para alterar ordens."
+            );
+        }
+
+        const resposta =
+            await requisicaoApi(
+                `/api/ordens/${
+                    encodeURIComponent(
+                        id
+                    )
+                }`,
+
+                {
+                    method:
+                        "PUT",
+
+                    body:
+                        JSON.stringify({
+                            status:
+                                novoStatus
+                        })
+                }
+            );
+
+        await carregarOrdensDoServidor({
+            mostrarErro:
+                false
+        });
+
+        return resposta;
+    };
 
 /*
 |--------------------------------------------------------------------------
@@ -112,6 +188,12 @@ const ordemArquivoOriginalId =
 
 const ordemArquivoConvertidoId =
     $("#ordemArquivoConvertidoId");
+
+const ordemMatrizId =
+    $("#ordemMatrizId");
+
+const mensagemMatrizOrdem =
+    $("#mensagemMatrizOrdem");
 
 const controlesSelectCustomOrdem =
     new Map();
@@ -467,11 +549,27 @@ function inicializarSelectCustomOrdem(
 function atualizarSelectCustomOrdem(
     campo
 ) {
-    controlesSelectCustomOrdem
-        .get(
+    const controleDaOrdem =
+        controlesSelectCustomOrdem.get(
             campo
-        )
-        ?.atualizar();
+        );
+
+    if (controleDaOrdem) {
+        controleDaOrdem.atualizar();
+
+        return;
+    }
+
+    /*
+     * Atualiza selects que usam o
+     * componente padrão do sistema.
+     */
+
+    window
+        .atualizarSelectPadraoSistema
+        ?.(
+            campo
+        );
 }
 
 const ordemDescricao =
@@ -479,6 +577,9 @@ const ordemDescricao =
 
 const ordemQuantidade =
     $("#ordemQuantidade");
+
+const estimativaTempoOrdem =
+    $("#estimativaTempoOrdem");
 
 const ordemLinha =
     $("#ordemLinha");
@@ -525,6 +626,9 @@ const botaoConcluirLinhasOrdem =
 const ordemPrazo =
     $("#ordemPrazo");
 
+const ordemPrioridade =
+    $("#ordemPrioridade");
+
 const ordemStatus =
     $("#ordemStatus");
 
@@ -542,6 +646,9 @@ const buscaOrdens =
 
 const filtroStatusOrdens =
     $("#filtroStatusOrdens");
+
+const filtroPrioridadeOrdens =
+    $("#filtroPrioridadeOrdens");
 
 const quantidadeOrdens =
     $("#quantidadeOrdens");
@@ -578,6 +685,9 @@ const quantidadeOrdensAtrasadas =
 
 const quantidadeOrdensProximas =
     $("#quantidadeOrdensProximas");
+
+const quantidadeOrdensUrgentes =
+    $("#quantidadeOrdensUrgentes");
 
 const botaoFecharAlertaPrazos =
     $("#botaoFecharAlertaPrazos");
@@ -630,6 +740,292 @@ function formatarPrazoOrdem(
     return new Intl.DateTimeFormat(
         "pt-BR"
     ).format(data);
+}
+
+const PESOS_PRIORIDADE_ORDEM = {
+    urgente: 3,
+    alta: 2,
+    normal: 1
+};
+
+function obterRotuloPrioridadeOrdem(
+    prioridade
+) {
+    const rotulos = {
+        urgente:
+            "Urgente",
+
+        alta:
+            "Alta",
+
+        normal:
+            "Normal"
+    };
+
+    return rotulos[prioridade] ||
+        "Normal";
+}
+
+function obterPesoPrioridadeOrdem(
+    prioridade
+) {
+    return PESOS_PRIORIDADE_ORDEM[
+        prioridade
+    ] || 1;
+}
+
+function ordenarOrdensPorPrioridadeEPrazo(
+    lista
+) {
+    return [
+        ...lista
+    ].sort(
+        (
+            ordemA,
+            ordemB
+        ) => {
+            const diferencaPrioridade =
+                obterPesoPrioridadeOrdem(
+                    ordemB.prioridade
+                ) -
+                obterPesoPrioridadeOrdem(
+                    ordemA.prioridade
+                );
+
+            if (diferencaPrioridade) {
+                return diferencaPrioridade;
+            }
+
+            const prazoA =
+                ordemA.prazoEntrega ||
+                "9999-12-31";
+
+            const prazoB =
+                ordemB.prazoEntrega ||
+                "9999-12-31";
+
+            const diferencaPrazo =
+                prazoA.localeCompare(
+                    prazoB
+                );
+
+            if (diferencaPrazo) {
+                return diferencaPrazo;
+            }
+
+            return (
+                Number(
+                    ordemB.numero || 0
+                ) -
+                Number(
+                    ordemA.numero || 0
+                )
+            );
+        }
+    );
+}
+
+function criarBadgePrioridadeOrdem(
+    ordem
+) {
+    const prioridade =
+        ordem?.prioridade ||
+        "normal";
+
+    return `
+        <span
+            class="prioridade-ordem prioridade-ordem-${escaparHtml(
+                prioridade
+            )}"
+        >
+            ${escaparHtml(
+                ordem?.prioridadeTexto ||
+                obterRotuloPrioridadeOrdem(
+                    prioridade
+                )
+            )}
+        </span>
+    `;
+}
+
+function obterEstimativaTempoOrdem(
+    ordem
+) {
+    if (
+        typeof window
+            .calcularTempoEstimadoOrdemSistema !==
+            "function"
+    ) {
+        return null;
+    }
+
+    return window
+        .calcularTempoEstimadoOrdemSistema(
+            ordem
+        );
+}
+
+function formatarTempoEstimadoOrdem(
+    ordem
+) {
+    const estimativa =
+        obterEstimativaTempoOrdem(
+            ordem
+        );
+
+    if (!estimativa) {
+        return "Sem estimativa";
+    }
+
+    return typeof window
+        .formatarDuracaoProducaoSistema ===
+        "function"
+        ? window
+            .formatarDuracaoProducaoSistema(
+                estimativa.totalMinutos
+            )
+        : `${estimativa.totalMinutos} min`;
+}
+
+function criarTempoEstimadoTabelaOrdem(
+    ordem
+) {
+    const estimativa =
+        obterEstimativaTempoOrdem(
+            ordem
+        );
+
+    if (!estimativa) {
+        return `
+            <span class="tempo-estimado-ordem indisponivel">
+                Sem estimativa
+            </span>
+        `;
+    }
+
+    return `
+        <span
+            class="tempo-estimado-ordem"
+            title="${escaparHtml(
+                `${estimativa.ciclos} ciclo(s) · ${estimativa.quantidadePontos} pontos · ${estimativa.quantidadeCores} cor(es)`
+            )}"
+        >
+            ${icone("clock")}
+
+            ${escaparHtml(
+                formatarTempoEstimadoOrdem(
+                    ordem
+                )
+            )}
+        </span>
+    `;
+}
+
+function renderizarEstimativaTempoFormularioOrdem() {
+    if (!estimativaTempoOrdem) {
+        return;
+    }
+
+    const matriz =
+        encontrarMatrizOrdem(
+            ordemMatrizId
+                ?.value
+        );
+
+    const ordemTemporaria = {
+        matrizId:
+            matriz?.id ||
+            "",
+
+        matrizQuantidadePontos:
+            matriz?.quantidadePontos ??
+            null,
+
+        matrizQuantidadeCores:
+            matriz?.quantidadeCores ??
+            null,
+
+        quantidade:
+            Number(
+                ordemQuantidade
+                    ?.value ||
+                1
+            )
+    };
+
+    const estimativa =
+        obterEstimativaTempoOrdem(
+            ordemTemporaria
+        );
+
+    if (!estimativa) {
+        estimativaTempoOrdem.classList
+            .remove(
+                "estimativa-disponivel"
+            );
+
+        estimativaTempoOrdem.innerHTML = `
+            <span class="estimativa-tempo-ordem-icone">
+                ${icone("clock")}
+            </span>
+
+            <div>
+                <span>Tempo estimado de produção</span>
+
+                <strong>
+                    Selecione uma matriz com quantidade de pontos
+                </strong>
+
+                <small>
+                    Cadastre pontos e cores na matriz para liberar o cálculo.
+                </small>
+            </div>
+        `;
+
+        return;
+    }
+
+    estimativaTempoOrdem.classList
+        .add(
+            "estimativa-disponivel"
+        );
+
+    estimativaTempoOrdem.innerHTML = `
+        <span class="estimativa-tempo-ordem-icone">
+            ${icone("clock")}
+        </span>
+
+        <div>
+            <span>Tempo estimado de produção</span>
+
+            <strong>
+                ${escaparHtml(
+                    formatarTempoEstimadoOrdem(
+                        ordemTemporaria
+                    )
+                )}
+            </strong>
+
+            <small>
+                ${escaparHtml(
+                    estimativa.quantidadePecas
+                )}
+                peça(s) em
+                ${escaparHtml(
+                    estimativa.ciclos
+                )}
+                ciclo(s) ·
+                ${escaparHtml(
+                    estimativa.quantidadePontos
+                )}
+                pontos ·
+                ${escaparHtml(
+                    estimativa.quantidadeCores
+                )}
+                cor(es)
+            </small>
+        </div>
+    `;
 }
 
 function obterStatusInicialOrdem(
@@ -1801,7 +2197,338 @@ function preencherSeletorArquivoOrdem({
     );
 }
 
+function obterMatrizesOrdem() {
+    return typeof window.obterMatrizesSistema === "function"
+        ? window.obterMatrizesSistema().filter(Boolean)
+        : [];
+}
 
+function encontrarMatrizOrdem(
+    id
+) {
+    const matrizId =
+        String(
+            id || ""
+        ).trim();
+
+    return matrizId
+        ? obterMatrizesOrdem().find(
+            matriz =>
+                String(
+                    matriz.id
+                ) === matrizId
+        ) || null
+        : null;
+}
+
+function preencherMatrizesDaOrdem({
+    clienteId = "",
+    matrizId =
+        matrizOrdemSelecionadaId
+} = {}) {
+    if (!ordemMatrizId) {
+        return;
+    }
+
+    const cliente =
+        String(
+            clienteId || ""
+        ).trim();
+
+    const selecionada =
+        String(
+            matrizId || ""
+        ).trim();
+
+    if (!cliente) {
+        ordemMatrizId.innerHTML = `
+            <option value="">
+                Selecione um cliente
+            </option>
+        `;
+
+        ordemMatrizId.value = "";
+        ordemMatrizId.disabled = true;
+
+        mensagemMatrizOrdem.textContent =
+            "Selecione primeiro o cliente da ordem.";
+
+        atualizarSelectCustomOrdem(
+            ordemMatrizId
+        );
+
+        return;
+    }
+
+    const prioridadeStatus = {
+        aprovada: 0,
+        teste: 1,
+        rascunho: 2,
+        arquivada: 3
+    };
+
+    const matrizesCliente =
+        obterMatrizesOrdem()
+            .filter(
+                matriz => {
+                    const pertence =
+                        String(
+                            matriz.cliente?.id ||
+                            ""
+                        ) === cliente;
+
+                    return pertence && (
+                        matriz.status !==
+                            "arquivada" ||
+                        String(
+                            matriz.id
+                        ) === selecionada
+                    );
+                }
+            )
+            .sort(
+                (
+                    matrizA,
+                    matrizB
+                ) => {
+                    const porStatus =
+                        (
+                            prioridadeStatus[
+                                matrizA.status
+                            ] ?? 9
+                        ) -
+                        (
+                            prioridadeStatus[
+                                matrizB.status
+                            ] ?? 9
+                        );
+
+                    if (porStatus) {
+                        return porStatus;
+                    }
+
+                    const porNome =
+                        String(
+                            matrizA.nome ||
+                            ""
+                        ).localeCompare(
+                            String(
+                                matrizB.nome ||
+                                ""
+                            ),
+                            "pt-BR"
+                        );
+
+                    return porNome ||
+                        Number(
+                            matrizB.versao ||
+                            0
+                        ) -
+                        Number(
+                            matrizA.versao ||
+                            0
+                        );
+                }
+            );
+
+    if (!matrizesCliente.length) {
+        ordemMatrizId.innerHTML = `
+            <option value="">
+                Nenhuma matriz cadastrada — escolha manual
+            </option>
+        `;
+
+        ordemMatrizId.value = "";
+        ordemMatrizId.disabled = true;
+
+        mensagemMatrizOrdem.textContent =
+            "Este cliente ainda não possui matrizes.";
+
+        atualizarSelectCustomOrdem(
+            ordemMatrizId
+        );
+
+        return;
+    }
+
+    ordemMatrizId.innerHTML = `
+        <option value="">
+            Sem matriz — escolher arquivos manualmente
+        </option>
+
+        ${
+            matrizesCliente
+                .map(
+                    matriz => `
+                        <option
+                            value="${escaparHtml(
+                                matriz.id
+                            )}"
+                        >
+                            ${escaparHtml(
+                                matriz.nome ||
+                                "Matriz"
+                            )}
+                            · versão
+                            ${escaparHtml(
+                                matriz.versao
+                            )}
+                            ·
+                            ${escaparHtml(
+                                matriz.statusRotulo ||
+                                matriz.status ||
+                                "Sem status"
+                            )}
+                        </option>
+                    `
+                )
+                .join("")
+        }
+    `;
+
+    ordemMatrizId.disabled = false;
+
+    ordemMatrizId.value =
+        matrizesCliente.some(
+            matriz =>
+                String(
+                    matriz.id
+                ) === selecionada
+        )
+            ? selecionada
+            : "";
+
+    matrizOrdemSelecionadaId =
+        ordemMatrizId.value;
+
+    mensagemMatrizOrdem.textContent =
+        ordemMatrizId.value
+            ? "Os arquivos vinculados à matriz serão usados nesta ordem."
+            : "Selecione uma matriz ou mantenha a escolha manual.";
+
+    atualizarSelectCustomOrdem(
+        ordemMatrizId
+    );
+}
+
+function aplicarMatrizSelecionadaOrdem({
+    arquivoOriginalId = "",
+    arquivoOriginalNome = "",
+    arquivoConvertidoId = "",
+    arquivoConvertidoNome = "",
+    usarPrimeirosManual = true
+} = {}) {
+    const cliente =
+        encontrarClienteDaOrdem(
+            ordemCliente?.value
+        );
+
+    const matriz =
+        encontrarMatrizOrdem(
+            ordemMatrizId?.value
+        );
+
+    if (!cliente) {
+        preencherArquivosDaOrdem(
+            null
+        );
+
+        return;
+    }
+
+    /*
+     * Sem matriz:
+     * mantém o funcionamento antigo.
+     */
+
+    if (!matriz) {
+        preencherArquivosDaOrdem(
+            cliente,
+            {
+                arquivoOriginalId,
+                arquivoOriginalNome,
+                arquivoConvertidoId,
+                arquivoConvertidoNome,
+
+                usarPrimeiros:
+                    usarPrimeirosManual
+            }
+        );
+    } else {
+        /*
+         * Com matriz:
+         * mostra somente os arquivos
+         * vinculados à matriz escolhida.
+         */
+
+        preencherSeletorArquivoOrdem({
+            campo:
+                ordemArquivoOriginalId,
+
+            arquivos:
+                matriz.arquivoOriginal
+                    ? [
+                        matriz.arquivoOriginal
+                    ]
+                    : [],
+
+            tipo:
+                "original",
+
+            arquivoId:
+                arquivoOriginalId,
+
+            arquivoNome:
+                arquivoOriginalNome,
+
+            usarPrimeiro:
+                true
+        });
+
+        preencherSeletorArquivoOrdem({
+            campo:
+                ordemArquivoConvertidoId,
+
+            arquivos:
+                Array.isArray(
+                    matriz.arquivosMaquina
+                )
+                    ? matriz.arquivosMaquina
+                    : [],
+
+            tipo:
+                "convertido",
+
+            arquivoId:
+                arquivoConvertidoId,
+
+            arquivoNome:
+                arquivoConvertidoNome,
+
+            usarPrimeiro:
+                true
+        });
+
+        renderizarLogoClienteOrdem();
+    }
+
+    if (!ordemId?.value) {
+    ordemStatus.value =
+        obterStatusInicialOrdem(
+            ordemArquivoOriginalId
+                ?.value,
+
+            ordemArquivoConvertidoId
+                ?.value
+        );
+
+    atualizarSelectCustomOrdem(
+        ordemStatus
+    );
+}
+
+renderizarEstimativaTempoFormularioOrdem();
+}
 
 function preencherArquivosDaOrdem(
     cliente,
@@ -2470,22 +3197,33 @@ function selecionarClienteDaOrdem(
     fecharMenuClienteOrdem();
 
     /*
-     * Em uma nova ordem, a linha e o
-     * status são preenchidos automaticamente.
-     *
-     * Durante a edição, os valores atuais
-     * da ordem são preservados.
+     * Ao trocar o cliente, remove a matriz
+     * anteriormente selecionada.
      */
+
+    matrizOrdemSelecionadaId =
+        "";
+
+    /*
+     * Em uma ordem nova, atualiza também
+     * linha, status, matriz e arquivos.
+     *
+     * Durante a edição, mantém os demais
+     * dados digitados na ordem.
+     */
+
     if (!ordemId.value) {
-    atualizarDadosPeloCliente();
+        atualizarDadosPeloCliente();
     } else {
-    preencherArquivosDaOrdem(
-        cliente,
-        {
-            usarPrimeiros:
+        preencherMatrizesDaOrdem({
+            clienteId:
+                cliente.id
+        });
+
+        aplicarMatrizSelecionadaOrdem({
+            usarPrimeirosManual:
                 true
-        }
-        );
+        });
     }
 }
 
@@ -2503,6 +3241,12 @@ function atualizarDadosPeloCliente() {
         ordemStatus.value =
             "aguardando-arquivo";
 
+        atualizarSelectCustomOrdem(
+            ordemStatus
+        );
+
+        preencherMatrizesDaOrdem();
+
         preencherArquivosDaOrdem(
             null
         );
@@ -2510,30 +3254,21 @@ function atualizarDadosPeloCliente() {
         return;
     }
 
-    preencherArquivosDaOrdem(
-    cliente,
-    {
-        usarPrimeiros:
-            true
-    }
-    );
+    preencherMatrizesDaOrdem({
+        clienteId:
+            cliente.id
+    });
 
-    /*
-     * A linha cadastrada no cliente entra
-     * como primeira seleção da ordem.
-     */
+    aplicarMatrizSelecionadaOrdem({
+        usarPrimeirosManual:
+            true
+    });
+
+    renderizarEstimativaTempoFormularioOrdem();
+
     preencherLinhaOrdem(
         cliente.linha ||
         ""
-    );
-
-    ordemStatus.value =
-    obterStatusInicialOrdem(
-        ordemArquivoOriginalId
-            ?.value,
-
-        ordemArquivoConvertidoId
-            ?.value
     );
 }
 
@@ -2711,6 +3446,391 @@ function criarArquivoDetalhesOrdem({
     `;
 }
 
+function formatarNumeroMatrizOrdem(
+    valor
+) {
+    const numero =
+        Number(
+            valor
+        );
+
+    if (
+        !Number.isFinite(
+            numero
+        )
+    ) {
+        return "Não informado";
+    }
+
+    return new Intl
+        .NumberFormat(
+            "pt-BR",
+            {
+                maximumFractionDigits:
+                    2
+            }
+        )
+        .format(
+            numero
+        );
+}
+
+function formatarDimensoesMatrizOrdem(
+    matriz
+) {
+    const largura =
+        Number(
+            matriz?.larguraMm
+        );
+
+    const altura =
+        Number(
+            matriz?.alturaMm
+        );
+
+    if (
+        !Number.isFinite(
+            largura
+        ) ||
+        !Number.isFinite(
+            altura
+        ) ||
+        largura <= 0 ||
+        altura <= 0
+    ) {
+        return "Não informado";
+    }
+
+    return `${
+        formatarNumeroMatrizOrdem(
+            largura
+        )
+    } × ${
+        formatarNumeroMatrizOrdem(
+            altura
+        )
+    } mm`;
+}
+
+function criarHtmlMatrizDetalhesOrdem(
+    ordem
+) {
+    const matrizId =
+        String(
+            ordem?.matrizId ||
+            ""
+        ).trim();
+
+    /*
+     * Ordem criada pelo funcionamento antigo,
+     * com arquivos escolhidos manualmente.
+     */
+
+    if (!matrizId) {
+        return `
+            <section class="ordem-detalhes-secao">
+                <header class="ordem-detalhes-secao-cabecalho">
+                    <span class="ordem-detalhes-secao-icone">
+                        <svg aria-hidden="true">
+                            <use href="#icon-edit"></use>
+                        </svg>
+                    </span>
+
+                    <div>
+                        <h3>
+                            Matriz de bordado
+                        </h3>
+
+                        <p>
+                            Matriz utilizada nesta ordem de serviço.
+                        </p>
+                    </div>
+                </header>
+
+                <div class="ordem-matriz-manual">
+                    <span class="ordem-matriz-manual-icone">
+                        <svg aria-hidden="true">
+                            <use href="#icon-folder"></use>
+                        </svg>
+                    </span>
+
+                    <div>
+                        <strong>
+                            Arquivos selecionados manualmente
+                        </strong>
+
+                        <p>
+                            Esta ordem não está vinculada a uma
+                            matriz de bordado específica.
+                        </p>
+                    </div>
+                </div>
+            </section>
+        `;
+    }
+
+    const matriz =
+        encontrarMatrizOrdem(
+            matrizId
+        );
+
+    /*
+     * O vínculo existe na ordem, mas os dados
+     * da matriz ainda não foram carregados ou
+     * o usuário não possui acesso ao cadastro.
+     */
+
+    if (!matriz) {
+        return `
+            <section class="ordem-detalhes-secao">
+                <header class="ordem-detalhes-secao-cabecalho">
+                    <span class="ordem-detalhes-secao-icone">
+                        <svg aria-hidden="true">
+                            <use href="#icon-edit"></use>
+                        </svg>
+                    </span>
+
+                    <div>
+                        <h3>
+                            Matriz de bordado
+                        </h3>
+
+                        <p>
+                            Matriz utilizada nesta ordem de serviço.
+                        </p>
+                    </div>
+                </header>
+
+                <div class="ordem-matriz-indisponivel">
+                    <strong>
+                        Matriz vinculada
+                    </strong>
+
+                    <p>
+                        Os dados da matriz não estão disponíveis
+                        neste momento. Atualize a página e tente novamente.
+                    </p>
+                </div>
+            </section>
+        `;
+    }
+
+    const podeAbrirMatriz =
+        typeof possuiPermissaoSistema !==
+            "function" ||
+
+        possuiPermissaoSistema(
+            "clientes.visualizar"
+        );
+
+    const arquivoMaquina =
+        ordem.arquivoConvertido ||
+        matriz.arquivosMaquina?.[0]
+            ?.nome ||
+        "Não informado";
+
+    const arquivoOriginal =
+        ordem.arquivoOriginal ||
+        matriz.arquivoOriginal
+            ?.nome ||
+        "Não informado";
+
+    return `
+        <section class="ordem-detalhes-secao">
+            <header class="ordem-detalhes-secao-cabecalho">
+                <span class="ordem-detalhes-secao-icone">
+                    <svg aria-hidden="true">
+                        <use href="#icon-edit"></use>
+                    </svg>
+                </span>
+
+                <div>
+                    <h3>
+                        Matriz de bordado
+                    </h3>
+
+                    <p>
+                        Versão técnica utilizada na produção desta ordem.
+                    </p>
+                </div>
+            </header>
+
+            <article class="ordem-matriz-cartao">
+                <header class="ordem-matriz-cartao-cabecalho">
+                    <div class="ordem-matriz-identificacao">
+                        <span class="ordem-matriz-icone">
+                            <svg aria-hidden="true">
+                                <use href="#icon-check-file"></use>
+                            </svg>
+                        </span>
+
+                        <div>
+                            <span>
+                                Matriz utilizada
+                            </span>
+
+                            <h4>
+                                ${escaparHtml(
+                                    matriz.nome ||
+                                    "Matriz sem nome"
+                                )}
+                            </h4>
+
+                            <p>
+                                Versão
+                                ${escaparHtml(
+                                    matriz.versao ||
+                                    1
+                                )}
+                            </p>
+                        </div>
+                    </div>
+
+                    <span
+                        class="ordem-matriz-status ordem-matriz-status-${
+                            escaparHtml(
+                                matriz.status ||
+                                "rascunho"
+                            )
+                        }"
+                    >
+                        ${escaparHtml(
+                            matriz.statusRotulo ||
+                            matriz.status ||
+                            "Sem status"
+                        )}
+                    </span>
+                </header>
+
+                <div class="ordem-matriz-informacoes">
+                    <div>
+                        <span>
+                            Local de aplicação
+                        </span>
+
+                        <strong>
+                            ${escaparHtml(
+                                matriz.localAplicacao ||
+                                "Não informado"
+                            )}
+                        </strong>
+                    </div>
+
+                    <div>
+                        <span>
+                            Dimensões
+                        </span>
+
+                        <strong>
+                            ${escaparHtml(
+                                formatarDimensoesMatrizOrdem(
+                                    matriz
+                                )
+                            )}
+                        </strong>
+                    </div>
+
+                    <div>
+                        <span>
+                            Quantidade de pontos
+                        </span>
+
+                        <strong>
+                            ${
+                                matriz.quantidadePontos ===
+                                    null ||
+                                matriz.quantidadePontos ===
+                                    undefined
+
+                                    ? "Não informado"
+
+                                    : escaparHtml(
+                                        formatarNumeroMatrizOrdem(
+                                            matriz.quantidadePontos
+                                        )
+                                    )
+                            }
+                        </strong>
+                    </div>
+
+                    <div>
+                        <span>
+                            Quantidade de cores
+                        </span>
+
+                        <strong>
+                            ${
+                                matriz.quantidadeCores ===
+                                    null ||
+                                matriz.quantidadeCores ===
+                                    undefined
+
+                                    ? "Não informado"
+
+                                    : escaparHtml(
+                                        matriz.quantidadeCores
+                                    )
+                            }
+                        </strong>
+                    </div>
+
+                    <div class="ordem-matriz-informacao-larga">
+                        <span>
+                            Logo original
+                        </span>
+
+                        <strong title="${escaparHtml(
+                            arquivoOriginal
+                        )}">
+                            ${escaparHtml(
+                                arquivoOriginal
+                            )}
+                        </strong>
+                    </div>
+
+                    <div class="ordem-matriz-informacao-larga">
+                        <span>
+                            Arquivo de máquina utilizado
+                        </span>
+
+                        <strong title="${escaparHtml(
+                            arquivoMaquina
+                        )}">
+                            ${escaparHtml(
+                                arquivoMaquina
+                            )}
+                        </strong>
+                    </div>
+                </div>
+
+                ${
+                    podeAbrirMatriz
+                        ? `
+                            <footer class="ordem-matriz-cartao-rodape">
+                                <button
+                                    class="botao-abrir-matriz-ordem"
+                                    data-abrir-matriz-ordem-detalhes="${escaparHtml(
+                                        matriz.id
+                                    )}"
+                                    type="button"
+                                >
+                                    <svg aria-hidden="true">
+                                        <use href="#icon-edit"></use>
+                                    </svg>
+
+                                    <span>
+                                        Abrir matriz
+                                    </span>
+                                </button>
+                            </footer>
+                        `
+                        : ""
+                }
+            </article>
+        </section>
+    `;
+}
+
 function abrirDetalhesOrdem(
     id
 ) {
@@ -2802,78 +3922,128 @@ function abrirDetalhesOrdem(
 
     conteudoDetalhesOrdem.innerHTML = `
         <section class="ordem-resumo-grade">
-            <article class="ordem-resumo-item">
-                <span class="ordem-resumo-icone">
-                    <svg aria-hidden="true">
-                        <use href="#icon-check-file"></use>
-                    </svg>
-                </span>
+    <article class="ordem-resumo-item">
+        <span class="ordem-resumo-icone">
+            <svg aria-hidden="true">
+                <use href="#icon-check-file"></use>
+            </svg>
+        </span>
 
-                <div>
-                    <span>
-                        Quantidade
-                    </span>
+        <div>
+            <span>
+                Quantidade
+            </span>
 
-                    <strong>
-                        ${escaparHtml(
-                            ordem.quantidade ||
-                            0
-                        )}
-                        ${
-                            Number(
-                                ordem.quantidade
-                            ) === 1
-                                ? "unidade"
-                                : "unidades"
-                        }
-                    </strong>
-                </div>
-            </article>
+            <strong>
+                ${escaparHtml(
+                    ordem.quantidade ||
+                    0
+                )}
+                ${
+                    Number(
+                        ordem.quantidade
+                    ) === 1
+                        ? "unidade"
+                        : "unidades"
+                }
+            </strong>
+        </div>
+    </article>
 
-            <article class="ordem-resumo-item">
-                <span class="ordem-resumo-icone">
-                    <svg aria-hidden="true">
-                        <use href="#icon-clock"></use>
-                    </svg>
-                </span>
+    <article class="ordem-resumo-item">
+        <span class="ordem-resumo-icone">
+            <svg aria-hidden="true">
+                <use href="#icon-clock"></use>
+            </svg>
+        </span>
 
-                <div>
-                    <span>
-                        Prazo de entrega
-                    </span>
+        <div>
+            <span>
+                Prazo de entrega
+            </span>
 
-                    <strong>
-                        ${escaparHtml(
-                            formatarPrazoOrdem(
-                                ordem.prazoEntrega
-                            )
-                        )}
-                    </strong>
-                </div>
-            </article>
+            <strong>
+                ${escaparHtml(
+                    formatarPrazoOrdem(
+                        ordem.prazoEntrega
+                    )
+                )}
+            </strong>
+        </div>
+    </article>
 
-            <article class="ordem-resumo-item">
-                <span class="ordem-resumo-icone">
-                    <svg aria-hidden="true">
-                        <use href="#icon-file"></use>
-                    </svg>
-                </span>
+    <article class="ordem-resumo-item">
+        <span class="ordem-resumo-icone">
+            <svg aria-hidden="true">
+                <use href="#icon-alert"></use>
+            </svg>
+        </span>
 
-                <div>
-                    <span>
-                        Valor
-                    </span>
+        <div>
+            <span>
+                Prioridade
+            </span>
 
-                    <strong>
-                        ${escaparHtml(
-                            formatarValorDetalhesOrdem(
-                                ordem.valorCentavos
-                            )
-                        )}
-                    </strong>
-                </div>
-            </article>
-        </section>
+            <strong
+                class="texto-prioridade-alerta texto-prioridade-alerta-${escaparHtml(
+                    ordem.prioridade ||
+                    "normal"
+                )}"
+            >
+                ${escaparHtml(
+                    ordem.prioridadeTexto ||
+                    obterRotuloPrioridadeOrdem(
+                        ordem.prioridade
+                    )
+                )}
+            </strong>
+        </div>
+    </article>
+
+    <article class="ordem-resumo-item">
+    <span class="ordem-resumo-icone">
+        <svg aria-hidden="true">
+            <use href="#icon-clock"></use>
+        </svg>
+    </span>
+
+    <div>
+        <span>
+            Tempo estimado
+        </span>
+
+        <strong>
+            ${escaparHtml(
+                formatarTempoEstimadoOrdem(
+                    ordem
+                )
+            )}
+        </strong>
+    </div>
+</article>
+
+    <article class="ordem-resumo-item">
+        <span class="ordem-resumo-icone">
+            <svg aria-hidden="true">
+                <use href="#icon-file"></use>
+            </svg>
+        </span>
+
+        <div>
+            <span>
+                Valor
+            </span>
+
+            <strong>
+                ${escaparHtml(
+                    formatarValorDetalhesOrdem(
+                        ordem.valorCentavos
+                    )
+                )}
+            </strong>
+        </div>
+    </article>
+</section>
 
         <section class="ordem-detalhes-secao">
             <header class="ordem-detalhes-secao-cabecalho">
@@ -3008,8 +4178,12 @@ function abrirDetalhesOrdem(
                         )}
                     </div>
                 </div>
-            </div>
+                        </div>
         </section>
+
+        ${criarHtmlMatrizDetalhesOrdem(
+            ordem
+        )}
 
         <section class="ordem-detalhes-secao">
             <header class="ordem-detalhes-secao-cabecalho">
@@ -3176,7 +4350,10 @@ function fecharDetalhesOrdem() {
 }
 
 function abrirModalOrdem(
-    ordem = null
+    ordem = null,
+    {
+        duplicando = false
+    } = {}
 ) {
     if (
         typeof carregandoClientes !==
@@ -3193,11 +4370,36 @@ function abrirModalOrdem(
     }
 
     formularioOrdem.reset();
+
+    matrizOrdemSelecionadaId =
+        ordem?.matrizId ||
+        "";
+
     fecharMenuLinhaOrdem();
     fecharMenuClienteOrdem();
+    fecharOutrosSelectsCustomOrdem();
+
     preencherClientesDaOrdem();
+    preencherMatrizesDaOrdem();
 
     if (ordem) {
+    if (duplicando) {
+        tituloModalOrdem.textContent =
+            `Duplicar ${ordem.codigo}`;
+
+        botaoSalvarOrdem
+            .querySelector("span")
+            .textContent =
+                "Criar cópia";
+
+        /*
+         * Mantém o ID vazio para que o
+         * sistema crie uma nova ordem.
+         */
+
+        ordemId.value =
+            "";
+    } else {
         tituloModalOrdem.textContent =
             `Editar ${ordem.codigo}`;
 
@@ -3208,6 +4410,7 @@ function abrirModalOrdem(
 
         ordemId.value =
             ordem.id;
+    }
 
         preencherClientesDaOrdem(
                 ordem.clienteId
@@ -3218,29 +4421,35 @@ function abrirModalOrdem(
             ordem.clienteId
         );
 
-        preencherArquivosDaOrdem(
-        clienteDaOrdem,
-        {
-            arquivoOriginalId:
-                ordem.arquivoOriginalId ||
-                "",
+        preencherMatrizesDaOrdem({
+    clienteId:
+        ordem.clienteId,
 
-            arquivoOriginalNome:
-                ordem.arquivoOriginal ||
-                "",
+    matrizId:
+        ordem.matrizId ||
+        ""
+});
 
-            arquivoConvertidoId:
-                ordem.arquivoConvertidoId ||
-                "",
+aplicarMatrizSelecionadaOrdem({
+    arquivoOriginalId:
+        ordem.arquivoOriginalId ||
+        "",
 
-            arquivoConvertidoNome:
-                ordem.arquivoConvertido ||
-                "",
+    arquivoOriginalNome:
+        ordem.arquivoOriginal ||
+        "",
 
-            usarPrimeiros:
-                false
-        }
-    );
+    arquivoConvertidoId:
+        ordem.arquivoConvertidoId ||
+        "",
+
+    arquivoConvertidoNome:
+        ordem.arquivoConvertido ||
+        "",
+
+    usarPrimeirosManual:
+        false
+});
 
         ordemDescricao.value =
             ordem.descricao || "";
@@ -3252,15 +4461,52 @@ preencherLinhaOrdem(
     ordem.linha || ""
 );
 
-        ordemPrazo.value =
-            ordem.prazoEntrega || "";
+        /*
+ * Na duplicação, o prazo fica vazio
+ * para evitar criar uma ordem com
+ * uma data antiga.
+ */
 
-        ordemStatus.value =
-            ordem.status ||
+ordemPrazo.value =
+    duplicando
+        ? ""
+        : ordem.prazoEntrega ||
+            "";
+
+if (ordemPrioridade) {
+    ordemPrioridade.value =
+        duplicando
+            ? "normal"
+            : ordem.prioridade ||
+                "normal";
+}
+
+/*
+ * Não copia status como Entregue,
+ * Concluído ou Cancelado.
+ *
+ * O novo status é calculado de acordo
+ * com os arquivos disponíveis.
+ */
+
+ordemStatus.value =
+    duplicando
+        ? obterStatusInicialOrdem(
+            ordemArquivoOriginalId
+                ?.value,
+
+            ordemArquivoConvertidoId
+                ?.value
+        )
+        : ordem.status ||
             "aguardando-arquivo";
 
-        ordemObservacoes.value =
-            ordem.observacoes || "";
+atualizarSelectCustomOrdem(
+    ordemStatus
+);
+
+ordemObservacoes.value =
+    ordem.observacoes || "";
 } else {
     tituloModalOrdem.textContent =
         "Nova ordem";
@@ -3268,16 +4514,39 @@ preencherLinhaOrdem(
     ordemId.value = "";
     ordemQuantidade.value = 1;
 
+    if (ordemPrioridade) {
+        ordemPrioridade.value =
+            "normal";
+    }
+
     preencherClientesDaOrdem();
+    preencherMatrizesDaOrdem();
     preencherArquivosDaOrdem(
-    null
+        null
     );
+
     preencherLinhaOrdem("");
 }
 
-    modalOrdem.classList.add(
-        "aberto"
-    );
+/*
+ * Atualiza o texto visual dos selects
+ * após preencher edição, duplicação
+ * ou uma nova ordem.
+ */
+
+atualizarSelectCustomOrdem(
+    ordemPrioridade
+);
+
+atualizarSelectCustomOrdem(
+    ordemStatus
+);
+
+renderizarEstimativaTempoFormularioOrdem();
+
+modalOrdem.classList.add(
+    "aberto"
+);
 
     modalOrdem.setAttribute(
         "aria-hidden",
@@ -3289,6 +4558,13 @@ preencherLinhaOrdem(
 
     setTimeout(
     () => {
+        if (duplicando) {
+            ordemPrazo
+                ?.focus();
+
+            return;
+        }
+
         botaoClienteOrdem
             ?.focus();
     },
@@ -3299,6 +4575,7 @@ preencherLinhaOrdem(
 function fecharModalOrdem() {
     fecharMenuClienteOrdem();
     fecharMenuLinhaOrdem();
+    fecharOutrosSelectsCustomOrdem();
 
     modalOrdem?.classList.remove(
         "aberto"
@@ -3338,39 +4615,54 @@ function filtrarOrdens() {
             buscaOrdemAtual
         );
 
-    return ordens.filter(
-        ordem => {
-            const correspondeStatus =
-                statusOrdemAtual ===
-                    "todos" ||
-                ordem.status ===
-                    statusOrdemAtual;
+    const filtradas =
+        ordens.filter(
+            ordem => {
+                const correspondeStatus =
+                    statusOrdemAtual ===
+                        "todos" ||
+                    ordem.status ===
+                        statusOrdemAtual;
 
-            if (!correspondeStatus) {
-                return false;
+                const correspondePrioridade =
+                    prioridadeOrdemAtual ===
+                        "todas" ||
+                    ordem.prioridade ===
+                        prioridadeOrdemAtual;
+
+                if (
+                    !correspondeStatus ||
+                    !correspondePrioridade
+                ) {
+                    return false;
+                }
+
+                if (!busca) {
+                    return true;
+                }
+
+                return [
+                    ordem.codigo,
+                    ordem.numero,
+                    ordem.clienteNome,
+                    ordem.clienteCpf,
+                    ordem.descricao,
+                    ordem.linha,
+                    ordem.statusTexto,
+                    ordem.prioridadeTexto
+                ].some(
+                    valor =>
+                        normalizarTexto(
+                            valor
+                        ).includes(
+                            busca
+                        )
+                );
             }
+        );
 
-            if (!busca) {
-                return true;
-            }
-
-            return [
-                ordem.codigo,
-                ordem.numero,
-                ordem.clienteNome,
-                ordem.clienteCpf,
-                ordem.descricao,
-                ordem.linha,
-                ordem.statusTexto
-            ].some(
-                valor =>
-                    normalizarTexto(
-                        valor
-                    ).includes(
-                        busca
-                    )
-            );
-        }
+    return ordenarOrdensPorPrioridadeEPrazo(
+        filtradas
     );
 }
 
@@ -3564,7 +4856,7 @@ function renderizarOrdens() {
 
         corpoTabelaOrdens.innerHTML = `
             <tr>
-                <td colspan="6">
+                <td colspan="8">
                     ${htmlCarregando()}
                 </td>
             </tr>
@@ -3575,6 +4867,14 @@ function renderizarOrdens() {
 
     const lista =
         filtrarOrdens();
+
+    const podeDuplicarOrdem =
+    typeof possuiPermissaoSistema !==
+        "function" ||
+
+    possuiPermissaoSistema(
+        "ordens.criar"
+    );
 
     quantidadeOrdens.textContent =
         `${lista.length} ${
@@ -3589,11 +4889,13 @@ if (!lista.length) {
             buscaOrdemAtual.trim()
         ) ||
         statusOrdemAtual !==
-            "todos";
+            "todos" ||
+        prioridadeOrdemAtual !==
+            "todas";
 
     corpoTabelaOrdens.innerHTML = `
         <tr>
-            <td colspan="6">
+            <td colspan="8">
                 <div class="estado-vazio">
                     <div class="estado-vazio-icone">
                         ${icone(
@@ -3614,7 +4916,7 @@ if (!lista.length) {
                     <small>
                         ${
                             possuiFiltro
-                                ? "Altere a busca ou o filtro de status."
+                                ? "Altere a busca ou os filtros de status e prioridade."
                                 : "Clique em “Nova ordem” para cadastrar o primeiro serviço."
                         }
                     </small>
@@ -3630,7 +4932,12 @@ if (!lista.length) {
         lista
             .map(
                 ordem => `
-                    <tr>
+                    <tr
+                        class="linha-ordem prioridade-linha-${escaparHtml(
+                            ordem.prioridade ||
+                            "normal"
+                        )}"
+                    >
                         <td>
                             <strong class="codigo-ordem">
                                 ${escaparHtml(
@@ -3681,9 +4988,22 @@ if (!lista.length) {
                         </td>
 
                         <td>
+                            ${criarBadgePrioridadeOrdem(
+                                ordem
+                            )}
+                        </td>
+
+                        <td>
+                            ${criarTempoEstimadoTabelaOrdem(
+                                ordem
+                            )}
+                        </td>
+
+                        <td>
                             <span
                                 class="status-ordem status-ordem-${escaparHtml(
-                                    ordem.status
+                                    ordem.status ||
+                                    ""
                                 )}"
                             >
                                 ${escaparHtml(
@@ -3730,6 +5050,24 @@ if (!lista.length) {
     >
         ${icone("eye")}
     </button>
+
+    ${
+        podeDuplicarOrdem
+            ? `
+                <button
+                    class="botao-acao"
+                    data-duplicar-ordem="${escaparHtml(
+                        ordem.id
+                    )}"
+                    type="button"
+                    title="Duplicar ordem"
+                    aria-label="Duplicar ordem"
+                >
+                    ${icone("plus")}
+                </button>
+            `
+            : ""
+    }
 
     <button
         class="botao-acao"
@@ -3817,13 +5155,17 @@ async function carregarOrdensDoServidor(
                 "erro"
             );
         }
-} finally {
-    carregandoOrdens = false;
+    } finally {
+        carregandoOrdens = false;
 
-    renderizarOrdens();
-    atualizarDashboardOrdens();
+        renderizarOrdens();
+        atualizarDashboardOrdens();
+        emitirOrdensAtualizadas();
+    }
 }
-}
+
+window.recarregarOrdensSistema =
+    carregarOrdensDoServidor;
 
 /*
 |--------------------------------------------------------------------------
@@ -3927,6 +5269,11 @@ if (
         clienteId:
             ordemCliente.value,
 
+        matrizId:
+            ordemMatrizId
+                ?.value ||
+            "",
+
         arquivoOriginalId:
             ordemArquivoOriginalId
                 ?.value ||
@@ -3954,6 +5301,11 @@ if (
 
         prazoEntrega:
             ordemPrazo.value,
+
+        prioridade:
+            ordemPrioridade
+                ?.value ||
+            "normal",
 
         valor:
             "0",
@@ -4054,6 +5406,76 @@ function editarOrdem(
 
     abrirModalOrdem(
         ordem
+    );
+}
+
+/*
+|--------------------------------------------------------------------------
+| Duplicar ordem
+|--------------------------------------------------------------------------
+*/
+
+function duplicarOrdem(
+    id
+) {
+    if (
+        typeof possuiPermissaoSistema ===
+            "function" &&
+        !possuiPermissaoSistema(
+            "ordens.criar"
+        )
+    ) {
+        mostrarNotificacao(
+            "Acesso negado",
+            "Você não possui permissão para criar ordens.",
+            "aviso"
+        );
+
+        return;
+    }
+
+    const ordem =
+        ordens.find(
+            item =>
+                item.id === id
+        );
+
+    if (!ordem) {
+        mostrarNotificacao(
+            "Ordem não encontrada",
+            "Atualize a página e tente novamente.",
+            "erro"
+        );
+
+        return;
+    }
+
+    /*
+     * Uma nova ordem precisa estar
+     * vinculada a um cliente existente.
+     */
+
+    const cliente =
+        encontrarClienteDaOrdem(
+            ordem.clienteId
+        );
+
+    if (!cliente) {
+        mostrarNotificacao(
+            "Cliente indisponível",
+            "O cliente desta ordem não está mais cadastrado. Selecione outra ordem ou cadastre o cliente novamente.",
+            "aviso"
+        );
+
+        return;
+    }
+
+    abrirModalOrdem(
+        ordem,
+        {
+            duplicando:
+                true
+        }
     );
 }
 
@@ -4294,6 +5716,18 @@ function ordemEstaPertoDeAtrasar(
     );
 }
 
+function ordemTemPrioridadeUrgente(
+    ordem
+) {
+    return (
+        ordem?.prioridade ===
+            "urgente" &&
+        !ordemEstaFinalizada(
+            ordem
+        )
+    );
+}
+
 function resumirCodigosOrdens(
     lista
 ) {
@@ -4415,46 +5849,66 @@ function criarItemAlertaPrazoOrdem(
             </div>
 
             <div class="alerta-prazo-ordem-detalhes">
-                <div>
-                    <span>
-                        Entrega
-                    </span>
+    <div>
+        <span>
+            Entrega
+        </span>
 
-                    <strong>
-                        ${escaparHtml(
-                            formatarPrazoOrdem(
-                                ordem.prazoEntrega
-                            )
-                        )}
-                    </strong>
-                </div>
+        <strong>
+            ${escaparHtml(
+                formatarPrazoOrdem(
+                    ordem.prazoEntrega
+                )
+            )}
+        </strong>
+    </div>
 
-                <div>
-                    <span>
-                        Status
-                    </span>
+    <div>
+        <span>
+            Status
+        </span>
 
-                    <strong>
-                        ${escaparHtml(
-                            ordem.statusTexto ||
-                            "Não informado"
-                        )}
-                    </strong>
-                </div>
+        <strong>
+            ${escaparHtml(
+                ordem.statusTexto ||
+                "Não informado"
+            )}
+        </strong>
+    </div>
 
-                <div>
-                    <span>
-                        Quantidade
-                    </span>
+    <div>
+        <span>
+            Quantidade
+        </span>
 
-                    <strong>
-                        ${escaparHtml(
-                            ordem.quantidade ||
-                            0
-                        )}
-                    </strong>
-                </div>
-            </div>
+        <strong>
+            ${escaparHtml(
+                ordem.quantidade ||
+                0
+            )}
+        </strong>
+    </div>
+
+    <div>
+        <span>
+            Prioridade
+        </span>
+
+        <strong
+            class="texto-prioridade-alerta texto-prioridade-alerta-${escaparHtml(
+                ordem.prioridade ||
+                "normal"
+            )}"
+        >
+            ${escaparHtml(
+                ordem.prioridadeTexto ||
+                obterRotuloPrioridadeOrdem(
+                    ordem.prioridade
+                )
+            )}
+        </strong>
+    </div>
+</div>
 
                         <div class="alerta-prazo-ordem-acoes">
                 <button
@@ -4500,7 +5954,8 @@ function fecharAlertaPrazosOrdens() {
 
 function abrirAlertaPrazosOrdens(
     atrasadas,
-    proximasDoPrazo
+    proximasDoPrazo,
+    urgentes
 ) {
     if (
         !modalAlertaPrazosOrdens ||
@@ -4509,10 +5964,26 @@ function abrirAlertaPrazosOrdens(
         return;
     }
 
-    const todasAsOrdens = [
-        ...atrasadas,
-        ...proximasDoPrazo
-    ];
+    const todasAsOrdens =
+        [
+            ...new Map(
+                [
+                    ...atrasadas,
+                    ...proximasDoPrazo,
+                    ...urgentes
+                ].map(
+                    ordem => [
+                        ordem.id,
+                        ordem
+                    ]
+                )
+            ).values()
+        ];
+
+    const ordenadas =
+        ordenarOrdensPorPrioridadeEPrazo(
+            todasAsOrdens
+        );
 
     if (quantidadeOrdensAtrasadas) {
         quantidadeOrdensAtrasadas.textContent =
@@ -4528,8 +5999,15 @@ function abrirAlertaPrazosOrdens(
             );
     }
 
+    if (quantidadeOrdensUrgentes) {
+        quantidadeOrdensUrgentes.textContent =
+            String(
+                urgentes.length
+            );
+    }
+
     listaAlertaPrazosOrdens.innerHTML =
-        todasAsOrdens
+        ordenadas
             .map(
                 criarItemAlertaPrazoOrdem
             )
@@ -4558,42 +6036,25 @@ function abrirAlertaPrazosOrdens(
 
 function notificarPrazosDasOrdens() {
     const atrasadas =
-        ordens
-            .filter(
+        ordenarOrdensPorPrioridadeEPrazo(
+            ordens.filter(
                 ordemEstaAtrasada
             )
-            .sort(
-                (
-                    ordemA,
-                    ordemB
-                ) =>
-                    String(
-                        ordemA.prazoEntrega
-                    ).localeCompare(
-                        String(
-                            ordemB.prazoEntrega
-                        )
-                    )
-            );
+        );
 
     const proximasDoPrazo =
-        ordens
-            .filter(
+        ordenarOrdensPorPrioridadeEPrazo(
+            ordens.filter(
                 ordemEstaPertoDeAtrasar
             )
-            .sort(
-                (
-                    ordemA,
-                    ordemB
-                ) =>
-                    String(
-                        ordemA.prazoEntrega
-                    ).localeCompare(
-                        String(
-                            ordemB.prazoEntrega
-                        )
-                    )
-            );
+        );
+
+    const urgentes =
+        ordenarOrdensPorPrioridadeEPrazo(
+            ordens.filter(
+                ordemTemPrioridadeUrgente
+            )
+        );
 
     const assinatura = [
         ...atrasadas.map(
@@ -4602,12 +6063,25 @@ function notificarPrazosDasOrdens() {
                     ordem.id
                 }:${
                     ordem.prazoEntrega
+                }:${
+                    ordem.prioridade
                 }`
         ),
 
         ...proximasDoPrazo.map(
             ordem =>
                 `proxima:${
+                    ordem.id
+                }:${
+                    ordem.prazoEntrega
+                }:${
+                    ordem.prioridade
+                }`
+        ),
+
+        ...urgentes.map(
+            ordem =>
+                `urgente:${
                     ordem.id
                 }:${
                     ordem.prazoEntrega
@@ -4636,7 +6110,8 @@ function notificarPrazosDasOrdens() {
 
     abrirAlertaPrazosOrdens(
         atrasadas,
-        proximasDoPrazo
+        proximasDoPrazo,
+        urgentes
     );
 }
 
@@ -5450,6 +6925,56 @@ listaAlertaPrazosOrdens
         }
     );
 
+conteudoDetalhesOrdem
+    ?.addEventListener(
+        "click",
+        evento => {
+            const botaoAbrirMatriz =
+                evento.target.closest(
+                    "[data-abrir-matriz-ordem-detalhes]"
+                );
+
+            if (!botaoAbrirMatriz) {
+                return;
+            }
+
+            const matrizId =
+                botaoAbrirMatriz
+                    .dataset
+                    .abrirMatrizOrdemDetalhes;
+
+            if (!matrizId) {
+                return;
+            }
+
+            fecharDetalhesOrdem();
+
+            setTimeout(
+                () => {
+                    if (
+                        typeof window
+                            .abrirMatrizSistema ===
+                        "function"
+                    ) {
+                        window
+                            .abrirMatrizSistema(
+                                matrizId
+                            );
+
+                        return;
+                    }
+
+                    mostrarNotificacao(
+                        "Matriz indisponível",
+                        "Não foi possível abrir a matriz selecionada.",
+                        "erro"
+                    );
+                },
+                120
+            );
+        }
+    );
+
 botaoImprimirDetalhesOrdem
     ?.addEventListener(
         "click",
@@ -5628,6 +7153,66 @@ listaOrdensAtrasadasDashboard
         }
     );
 
+    ordemMatrizId
+    ?.addEventListener(
+        "change",
+        () => {
+            matrizOrdemSelecionadaId =
+                ordemMatrizId.value;
+
+            if (mensagemMatrizOrdem) {
+                mensagemMatrizOrdem.textContent =
+                    ordemMatrizId.value
+                        ? "Os arquivos vinculados à matriz serão usados nesta ordem."
+                        : "Selecione uma matriz ou mantenha a escolha manual.";
+            }
+
+            aplicarMatrizSelecionadaOrdem({
+                usarPrimeirosManual:
+                    true
+            });
+        }
+    );
+
+window.addEventListener(
+    "matrizes-atualizadas",
+    () => {
+        const arquivoOriginalId =
+            ordemArquivoOriginalId
+                ?.value ||
+            "";
+
+        const arquivoConvertidoId =
+            ordemArquivoConvertidoId
+                ?.value ||
+            "";
+
+        preencherMatrizesDaOrdem({
+            clienteId:
+                ordemCliente?.value ||
+                "",
+
+            matrizId:
+                matrizOrdemSelecionadaId
+        });
+
+        if (
+            modalOrdem
+                ?.classList.contains(
+                    "aberto"
+                )
+        ) {
+            aplicarMatrizSelecionadaOrdem({
+                arquivoOriginalId,
+                arquivoConvertidoId,
+
+                usarPrimeirosManual:
+                    false
+            });
+        }
+    }
+);
+
 [
     ordemArquivoOriginalId,
     ordemArquivoConvertidoId
@@ -5651,13 +7236,24 @@ listaOrdensAtrasadasDashboard
                             ordemArquivoConvertidoId
                                 ?.value
                         );
+
+                    atualizarSelectCustomOrdem(
+                        ordemStatus
+                    );
                 }
             }
         );
     }
 );
 
+ordemQuantidade
+    ?.addEventListener(
+        "input",
+        renderizarEstimativaTempoFormularioOrdem
+    );
+
 [
+    ordemMatrizId,
     ordemArquivoOriginalId,
     ordemArquivoConvertidoId
 ].forEach(
@@ -5782,6 +7378,17 @@ filtroStatusOrdens
         }
     );
 
+filtroPrioridadeOrdens
+    ?.addEventListener(
+        "change",
+        evento => {
+            prioridadeOrdemAtual =
+                evento.target.value;
+
+            renderizarOrdens();
+        }
+    );
+
 corpoTabelaOrdens
     ?.addEventListener(
         "click",
@@ -5800,6 +7407,11 @@ corpoTabelaOrdens
             const botaoImprimir =
                 evento.target.closest(
                     "[data-imprimir-ordem]"
+                );
+
+            const botaoDuplicar =
+                evento.target.closest(
+                    "[data-duplicar-ordem]"
                 );
 
             const botaoEditar =
@@ -5836,6 +7448,15 @@ if (botaoImprimir) {
     imprimirFichaOrdem(
         botaoImprimir.dataset
             .imprimirOrdem
+    );
+
+    return;
+}
+
+if (botaoDuplicar) {
+    duplicarOrdem(
+        botaoDuplicar.dataset
+            .duplicarOrdem
     );
 
     return;
@@ -5994,19 +7615,26 @@ window.addEventListener(
 );
 
 window.addEventListener(
-    "permissoes-carregadas",
+    "configuracao-producao-atualizada",
     () => {
+        renderizarOrdens();
+        renderizarEstimativaTempoFormularioOrdem();
+
         if (
-            modalOrdem
-                ?.classList
-                .contains(
+            ordemDetalhesAtualId &&
+            modalDetalhesOrdem
+                ?.classList.contains(
                     "aberto"
                 )
         ) {
-            renderizarLogoClienteOrdem();
+            abrirDetalhesOrdem(
+                ordemDetalhesAtualId
+            );
         }
     }
-);window.addEventListener(
+);
+
+window.addEventListener(
     "permissoes-carregadas",
     () => {
         if (
