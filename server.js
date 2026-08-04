@@ -5,11 +5,14 @@ const fsPromises = require("node:fs/promises");
 const { Readable } = require("node:stream");
 const { randomUUID } = require("node:crypto");
 const { DatabaseSync } = require("node:sqlite");
-
 const { criarServicoBackup } = require("./backup");
 const { criarServicoAutenticacao } = require("./autenticacao");
+const {criarServicoAtividades} = require("./atividades");
 const { criarServicoOrdens } = require("./ordens");
 const { criarServicoLinhas } = require("./linhas");
+const {criarServicoMovimentacoesLinhas} = require("./movimentacoes-linhas");
+const {criarServicoMatrizes} = require("./matrizes");
+const {criarServicoProducao} = require("./producao");
 
 /*
 |--------------------------------------------------------------------------
@@ -50,6 +53,11 @@ const PASTA_CONVERTIDOS = path.join(
     "convertidos"
 );
 
+const PASTA_EDITAVEIS = path.join(
+    PASTA_UPLOADS,
+    "editaveis"
+);
+
 const CAMINHO_BANCO = path.join(
     PASTA_DADOS,
     "sistema-bordado.db"
@@ -69,6 +77,9 @@ const LIMITE_LOGO_ORIGINAL =
 
 const LIMITE_LOGO_CONVERTIDA =
     20 * 1024 * 1024;
+
+const LIMITE_ARQUIVO_EDITAVEL =
+    30 * 1024 * 1024;
 
 const EXTENSOES_ORIGINAIS =
     new Set([
@@ -90,7 +101,14 @@ const EXTENSOES_CONVERTIDAS =
         ".zip"
     ]);
 
+const EXTENSOES_EDITAVEIS =
+    new Set([
+        ".emb",
+        ".zip"
+    ]);
+
 const TIPOS_MIME = {
+
     ".html":
         "text/html; charset=utf-8",
 
@@ -123,6 +141,9 @@ const TIPOS_MIME = {
 
     ".zip":
         "application/zip",
+
+    ".emb":
+    "application/octet-stream",
 
     ".dst":
         "application/octet-stream",
@@ -174,7 +195,8 @@ for (
         PASTA_PUBLICA,
         PASTA_UPLOADS,
         PASTA_ORIGINAIS,
-        PASTA_CONVERTIDOS
+        PASTA_CONVERTIDOS,
+        PASTA_EDITAVEIS
     ]
 ) {
     fs.mkdirSync(
@@ -525,11 +547,12 @@ function garantirTabelaArquivosClientes() {
             tipo TEXT
                 NOT NULL
                 CHECK (
-                    tipo IN (
-                        'original',
-                        'convertido'
-                    )
-                ),
+                tipo IN (
+                    'original',
+                    'convertido',
+                    'editavel'
+                )
+            ),
 
             nome_original TEXT
                 NOT NULL,
@@ -684,6 +707,374 @@ function garantirTabelaArquivosClientes() {
 }
 
 garantirTabelaArquivosClientes();
+
+/*
+|--------------------------------------------------------------------------
+| Migração: arquivos editáveis
+|--------------------------------------------------------------------------
+*/
+
+function permitirTipoEditavelArquivosClientes() {
+    const tabela =
+        banco.prepare(`
+            SELECT sql
+
+            FROM sqlite_master
+
+            WHERE
+                type = 'table'
+                AND name =
+                    'cliente_arquivos'
+
+            LIMIT 1
+        `).get();
+
+    const estruturaAtual =
+        String(
+            tabela?.sql || ""
+        );
+
+    /*
+     * Quando a tabela já possui o tipo
+     * editável, nenhuma migração é feita.
+     */
+
+    if (
+        estruturaAtual.includes(
+            "'editavel'"
+        )
+    ) {
+        return;
+    }
+
+    banco.exec(`
+        PRAGMA foreign_keys = OFF;
+    `);
+
+    let transacaoAberta =
+        false;
+
+    try {
+        banco.exec(`
+            BEGIN IMMEDIATE;
+        `);
+
+        transacaoAberta = true;
+
+        banco.exec(`
+            CREATE TABLE
+                cliente_arquivos_nova (
+                    id TEXT PRIMARY KEY,
+
+                    cliente_id TEXT
+                        NOT NULL
+                        REFERENCES clientes(id)
+                        ON DELETE CASCADE,
+
+                    tipo TEXT
+                        NOT NULL
+                        CHECK (
+                            tipo IN (
+                                'original',
+                                'convertido',
+                                'editavel'
+                            )
+                        ),
+
+                    nome_original TEXT
+                        NOT NULL,
+
+                    caminho_arquivo TEXT
+                        NOT NULL
+                        UNIQUE,
+
+                    criado_em TEXT
+                        NOT NULL
+                ) STRICT;
+
+            INSERT INTO
+                cliente_arquivos_nova (
+                    id,
+                    cliente_id,
+                    tipo,
+                    nome_original,
+                    caminho_arquivo,
+                    criado_em
+                )
+
+            SELECT
+                id,
+                cliente_id,
+                tipo,
+                nome_original,
+                caminho_arquivo,
+                criado_em
+
+            FROM cliente_arquivos;
+
+            DROP TABLE cliente_arquivos;
+
+            ALTER TABLE
+                cliente_arquivos_nova
+
+            RENAME TO
+                cliente_arquivos;
+
+            CREATE INDEX IF NOT EXISTS
+                indice_cliente_arquivos_cliente
+
+            ON cliente_arquivos(
+                cliente_id
+            );
+
+            CREATE INDEX IF NOT EXISTS
+                indice_cliente_arquivos_tipo
+
+            ON cliente_arquivos(
+                cliente_id,
+                tipo
+            );
+
+            CREATE INDEX IF NOT EXISTS
+                indice_cliente_arquivos_criado_em
+
+            ON cliente_arquivos(
+                criado_em
+            );
+        `);
+
+        banco.exec(`
+            COMMIT;
+        `);
+
+        transacaoAberta = false;
+    } catch (erro) {
+        if (transacaoAberta) {
+            try {
+                banco.exec(`
+                    ROLLBACK;
+                `);
+            } catch {
+                // Mantém o erro original.
+            }
+        }
+
+        throw erro;
+    } finally {
+        banco.exec(`
+            PRAGMA foreign_keys = ON;
+        `);
+    }
+
+    const inconsistencias =
+        banco.prepare(`
+            PRAGMA foreign_key_check
+        `).all();
+
+    if (inconsistencias.length) {
+        throw new Error(
+            "A migração dos arquivos editáveis gerou vínculos inválidos."
+        );
+    }
+}
+
+permitirTipoEditavelArquivosClientes();
+
+/*
+|--------------------------------------------------------------------------
+| Matrizes de bordado
+|--------------------------------------------------------------------------
+*/
+
+function garantirTabelasMatrizesBordado() {
+    /*
+     * Cada registro representa uma versão
+     * específica de uma matriz.
+     */
+
+    banco.exec(`
+        CREATE TABLE IF NOT EXISTS
+            matrizes_bordado (
+                id TEXT PRIMARY KEY,
+
+                cliente_id TEXT
+                    NOT NULL
+                    REFERENCES clientes(id)
+                    ON DELETE CASCADE,
+
+                nome TEXT
+                    NOT NULL,
+
+                versao INTEGER
+                    NOT NULL
+                    DEFAULT 1
+                    CHECK (
+                        versao >= 1
+                    ),
+
+                arquivo_original_id TEXT
+                    REFERENCES cliente_arquivos(id)
+                    ON DELETE SET NULL,
+
+                local_aplicacao TEXT
+                    NOT NULL
+                    DEFAULT '',
+
+                largura_mm REAL
+                    CHECK (
+                        largura_mm IS NULL
+                        OR largura_mm > 0
+                    ),
+
+                altura_mm REAL
+                    CHECK (
+                        altura_mm IS NULL
+                        OR altura_mm > 0
+                    ),
+
+                quantidade_pontos INTEGER
+                    CHECK (
+                        quantidade_pontos IS NULL
+                        OR quantidade_pontos >= 0
+                    ),
+
+                quantidade_cores INTEGER
+                    CHECK (
+                        quantidade_cores IS NULL
+                        OR quantidade_cores >= 0
+                    ),
+
+                status TEXT
+                    NOT NULL
+                    DEFAULT 'rascunho'
+                    CHECK (
+                        status IN (
+                            'rascunho',
+                            'teste',
+                            'aprovada',
+                            'arquivada'
+                        )
+                    ),
+
+                observacoes TEXT
+                    NOT NULL
+                    DEFAULT '',
+
+                criado_em TEXT
+                    NOT NULL,
+
+                atualizado_em TEXT
+                    NOT NULL
+            ) STRICT;
+
+        CREATE INDEX IF NOT EXISTS
+            indice_matrizes_cliente
+
+        ON matrizes_bordado(
+            cliente_id
+        );
+
+        CREATE INDEX IF NOT EXISTS
+            indice_matrizes_cliente_status
+
+        ON matrizes_bordado(
+            cliente_id,
+            status
+        );
+
+        CREATE INDEX IF NOT EXISTS
+            indice_matrizes_atualizado_em
+
+        ON matrizes_bordado(
+            atualizado_em
+        );
+    `);
+
+    /*
+     * Liga os arquivos já armazenados
+     * à matriz correspondente.
+     *
+     * Uma matriz pode possuir:
+     *
+     * - um arquivo editável;
+     * - vários arquivos de máquina.
+     *
+     * Exemplo:
+     *
+     * logo.emb
+     * logo.dst
+     * logo.pes
+     */
+
+    banco.exec(`
+        CREATE TABLE IF NOT EXISTS
+            matriz_arquivos (
+                id TEXT PRIMARY KEY,
+
+                matriz_id TEXT
+                    NOT NULL
+                    REFERENCES matrizes_bordado(id)
+                    ON DELETE CASCADE,
+
+                arquivo_id TEXT
+                    NOT NULL
+                    REFERENCES cliente_arquivos(id)
+                    ON DELETE CASCADE,
+
+                funcao TEXT
+                    NOT NULL
+                    CHECK (
+                        funcao IN (
+                            'editavel',
+                            'maquina'
+                        )
+                    ),
+
+                criado_em TEXT
+                    NOT NULL,
+
+                UNIQUE (
+                    arquivo_id
+                )
+            ) STRICT;
+
+        CREATE INDEX IF NOT EXISTS
+            indice_matriz_arquivos_matriz
+
+        ON matriz_arquivos(
+            matriz_id
+        );
+
+        CREATE INDEX IF NOT EXISTS
+            indice_matriz_arquivos_funcao
+
+        ON matriz_arquivos(
+            matriz_id,
+            funcao
+        );
+
+        /*
+         * Cada matriz pode possuir somente
+         * um arquivo editável.
+         *
+         * Arquivos de máquina podem ser vários:
+         * DST, PES, JEF e outros.
+         */
+
+        CREATE UNIQUE INDEX IF NOT EXISTS
+            indice_matriz_um_editavel
+
+        ON matriz_arquivos(
+            matriz_id
+        )
+
+        WHERE
+            funcao = 'editavel';
+    `);
+}
+
+garantirTabelasMatrizesBordado();
+
 /*
 |--------------------------------------------------------------------------
 | Normalização dos caminhos armazenados
@@ -1918,6 +2309,13 @@ function converterCliente(
                 "convertido"
         );
 
+    const arquivosEditaveis =
+    arquivos.filter(
+        arquivo =>
+            arquivo.tipo ===
+                "editavel"
+    );      
+
     return {
         id:
             cliente.id,
@@ -1982,6 +2380,8 @@ function converterCliente(
         arquivosOriginais,
 
         arquivosConvertidos,
+
+        arquivosEditaveis,
 
         observacoes:
             cliente.observacoes || "",
@@ -2061,16 +2461,25 @@ function lerJson(
                     }
 
                     if (!corpo.trim()) {
+                        request.dadosAuditoria =
+                            {};
+
                         resolve({});
 
                         return;
                     }
 
                     try {
-                        resolve(
+                        const dados =
                             JSON.parse(
                                 corpo
-                            )
+                            );
+
+                        request.dadosAuditoria =
+                            dados;
+
+                        resolve(
+                            dados
                         );
                     } catch {
                         reject(
@@ -2236,6 +2645,12 @@ const arquivosConvertidos =
         "logoConvertida"
     );
 
+    const arquivosEditaveis =
+    arquivosDoFormulario(
+        formulario,
+        "arquivoEditavel"
+    );
+
         return {
             dados: {
     nome:
@@ -2278,6 +2693,8 @@ arquivosOriginais,
 
 arquivosConvertidos,
 
+arquivosEditaveis,
+
 /*
  * Mantém compatibilidade enquanto
  * terminamos as próximas etapas.
@@ -2288,6 +2705,10 @@ arquivoOriginal:
 
 arquivoConvertido:
     arquivosConvertidos[0] ||
+    null,
+
+arquivoEditavel:
+    arquivosEditaveis[0] ||
     null
         };
     }
@@ -2309,10 +2730,16 @@ arquivoConvertido:
         arquivosConvertidos:
             [],
 
+        arquivosEditaveis:
+            [],
+
         arquivoOriginal:
             null,
 
         arquivoConvertido:
+            null,
+
+        arquivoEditavel:
             null
     };
 }
@@ -2369,40 +2796,84 @@ function validarArquivo(
             )
             .toLowerCase();
 
-    const original =
-        tipo === "original";
+    const configuracoes = {
+        original: {
+            extensoes:
+                EXTENSOES_ORIGINAIS,
 
-    const permitidas =
-        original
-            ? EXTENSOES_ORIGINAIS
-            : EXTENSOES_CONVERTIDAS;
+            limite:
+                LIMITE_LOGO_ORIGINAL,
 
-    const limite =
-        original
-            ? LIMITE_LOGO_ORIGINAL
-            : LIMITE_LOGO_CONVERTIDA;
+            mensagemFormato:
+                "Formato da logo original não permitido.",
 
-    if (
-        !permitidas.has(
-            extensao
-        )
-    ) {
+            mensagemLimite:
+                "A logo original deve ter no máximo 12 MB."
+        },
+
+        convertido: {
+            extensoes:
+                EXTENSOES_CONVERTIDAS,
+
+            limite:
+                LIMITE_LOGO_CONVERTIDA,
+
+            mensagemFormato:
+                "Formato do arquivo de máquina não permitido.",
+
+            mensagemLimite:
+                "O arquivo de máquina deve ter no máximo 20 MB."
+        },
+
+        editavel: {
+            extensoes:
+                EXTENSOES_EDITAVEIS,
+
+            limite:
+                LIMITE_ARQUIVO_EDITAVEL,
+
+            mensagemFormato:
+                "O arquivo editável deve estar no formato EMB ou ZIP.",
+
+            mensagemLimite:
+                "O arquivo editável deve ter no máximo 30 MB."
+        }
+    };
+
+    const configuracao =
+        configuracoes[
+            tipo
+        ];
+
+    if (!configuracao) {
         throw new ErroHttp(
             400,
-
-            original
-                ? "Formato da logo original não permitido."
-                : "Formato do arquivo convertido não permitido."
+            "O tipo do arquivo não é válido."
         );
     }
 
-    if (arquivo.size > limite) {
+    if (
+        !configuracao
+            .extensoes
+            .has(
+                extensao
+            )
+    ) {
+        throw new ErroHttp(
+            400,
+            configuracao
+                .mensagemFormato
+        );
+    }
+
+    if (
+        arquivo.size >
+        configuracao.limite
+    ) {
         throw new ErroHttp(
             413,
-
-            original
-                ? "A logo original deve ter no máximo 12 MB."
-                : "O arquivo convertido deve ter no máximo 20 MB."
+            configuracao
+                .mensagemLimite
         );
     }
 
@@ -2454,19 +2925,43 @@ async function salvarArquivo(
         return null;
     }
 
-    const original =
-        arquivoValidado.tipo ===
-        "original";
+    const configuracoes = {
+        original: {
+            pasta:
+                PASTA_ORIGINAIS,
 
-    const pasta =
-        original
-            ? PASTA_ORIGINAIS
-            : PASTA_CONVERTIDOS;
+            subpasta:
+                "originais"
+        },
 
-    const subpasta =
-        original
-            ? "originais"
-            : "convertidos";
+        convertido: {
+            pasta:
+                PASTA_CONVERTIDOS,
+
+            subpasta:
+                "convertidos"
+        },
+
+        editavel: {
+            pasta:
+                PASTA_EDITAVEIS,
+
+            subpasta:
+                "editaveis"
+        }
+    };
+
+    const configuracao =
+        configuracoes[
+            arquivoValidado.tipo
+        ];
+
+    if (!configuracao) {
+        throw new ErroHttp(
+            400,
+            "O tipo do arquivo não é válido."
+        );
+    }
 
     const nomeArmazenado =
         `${randomUUID()}${
@@ -2475,7 +2970,7 @@ async function salvarArquivo(
 
     const caminhoAbsoluto =
         path.join(
-            pasta,
+            configuracao.pasta,
             nomeArmazenado
         );
 
@@ -2501,7 +2996,11 @@ async function salvarArquivo(
                 .nomeOriginal,
 
         caminhoRelativo:
-    `${subpasta}/${nomeArmazenado}`
+            `${
+                configuracao.subpasta
+            }/${
+                nomeArmazenado
+            }`
     };
 }
 
@@ -2983,6 +3482,12 @@ const servicoAutenticacao =
             "production"
     });
 
+const servicoAtividades =
+    criarServicoAtividades({
+        banco,
+        enviarJson
+    });
+
 const servicoOrdens =
     criarServicoOrdens({
         banco,
@@ -2991,8 +3496,42 @@ const servicoOrdens =
         lerJson
     });
 
+let servicoMovimentacoesLinhas =
+    null;
+
 const servicoLinhas =
     criarServicoLinhas({
+        banco,
+        ErroHttp,
+        enviarJson,
+        lerJson,
+
+        registrarEstoqueInicialLinha:
+            dados =>
+                servicoMovimentacoesLinhas
+                    ?.registrarEstoqueInicial(
+                        dados
+                    )
+    });
+
+servicoMovimentacoesLinhas =
+    criarServicoMovimentacoesLinhas({
+        banco,
+        ErroHttp,
+        enviarJson,
+        lerJson
+    });
+
+const servicoMatrizes =
+    criarServicoMatrizes({
+        banco,
+        ErroHttp,
+        enviarJson,
+        lerJson
+    });
+
+const servicoProducao =
+    criarServicoProducao({
         banco,
         ErroHttp,
         enviarJson,
@@ -3125,6 +3664,16 @@ async function criarCliente(
             recebido.dados
         );
 
+    request.dadosAuditoria = {
+    ...(
+        request.dadosAuditoria ||
+        {}
+    ),
+
+    nome:
+        dados.nome
+};
+
     if (
         dados.cpfNumeros &&
         consultasClientes
@@ -3153,8 +3702,16 @@ async function criarCliente(
             "convertido"
         );
 
+    const validadosEditaveis =
+    validarArquivos(
+        recebido
+            .arquivosEditaveis,
+        "editavel"
+        );
+
     let salvosOriginais = [];
     let salvosConvertidos = [];
+    let salvosEditaveis = [];
 
     let transacaoAberta =
         false;
@@ -3168,6 +3725,11 @@ async function criarCliente(
         salvosConvertidos =
             await salvarListaArquivos(
                 validadosConvertidos
+            );
+
+        salvosEditaveis =
+            await salvarListaArquivos(
+            validadosEditaveis
             );
 
         const agora =
@@ -3255,6 +3817,13 @@ async function criarCliente(
             agora
         );
 
+        registrarArquivosCliente(
+            id,
+            "editavel",
+            salvosEditaveis,
+            agora
+        );
+
         banco.exec(`
             COMMIT;
         `);
@@ -3296,7 +3865,8 @@ async function criarCliente(
         await apagarListaArquivos(
             [
                 ...salvosOriginais,
-                ...salvosConvertidos
+                ...salvosConvertidos,
+                ...salvosEditaveis
             ]
         );
 
@@ -3331,6 +3901,16 @@ async function editarCliente(
             recebido.dados
         );
 
+    request.dadosAuditoria = {
+    ...(
+        request.dadosAuditoria ||
+        {}
+    ),
+
+    nome:
+        dados.nome
+};
+
     if (
         dados.cpfNumeros &&
         consultasClientes
@@ -3358,8 +3938,17 @@ async function editarCliente(
             "convertido"
         );
 
+    const validadosEditaveis =
+    validarArquivos(
+        recebido
+            .arquivosEditaveis ||
+            [],
+        "editavel"
+    );
+
     let salvosOriginais = [];
     let salvosConvertidos = [];
+    let salvosEditaveis = [];
     let transacaoAberta = false;
 
     try {
@@ -3371,6 +3960,11 @@ async function editarCliente(
         salvosConvertidos =
             await salvarListaArquivos(
                 validadosConvertidos
+            );
+
+        salvosEditaveis =
+            await salvarListaArquivos(
+                validadosEditaveis
             );
 
         const agora =
@@ -3399,6 +3993,13 @@ async function editarCliente(
             id,
             "convertido",
             salvosConvertidos,
+            agora
+        );
+
+        registrarArquivosCliente(
+            id,
+            "editavel",
+            salvosEditaveis,
             agora
         );
 
@@ -3506,7 +4107,8 @@ async function editarCliente(
 
         await apagarListaArquivos([
             ...salvosOriginais,
-            ...salvosConvertidos
+            ...salvosConvertidos,
+            ...salvosEditaveis
         ]);
 
         throw erro;
@@ -3601,6 +4203,80 @@ async function removerArquivoClientePorId(
         );
     }
 
+    /*
+ * Um arquivo utilizado por uma matriz
+ * ou por uma ordem não pode ser apagado.
+ */
+
+const matrizEmUso =
+    banco.prepare(`
+        SELECT
+            matriz.id,
+            matriz.nome,
+            matriz.versao
+
+        FROM matrizes_bordado
+            AS matriz
+
+        LEFT JOIN matriz_arquivos
+            AS vinculo
+            ON vinculo.matriz_id =
+                matriz.id
+
+        WHERE
+            matriz.arquivo_original_id = ?
+            OR vinculo.arquivo_id = ?
+
+        ORDER BY
+            matriz.atualizado_em DESC,
+            matriz.id ASC
+
+        LIMIT 1
+    `).get(
+        arquivoId,
+        arquivoId
+    );
+
+if (matrizEmUso) {
+    throw new ErroHttp(
+        409,
+        `O arquivo está vinculado à matriz "${
+            matrizEmUso.nome
+        }", versão ${
+            matrizEmUso.versao
+        }. Abra a matriz e remova o vínculo antes de excluir o arquivo.`
+    );
+}
+
+const ordemEmUso =
+    banco.prepare(`
+        SELECT
+            id,
+            numero
+
+        FROM ordens
+
+        WHERE
+            arquivo_original_id = ?
+            OR arquivo_convertido_id = ?
+
+        ORDER BY numero DESC
+
+        LIMIT 1
+    `).get(
+        arquivoId,
+        arquivoId
+    );
+
+if (ordemEmUso) {
+    throw new ErroHttp(
+        409,
+        `O arquivo está sendo utilizado na ordem #${
+            ordemEmUso.numero
+        }. Altere o arquivo da ordem antes de removê-lo.`
+    );
+}
+
     let transacaoAberta =
         false;
 
@@ -3623,10 +4299,15 @@ async function removerArquivoClientePorId(
          * arquivo da lista passa a ser
          * o arquivo principal.
          */
-        atualizarArquivoPrincipalCliente(
-            clienteId,
-            arquivo.tipo
-        );
+        if (
+            arquivo.tipo !==
+                "editavel"
+        ) {
+            atualizarArquivoPrincipalCliente(
+                clienteId,
+                arquivo.tipo
+            );
+        }
 
         banco.exec(`
             COMMIT;
@@ -3659,13 +4340,18 @@ async function removerArquivoClientePorId(
             sucesso:
                 true,
 
-            mensagem:
-                arquivo.tipo ===
+        mensagem:
+            arquivo.tipo ===
                 "original"
 
-                    ? "Logo original removida com sucesso."
+                ? "Logo original removida com sucesso."
 
-                    : "Arquivo convertido removido com sucesso.",
+                : arquivo.tipo ===
+                    "editavel"
+
+                    ? "Arquivo editável removido com sucesso."
+
+                    : "Arquivo de máquina removido com sucesso.",
 
             arquivoRemovido: {
                 id:
@@ -4122,6 +4808,75 @@ async function tratarRequest(
         const pathname =
             url.pathname;
 
+        const sessaoAuditoria =
+    servicoAutenticacao
+        .obterSessao(
+            request
+        );
+
+const deveRegistrarAtividade =
+    Boolean(
+        sessaoAuditoria
+            ?.usuario
+    ) &&
+    pathname.startsWith(
+        "/api/"
+    ) &&
+    pathname !==
+        "/api/atividades" &&
+    (
+        [
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE"
+        ].includes(
+            request.method
+        ) ||
+        (
+            request.method ===
+                "GET" &&
+            pathname ===
+                "/api/backup"
+        )
+    );
+
+if (
+    deveRegistrarAtividade
+) {
+    response.once(
+        "finish",
+        () => {
+            if (
+                response.statusCode <
+                    200 ||
+                response.statusCode >=
+                    300
+            ) {
+                return;
+            }
+
+            try {
+                servicoAtividades
+                    .registrarRequisicao({
+                        request,
+
+                        pathname,
+
+                        usuario:
+                            sessaoAuditoria
+                                .usuario
+                    });
+            } catch (erro) {
+                console.error(
+                    "Não foi possível registrar a atividade:",
+                    erro
+                );
+            }
+        }
+    );
+}
+
         /*
         |--------------------------------------------------------------------------
         | Rotas públicas
@@ -4235,6 +4990,25 @@ async function tratarRequest(
                         request,
                         response
                     );
+
+            servicoAtividades.registrar({
+                usuario,
+
+                acao:
+                    "entrar",
+
+                entidade:
+                    "conta",
+
+                descricao:
+                    "entrou no sistema",
+
+                metodo:
+                    "POST",
+
+                rota:
+                    "/api/auth/login"
+            });
 
             enviarJson(
                 response,
@@ -4362,7 +5136,8 @@ async function tratarRequest(
             "/api/ordens",
             "/api/linhas",
             "/api/backup",
-            "/api/usuarios"
+            "/api/usuarios",
+            "/api/atividades"
         ];
 
         const rotaApiProtegida =
@@ -4388,6 +5163,33 @@ async function tratarRequest(
                     response
                 );
         }
+
+        /*
+|--------------------------------------------------------------------------
+| Histórico de atividades
+|--------------------------------------------------------------------------
+*/
+
+if (
+    request.method ===
+        "GET" &&
+    pathname ===
+        "/api/atividades"
+) {
+    servicoAutenticacao
+        .exigirPermissao(
+            request,
+            response,
+            "usuarios.gerenciar"
+        );
+
+    servicoAtividades.listar(
+        url,
+        response
+    );
+
+    return;
+}
 
         /*
         |--------------------------------------------------------------------------
@@ -4721,20 +5523,80 @@ async function tratarRequest(
             pathname ===
                 "/api/linhas"
         ) {
-            servicoAutenticacao
-                .exigirPermissao(
-                    request,
-                    response,
-                    "linhas.criar"
-                );
+            const sessao =
+                servicoAutenticacao
+                    .exigirPermissao(
+                        request,
+                        response,
+                        "linhas.criar"
+                    );
 
             await servicoLinhas.criar(
                 request,
-                response
+                response,
+                sessao.usuario
             );
 
             return;
         }
+
+        const rotaMovimentacoesLinha =
+    pathname.match(
+        /^\/api\/linhas\/([^/]+)\/movimentacoes$/
+    );
+
+if (rotaMovimentacoesLinha) {
+    const id =
+        decodeURIComponent(
+            rotaMovimentacoesLinha[
+                1
+            ]
+        );
+
+    if (
+        request.method ===
+            "GET"
+    ) {
+        servicoAutenticacao
+            .exigirPermissao(
+                request,
+                response,
+                "linhas.visualizar"
+            );
+
+        servicoMovimentacoesLinhas
+            .listar(
+                url,
+                response,
+                id
+            );
+
+        return;
+    }
+
+    if (
+        request.method ===
+            "POST"
+    ) {
+        const sessao =
+            servicoAutenticacao
+                .exigirPermissao(
+                    request,
+                    response,
+                    "linhas.editar"
+                );
+
+        await servicoMovimentacoesLinhas
+            .registrar(
+                request,
+                response,
+                id,
+                sessao.usuario
+            );
+
+        return;
+    }
+}
 
         const rotaLinha =
             pathname.match(
@@ -4807,6 +5669,188 @@ async function tratarRequest(
                 return;
             }
         }
+
+        /*
+|--------------------------------------------------------------------------
+| Matrizes de bordado
+|--------------------------------------------------------------------------
+*/
+
+if (
+    request.method === "GET" &&
+    pathname ===
+        "/api/matrizes"
+) {
+    servicoAutenticacao
+        .exigirPermissao(
+            request,
+            response,
+            "clientes.visualizar"
+        );
+
+    servicoMatrizes.listar(
+        url,
+        response
+    );
+
+    return;
+}
+
+if (
+    request.method === "POST" &&
+    pathname ===
+        "/api/matrizes"
+) {
+    servicoAutenticacao
+        .exigirPermissao(
+            request,
+            response,
+            "clientes.editar"
+        );
+
+    await servicoMatrizes.criar(
+        request,
+        response
+    );
+
+    return;
+}
+
+const rotaArquivarMatriz =
+    pathname.match(
+        /^\/api\/matrizes\/([^/]+)\/arquivar$/
+    );
+
+if (
+    rotaArquivarMatriz &&
+    request.method ===
+        "PATCH"
+) {
+    servicoAutenticacao
+        .exigirPermissao(
+            request,
+            response,
+            "clientes.editar"
+        );
+
+    const id =
+        decodeURIComponent(
+            rotaArquivarMatriz[
+                1
+            ]
+        );
+
+    servicoMatrizes.arquivar(
+        response,
+        id
+    );
+
+    return;
+}
+
+const rotaRestaurarMatriz =
+    pathname.match(
+        /^\/api\/matrizes\/([^/]+)\/restaurar$/
+    );
+
+if (
+    rotaRestaurarMatriz &&
+    request.method ===
+        "PATCH"
+) {
+    servicoAutenticacao
+        .exigirPermissao(
+            request,
+            response,
+            "clientes.editar"
+        );
+
+    const id =
+        decodeURIComponent(
+            rotaRestaurarMatriz[
+                1
+            ]
+        );
+
+    servicoMatrizes.restaurar(
+        response,
+        id
+    );
+
+    return;
+}
+
+const rotaMatriz =
+    pathname.match(
+        /^\/api\/matrizes\/([^/]+)$/
+    );
+
+if (rotaMatriz) {
+    const id =
+        decodeURIComponent(
+            rotaMatriz[
+                1
+            ]
+        );
+
+    if (
+        request.method ===
+            "GET"
+    ) {
+        servicoAutenticacao
+            .exigirPermissao(
+                request,
+                response,
+                "clientes.visualizar"
+            );
+
+        servicoMatrizes.obter(
+            response,
+            id
+        );
+
+        return;
+    }
+
+    if (
+        request.method ===
+            "PUT"
+    ) {
+        servicoAutenticacao
+            .exigirPermissao(
+                request,
+                response,
+                "clientes.editar"
+            );
+
+        await servicoMatrizes.editar(
+            request,
+            response,
+            id
+        );
+
+        return;
+    }
+
+    if (
+        request.method ===
+            "DELETE"
+    ) {
+        servicoAutenticacao
+            .exigirPermissao(
+                request,
+                response,
+                "clientes.excluir"
+            );
+
+        servicoMatrizes.remover(
+            response,
+            id
+        );
+
+        return;
+    }
+}
 
         /*
         |--------------------------------------------------------------------------
@@ -4925,6 +5969,53 @@ async function tratarRequest(
                 return;
             }
         }
+
+        /*
+|--------------------------------------------------------------------------
+| Configuração da produção
+|--------------------------------------------------------------------------
+*/
+
+if (
+    request.method === "GET" &&
+    pathname ===
+        "/api/producao/configuracao"
+) {
+    servicoAutenticacao
+        .exigirPermissao(
+            request,
+            response,
+            "ordens.visualizar"
+        );
+
+    servicoProducao
+        .obterConfiguracao(
+            response
+        );
+
+    return;
+}
+
+if (
+    request.method === "PUT" &&
+    pathname ===
+        "/api/producao/configuracao"
+) {
+    servicoAutenticacao
+        .exigirPermissao(
+            request,
+            response,
+            "ordens.editar"
+        );
+
+    await servicoProducao
+        .atualizarConfiguracao(
+            request,
+            response
+        );
+
+    return;
+}
 
         /*
         |--------------------------------------------------------------------------
