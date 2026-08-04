@@ -1,0 +1,1287 @@
+const {
+    randomUUID
+} = require("node:crypto");
+
+const TIPOS_MOVIMENTACAO_LINHA =
+    new Set([
+        "entrada",
+        "saida",
+        "ajuste"
+    ]);
+
+function criarServicoMovimentacoesLinhas({
+    banco,
+    ErroHttp,
+    enviarJson,
+    lerJson
+}) {
+
+    banco.exec(`
+        CREATE TABLE IF NOT EXISTS movimentacoes_linhas (
+            id TEXT
+                PRIMARY KEY,
+
+            linha_id TEXT
+                NOT NULL,
+
+            tipo TEXT
+                NOT NULL
+                CHECK (
+                    tipo IN (
+                        'estoque-inicial',
+                        'entrada',
+                        'saida',
+                        'ajuste'
+                    )
+                ),
+
+            quantidade_movimentada REAL
+                NOT NULL,
+
+            estoque_anterior REAL
+                NOT NULL
+                CHECK (
+                    estoque_anterior >= 0
+                ),
+
+            estoque_posterior REAL
+                NOT NULL
+                CHECK (
+                    estoque_posterior >= 0
+                ),
+
+            motivo TEXT
+                NOT NULL,
+
+            observacoes TEXT
+                NOT NULL
+                DEFAULT '',
+
+            ordem_id TEXT
+                REFERENCES ordens(id)
+                ON DELETE SET NULL,
+
+            ordem_numero INTEGER,
+
+            ordem_cliente_nome TEXT
+                NOT NULL
+                DEFAULT '',
+
+            usuario_id TEXT
+                NOT NULL
+                DEFAULT '',
+
+            usuario_nome TEXT
+                NOT NULL
+                DEFAULT 'Sistema',
+
+            criado_em TEXT
+                NOT NULL,
+
+            FOREIGN KEY (
+                linha_id
+            ) REFERENCES catalogo_linhas(id)
+                ON DELETE RESTRICT
+        ) STRICT;
+
+        CREATE INDEX IF NOT EXISTS
+            indice_movimentacoes_linhas_linha_data
+
+        ON movimentacoes_linhas (
+            linha_id,
+            criado_em DESC
+        );
+
+        CREATE INDEX IF NOT EXISTS
+            indice_movimentacoes_linhas_data
+
+        ON movimentacoes_linhas (
+            criado_em DESC
+        );
+    `);
+
+    function garantirColunaMovimentacao(
+    nome,
+    definicao
+) {
+    const existe =
+        banco
+            .prepare(
+                "PRAGMA table_info(movimentacoes_linhas)"
+            )
+            .all()
+            .some(
+                coluna =>
+                    coluna.name === nome
+            );
+
+    if (existe) {
+        return;
+    }
+
+    banco.exec(`
+        ALTER TABLE movimentacoes_linhas
+        ADD COLUMN ${nome}
+        ${definicao}
+    `);
+}
+
+garantirColunaMovimentacao(
+    "ordem_id",
+    `
+        TEXT
+        REFERENCES ordens(id)
+        ON DELETE SET NULL
+    `
+);
+
+garantirColunaMovimentacao(
+    "ordem_numero",
+    "INTEGER"
+);
+
+garantirColunaMovimentacao(
+    "ordem_cliente_nome",
+    `
+        TEXT
+        NOT NULL
+        DEFAULT ''
+    `
+);
+
+banco.exec(`
+    CREATE INDEX IF NOT EXISTS
+        indice_movimentacoes_linhas_ordem
+
+    ON movimentacoes_linhas (
+        ordem_id,
+        criado_em DESC
+    );
+`);
+
+    const consultarLinha =
+        banco.prepare(`
+            SELECT
+                id,
+                marca,
+                codigo,
+                nome,
+                unidade,
+                estoque,
+                estoque_minimo,
+                ativo
+
+            FROM catalogo_linhas
+
+            WHERE id = ?
+
+            LIMIT 1
+        `);
+
+    const consultarOrdemPorId =
+    banco.prepare(`
+        SELECT
+            id,
+            numero,
+            cliente_nome,
+            descricao,
+            status,
+            linha
+
+        FROM ordens
+
+        WHERE id = ?
+
+        LIMIT 1
+    `);
+
+const consultarOrdensProducao =
+    banco.prepare(`
+        SELECT
+            id,
+            numero,
+            cliente_nome,
+            descricao,
+            status,
+            linha
+
+        FROM ordens
+
+        WHERE status IN (
+            'pronto-producao',
+            'em-producao',
+            'concluido'
+        )
+
+        ORDER BY
+            CASE status
+                WHEN 'em-producao'
+                    THEN 1
+
+                WHEN 'pronto-producao'
+                    THEN 2
+
+                ELSE 3
+            END,
+
+            numero DESC
+    `);
+
+const consultarConsumoOrdemLinha =
+    banco.prepare(`
+        SELECT
+            COALESCE(
+                ABS(
+                    SUM(
+                        quantidade_movimentada
+                    )
+                ),
+                0
+            ) AS total
+
+        FROM movimentacoes_linhas
+
+        WHERE
+            linha_id = ?
+            AND ordem_id = ?
+            AND tipo = 'saida'
+    `);
+
+    const atualizarEstoqueLinha =
+        banco.prepare(`
+            UPDATE catalogo_linhas
+
+            SET
+                estoque = ?,
+                atualizado_em = ?
+
+            WHERE id = ?
+        `);
+
+    const inserirMovimentacao =
+    banco.prepare(`
+        INSERT INTO movimentacoes_linhas (
+            id,
+            linha_id,
+            tipo,
+            quantidade_movimentada,
+            estoque_anterior,
+            estoque_posterior,
+            motivo,
+            observacoes,
+            ordem_id,
+            ordem_numero,
+            ordem_cliente_nome,
+            usuario_id,
+            usuario_nome,
+            criado_em
+        )
+        VALUES (
+            ?, ?, ?, ?, ?, ?,
+            ?, ?, ?, ?, ?, ?,
+            ?, ?
+        )
+    `);
+
+    const consultarMovimentacaoPorId =
+    banco.prepare(`
+        SELECT
+            id,
+            linha_id,
+            tipo,
+            quantidade_movimentada,
+            estoque_anterior,
+            estoque_posterior,
+            motivo,
+            observacoes,
+            ordem_id,
+            ordem_numero,
+            ordem_cliente_nome,
+            usuario_id,
+            usuario_nome,
+            criado_em
+
+        FROM movimentacoes_linhas
+
+        WHERE id = ?
+
+        LIMIT 1
+    `);
+
+    function limparTexto(
+        valor
+    ) {
+        return String(
+            valor ?? ""
+        ).trim();
+    }
+
+    function converterNumeroNaoNegativo(
+        valor,
+        nomeCampo
+    ) {
+        const texto =
+            limparTexto(
+                valor
+            ).replace(
+                ",",
+                "."
+            );
+
+        if (!texto) {
+            throw new ErroHttp(
+                400,
+                `Informe ${nomeCampo}.`
+            );
+        }
+
+        const numero =
+            Number(
+                texto
+            );
+
+        if (
+            !Number.isFinite(
+                numero
+            ) ||
+            numero < 0
+        ) {
+            throw new ErroHttp(
+                400,
+                `Informe um valor válido para ${nomeCampo}.`
+            );
+        }
+
+        return numero;
+    }
+
+    function arredondarQuantidade(
+        valor
+    ) {
+        return Math.round(
+            Number(valor) * 10000
+        ) / 10000;
+    }
+
+    function obterNomeUsuario(
+        usuario
+    ) {
+        return limparTexto(
+            usuario?.nome ||
+            usuario?.usuario ||
+            "Sistema"
+        ).slice(
+            0,
+            120
+        ) || "Sistema";
+    }
+
+    function normalizarReferenciaLinha(
+    valor
+) {
+    return limparTexto(
+        valor
+    )
+        .normalize(
+            "NFD"
+        )
+        .replace(
+            /[\u0300-\u036f]/g,
+            ""
+        )
+        .replace(
+            /\s+/g,
+            " "
+        )
+        .toLowerCase();
+}
+
+function criarReferenciaLinha(
+    linha
+) {
+    return [
+        linha?.marca,
+        linha?.codigo,
+        linha?.nome
+    ]
+        .filter(
+            Boolean
+        )
+        .join(
+            " — "
+        );
+}
+
+function ordemUtilizaLinha(
+    ordem,
+    linha
+) {
+    const referencia =
+        normalizarReferenciaLinha(
+            criarReferenciaLinha(
+                linha
+            )
+        );
+
+    const referenciaMarcaCodigo =
+        normalizarReferenciaLinha(
+            [
+                linha?.marca,
+                linha?.codigo
+            ]
+                .filter(
+                    Boolean
+                )
+                .join(
+                    " — "
+                )
+        );
+
+    if (!referencia) {
+        return false;
+    }
+
+    return String(
+        ordem?.linha ||
+        ""
+    )
+        .split(
+            /\r?\n/
+        )
+        .map(
+            normalizarReferenciaLinha
+        )
+        .some(
+            item =>
+                item === referencia ||
+                (
+                    referenciaMarcaCodigo &&
+                    item.startsWith(
+                        `${referenciaMarcaCodigo} —`
+                    )
+                )
+        );
+}
+
+function converterOrdemDisponivel(
+    ordem,
+    linhaId
+) {
+    const rotulosStatus = {
+        "pronto-producao":
+            "Pronto para produzir",
+
+        "em-producao":
+            "Em produção",
+
+        concluido:
+            "Concluído"
+    };
+
+    const quantidadeConsumida =
+        Number(
+            consultarConsumoOrdemLinha
+                .get(
+                    linhaId,
+                    ordem.id
+                )
+                ?.total ||
+            0
+        );
+
+    return {
+        id:
+            ordem.id,
+
+        numero:
+            Number(
+                ordem.numero
+            ),
+
+        numeroTexto:
+            `#${String(
+                ordem.numero
+            ).padStart(
+                4,
+                "0"
+            )}`,
+
+        clienteNome:
+            ordem.cliente_nome,
+
+        descricao:
+            ordem.descricao,
+
+        status:
+            ordem.status,
+
+        statusTexto:
+            rotulosStatus[
+                ordem.status
+            ] ||
+            ordem.status,
+
+        quantidadeConsumida
+    };
+}
+
+function listarOrdensDisponiveis(
+    linha
+) {
+    return consultarOrdensProducao
+        .all()
+        .filter(
+            ordem =>
+                ordemUtilizaLinha(
+                    ordem,
+                    linha
+                )
+        )
+        .map(
+            ordem =>
+                converterOrdemDisponivel(
+                    ordem,
+                    linha.id
+                )
+        );
+}
+
+    function converterMovimentacao(
+        movimentacao
+    ) {
+        if (!movimentacao) {
+            return null;
+        }
+
+        const rotulos = {
+            "estoque-inicial":
+                "Estoque inicial",
+
+            entrada:
+                "Entrada",
+
+            saida:
+                "Saída",
+
+            ajuste:
+                "Ajuste"
+        };
+
+        return {
+            id:
+                movimentacao.id,
+
+            linhaId:
+                movimentacao.linha_id,
+
+            tipo:
+                movimentacao.tipo,
+
+            tipoTexto:
+                rotulos[
+                    movimentacao.tipo
+                ] ||
+                movimentacao.tipo,
+
+            quantidadeMovimentada:
+                Number(
+                    movimentacao
+                        .quantidade_movimentada
+                ),
+
+            quantidadeAbsoluta:
+                Math.abs(
+                    Number(
+                        movimentacao
+                            .quantidade_movimentada
+                    )
+                ),
+
+            estoqueAnterior:
+                Number(
+                    movimentacao
+                        .estoque_anterior
+                ),
+
+            estoquePosterior:
+                Number(
+                    movimentacao
+                        .estoque_posterior
+                ),
+
+            motivo:
+                movimentacao.motivo,
+
+            observacoes:
+                movimentacao.observacoes,
+
+            ordemId:
+                movimentacao.ordem_id ||
+                "",
+
+            ordemNumero:
+                movimentacao.ordem_numero ===
+                    null ||
+                movimentacao.ordem_numero ===
+                    undefined
+                    ? null
+                    : Number(
+                        movimentacao
+                            .ordem_numero
+                    ),
+
+            ordemNumeroTexto:
+                movimentacao.ordem_numero ===
+                    null ||
+                movimentacao.ordem_numero ===
+                    undefined
+                    ? ""
+                    : `#${String(
+                        movimentacao
+                            .ordem_numero
+                    ).padStart(
+                        4,
+                        "0"
+                    )}`,
+
+            ordemClienteNome:
+                movimentacao
+                    .ordem_cliente_nome ||
+                "",
+
+            ordemVinculada:
+                movimentacao.ordem_numero !==
+                    null &&
+                movimentacao.ordem_numero !==
+                    undefined,
+
+            usuarioId:
+                movimentacao.usuario_id,
+
+            usuarioNome:
+                movimentacao.usuario_nome,
+
+            criadoEm:
+                movimentacao.criado_em
+        };
+    }
+
+    function inserirRegistro({
+        linhaId,
+        tipo,
+        quantidadeMovimentada,
+        estoqueAnterior,
+        estoquePosterior,
+        motivo,
+        observacoes = "",
+        ordem = null,
+        usuario = null,
+        criadoEm = null
+    }) {
+        const id =
+            randomUUID();
+
+        inserirMovimentacao.run(
+            id,
+            linhaId,
+            tipo,
+
+            arredondarQuantidade(
+                quantidadeMovimentada
+            ),
+
+            arredondarQuantidade(
+                estoqueAnterior
+            ),
+
+            arredondarQuantidade(
+                estoquePosterior
+            ),
+
+            limparTexto(
+                motivo
+            ).slice(
+                0,
+                160
+            ),
+
+            limparTexto(
+                observacoes
+            ).slice(
+                0,
+                1000
+            ),
+
+            ordem?.id ||
+                null,
+
+            ordem?.numero ??
+                null,
+
+            limparTexto(
+                ordem?.cliente_nome
+            ).slice(
+                0,
+                180
+            ),
+
+            limparTexto(
+                usuario?.id
+            ).slice(
+                0,
+                100
+            ),
+
+            obterNomeUsuario(
+                usuario
+            ),
+
+            criadoEm ||
+                new Date()
+                    .toISOString()
+        );
+
+        return consultarMovimentacaoPorId
+            .get(
+                id
+            );
+    }
+
+    function registrarEstoqueInicial({
+        linhaId,
+        quantidade,
+        usuario = null,
+        criadoEm = null,
+        motivo =
+            "Estoque inicial informado no cadastro."
+    }) {
+        const estoque =
+            arredondarQuantidade(
+                Number(
+                    quantidade || 0
+                )
+            );
+
+        if (estoque <= 0) {
+            return null;
+        }
+
+        return inserirRegistro({
+            linhaId,
+
+            tipo:
+                "estoque-inicial",
+
+            quantidadeMovimentada:
+                estoque,
+
+            estoqueAnterior:
+                0,
+
+            estoquePosterior:
+                estoque,
+
+            motivo,
+            usuario,
+            criadoEm
+        });
+    }
+
+    function migrarEstoquesExistentes() {
+    /*
+     * Busca somente linhas que possuem
+     * estoque, mas ainda não possuem
+     * nenhuma movimentação.
+     *
+     * Assim, a migração pode ser executada
+     * novamente sem duplicar registros.
+     */
+
+    const linhasExistentes =
+        banco
+            .prepare(`
+                SELECT
+                    linha.id,
+                    linha.estoque,
+                    linha.criado_em
+
+                FROM catalogo_linhas
+                    AS linha
+
+                WHERE
+                    linha.estoque > 0
+
+                    AND NOT EXISTS (
+                        SELECT 1
+
+                        FROM movimentacoes_linhas
+                            AS movimentacao
+
+                        WHERE
+                            movimentacao.linha_id =
+                            linha.id
+                    )
+            `)
+            .all();
+
+    if (!linhasExistentes.length) {
+        return;
+    }
+
+    banco.exec(
+        "BEGIN IMMEDIATE"
+    );
+
+    try {
+        for (
+            const linha
+            of linhasExistentes
+        ) {
+            registrarEstoqueInicial({
+                linhaId:
+                    linha.id,
+
+                quantidade:
+                    linha.estoque,
+
+                criadoEm:
+                    linha.criado_em,
+
+                motivo:
+                    "Estoque existente antes da implantação do histórico."
+            });
+        }
+
+        banco.exec(
+            "COMMIT"
+        );
+    } catch (erro) {
+        banco.exec(
+            "ROLLBACK"
+        );
+
+        throw erro;
+    }
+}
+
+    function listar(
+        url,
+        response,
+        linhaId
+    ) {
+        const linha =
+            consultarLinha.get(
+                linhaId
+            );
+
+        if (!linha) {
+            throw new ErroHttp(
+                404,
+                "Linha não encontrada."
+            );
+        }
+
+        const limiteRecebido =
+            Number(
+                url.searchParams.get(
+                    "limite"
+                ) || 100
+            );
+
+        const limite =
+            Number.isInteger(
+                limiteRecebido
+            )
+                ? Math.min(
+                    300,
+                    Math.max(
+                        1,
+                        limiteRecebido
+                    )
+                )
+                : 100;
+
+        const movimentacoes =
+            banco
+                .prepare(`
+                    SELECT
+                        id,
+                        linha_id,
+                        tipo,
+                        quantidade_movimentada,
+                        estoque_anterior,
+                        estoque_posterior,
+                        motivo,
+                        observacoes,
+                        ordem_id,
+                        ordem_numero,
+                        ordem_cliente_nome,
+                        usuario_id,
+                        usuario_nome,
+                        criado_em
+
+                    FROM movimentacoes_linhas
+
+                    WHERE linha_id = ?
+
+                    ORDER BY
+                        criado_em DESC,
+                        rowid DESC
+
+                    LIMIT ?
+                `)
+                .all(
+                    linhaId,
+                    limite
+                )
+                .map(
+                    converterMovimentacao
+                );
+
+        enviarJson(
+            response,
+            200,
+            {
+                sucesso: true,
+
+                linha: {
+                    id:
+                        linha.id,
+
+                    marca:
+                        linha.marca,
+
+                    codigo:
+                        linha.codigo,
+
+                    nome:
+                        linha.nome,
+
+                    unidade:
+                        linha.unidade,
+
+                    estoque:
+                        Number(
+                            linha.estoque
+                        ),
+
+                    estoqueMinimo:
+                        Number(
+                            linha.estoque_minimo
+                        ),
+
+                    ativo:
+                        Boolean(
+                            linha.ativo
+                        )
+                },
+
+                movimentacoes,
+
+                ordensDisponiveis:
+                    listarOrdensDisponiveis(
+                        linha
+                    )
+            }
+        );
+    }
+
+    async function registrar(
+        request,
+        response,
+        linhaId,
+        usuario = null
+    ) {
+        const linha =
+            consultarLinha.get(
+                linhaId
+            );
+
+        if (!linha) {
+            throw new ErroHttp(
+                404,
+                "Linha não encontrada."
+            );
+        }
+
+        const dados =
+            await lerJson(
+                request
+            );
+
+        const tipo =
+            limparTexto(
+                dados.tipo
+            ).toLowerCase();
+
+        if (
+            !TIPOS_MOVIMENTACAO_LINHA
+                .has(
+                    tipo
+                )
+        ) {
+            throw new ErroHttp(
+                400,
+                "O tipo da movimentação não é válido."
+            );
+        }
+
+        const motivo =
+            limparTexto(
+                dados.motivo
+            );
+
+        if (
+            motivo.length < 2 ||
+            motivo.length > 160
+        ) {
+            throw new ErroHttp(
+                400,
+                "O motivo precisa ter entre 2 e 160 caracteres."
+            );
+        }
+
+        const observacoes =
+            limparTexto(
+                dados.observacoes
+            );
+
+        if (
+            observacoes.length > 1000
+        ) {
+            throw new ErroHttp(
+                400,
+                "As observações podem ter no máximo 1000 caracteres."
+            );
+        }
+
+        const ordemId =
+    limparTexto(
+        dados.ordemId
+    );
+
+if (
+    tipo !== "saida" &&
+    ordemId
+) {
+    throw new ErroHttp(
+        400,
+        "Somente uma saída pode ser vinculada a uma ordem."
+    );
+}
+
+let estoqueAnterior;
+let estoquePosterior;
+let quantidadeMovimentada;
+let movimentacao;
+let ordem = null;
+
+banco.exec(
+    "BEGIN IMMEDIATE"
+);
+
+try {
+    /*
+     * Consulta novamente após bloquear
+     * o banco para evitar estoque
+     * desatualizado em movimentações
+     * realizadas ao mesmo tempo.
+     */
+
+    const linhaAtual =
+        consultarLinha.get(
+            linhaId
+        );
+
+    if (!linhaAtual) {
+        throw new ErroHttp(
+            404,
+            "Linha não encontrada."
+        );
+    }
+
+    if (ordemId) {
+    ordem =
+        consultarOrdemPorId.get(
+            ordemId
+        );
+
+    if (!ordem) {
+        throw new ErroHttp(
+            404,
+            "A ordem selecionada não foi encontrada."
+        );
+    }
+
+    if (
+        ![
+            "pronto-producao",
+            "em-producao",
+            "concluido"
+        ].includes(
+            ordem.status
+        )
+    ) {
+        throw new ErroHttp(
+            400,
+            "A ordem selecionada não está disponível para consumo de linha."
+        );
+    }
+
+    if (
+        !ordemUtilizaLinha(
+            ordem,
+            linhaAtual
+        )
+    ) {
+        throw new ErroHttp(
+            400,
+            "Esta linha não está vinculada à ordem selecionada."
+        );
+    }
+}
+
+    estoqueAnterior =
+        arredondarQuantidade(
+            linhaAtual.estoque
+        );
+
+    estoquePosterior =
+        estoqueAnterior;
+
+    if (
+        tipo === "ajuste"
+    ) {
+        estoquePosterior =
+            arredondarQuantidade(
+                converterNumeroNaoNegativo(
+                    dados.quantidade,
+                    "o novo estoque"
+                )
+            );
+    } else {
+        const quantidade =
+            arredondarQuantidade(
+                converterNumeroNaoNegativo(
+                    dados.quantidade,
+                    "a quantidade"
+                )
+            );
+
+        if (quantidade <= 0) {
+            throw new ErroHttp(
+                400,
+                "A quantidade da movimentação precisa ser maior que zero."
+            );
+        }
+
+        estoquePosterior =
+            tipo === "entrada"
+                ? arredondarQuantidade(
+                    estoqueAnterior +
+                    quantidade
+                )
+                : arredondarQuantidade(
+                    estoqueAnterior -
+                    quantidade
+                );
+    }
+
+    if (
+        estoquePosterior < 0
+    ) {
+        throw new ErroHttp(
+            400,
+            "A saída informada é maior que o estoque disponível."
+        );
+    }
+
+    if (
+        estoquePosterior ===
+        estoqueAnterior
+    ) {
+        throw new ErroHttp(
+            400,
+            "A movimentação não altera o estoque atual."
+        );
+    }
+
+    quantidadeMovimentada =
+        arredondarQuantidade(
+            estoquePosterior -
+            estoqueAnterior
+        );
+
+    const agora =
+        new Date()
+            .toISOString();
+
+    atualizarEstoqueLinha.run(
+        estoquePosterior,
+        agora,
+        linhaId
+    );
+
+    movimentacao =
+        inserirRegistro({
+            linhaId,
+            tipo,
+            quantidadeMovimentada,
+            estoqueAnterior,
+            estoquePosterior,
+            motivo,
+            observacoes,
+            ordem,
+            usuario,
+
+            criadoEm:
+                agora
+        });
+
+    banco.exec(
+        "COMMIT"
+    );
+} catch (erro) {
+    banco.exec(
+        "ROLLBACK"
+    );
+
+    throw erro;
+}
+
+        enviarJson(
+            response,
+            201,
+            {
+                sucesso: true,
+
+                mensagem:
+                    tipo === "entrada"
+                        ? "Entrada registrada com sucesso."
+                        : tipo === "saida"
+                            ? "Saída registrada com sucesso."
+                            : "Estoque ajustado com sucesso.",
+
+                estoqueAtual:
+                    estoquePosterior,
+
+                movimentacao:
+                    converterMovimentacao(
+                        movimentacao
+                    )
+            }
+        );
+    }
+
+    migrarEstoquesExistentes();
+
+    return {
+        listar,
+        registrar,
+        registrarEstoqueInicial
+    };
+}
+
+module.exports = {
+    criarServicoMovimentacoesLinhas
+};
