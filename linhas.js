@@ -14,7 +14,8 @@ function criarServicoLinhas({
     banco,
     ErroHttp,
     enviarJson,
-    lerJson
+    lerJson,
+    registrarEstoqueInicialLinha = null
 }) {
     /*
     |--------------------------------------------------------------------------
@@ -493,18 +494,20 @@ const valorCentavos =
             ).toLowerCase();
 
         const estoque =
-            Object.hasOwn(
-                dados,
-                "estoque"
+    linhaAtual
+        ? Number(
+            linhaAtual.estoque ??
+            0
+        )
+        : Object.hasOwn(
+            dados,
+            "estoque"
+        )
+            ? converterNumero(
+                dados.estoque,
+                "o estoque inicial"
             )
-                ? converterNumero(
-                    dados.estoque,
-                    "o estoque"
-                )
-                : Number(
-                    linhaAtual?.estoque ??
-                    0
-                );
+            : 0;
 
         const estoqueMinimo =
             Object.hasOwn(
@@ -908,7 +911,8 @@ parametros.push(
 
     async function criar(
         request,
-        response
+        response,
+        usuario = null
     ) {
         const dadosRecebidos =
             await lerJson(
@@ -927,22 +931,56 @@ parametros.push(
             new Date()
                 .toISOString();
 
-        inserirLinha.run(
-    id,
-    dados.marca,
-    dados.codigo,
-    dados.nome,
-    dados.fornecedor,
-    dados.valorCentavos,
-    dados.corHex,
-    dados.unidade,
-    dados.estoque,
-    dados.estoqueMinimo,
-    dados.ativo,
-    dados.observacoes,
-    agora,
-    agora
+        banco.exec(
+    "BEGIN IMMEDIATE"
 );
+
+try {
+    inserirLinha.run(
+        id,
+        dados.marca,
+        dados.codigo,
+        dados.nome,
+        dados.fornecedor,
+        dados.valorCentavos,
+        dados.corHex,
+        dados.unidade,
+        dados.estoque,
+        dados.estoqueMinimo,
+        dados.ativo,
+        dados.observacoes,
+        agora,
+        agora
+    );
+
+    if (
+        dados.estoque > 0 &&
+        typeof registrarEstoqueInicialLinha ===
+            "function"
+    ) {
+        registrarEstoqueInicialLinha({
+            linhaId:
+                id,
+
+            quantidade:
+                dados.estoque,
+
+            usuario,
+            criadoEm:
+                agora
+        });
+    }
+
+    banco.exec(
+        "COMMIT"
+    );
+} catch (erro) {
+    banco.exec(
+        "ROLLBACK"
+    );
+
+    throw erro;
+}
 
         enviarJson(
             response,
@@ -1055,9 +1093,33 @@ parametros.push(
             );
         }
 
-        excluirLinha.run(
-            id
-        );
+        const totalMovimentacoes =
+    Number(
+        banco
+            .prepare(`
+                SELECT
+                    COUNT(*) AS total
+
+                FROM movimentacoes_linhas
+
+                WHERE linha_id = ?
+            `)
+            .get(
+                id
+            )?.total ||
+        0
+    );
+
+if (totalMovimentacoes > 0) {
+    throw new ErroHttp(
+        409,
+        "Esta linha possui histórico de estoque e não pode ser excluída. Desative a linha para preservar as movimentações."
+    );
+}
+
+excluirLinha.run(
+    id
+);
 
         enviarJson(
             response,
