@@ -12,6 +12,8 @@ let prioridadeOrdemAtual = "todas";
 let ordemDetalhesAtualId = "";
 let cadastrandoClientePelaOrdem = false;
 let matrizOrdemSelecionadaId = "";
+let menuOpcoesOrdemAtualId = "";
+let botaoMenuOpcoesOrdemAtual = null;
 
 window.obterOrdensSistema =
     function () {
@@ -652,6 +654,9 @@ const filtroPrioridadeOrdens =
 
 const quantidadeOrdens =
     $("#quantidadeOrdens");
+
+const menuOpcoesOrdem =
+    $("#menuOpcoesOrdem");
 
 const totalOrdensAbertas =
     $("#totalOrdensAbertas");
@@ -4838,6 +4843,490 @@ const confirmou =
 
 /*
 |--------------------------------------------------------------------------
+| Menu de opções das ordens
+|--------------------------------------------------------------------------
+*/
+
+function possuiPermissaoOrdem(
+    permissao
+) {
+    return (
+        typeof possuiPermissaoSistema !==
+            "function" ||
+        possuiPermissaoSistema(
+            permissao
+        )
+    );
+}
+
+function fecharMenuOpcoesOrdem({
+    devolverFoco = false
+} = {}) {
+    if (!menuOpcoesOrdem) {
+        return;
+    }
+
+    menuOpcoesOrdem.classList.remove(
+        "aberto"
+    );
+
+    menuOpcoesOrdem.setAttribute(
+        "aria-hidden",
+        "true"
+    );
+
+    menuOpcoesOrdem.innerHTML =
+        "";
+
+    if (botaoMenuOpcoesOrdemAtual) {
+        botaoMenuOpcoesOrdemAtual
+            .setAttribute(
+                "aria-expanded",
+                "false"
+            );
+
+        if (devolverFoco) {
+            botaoMenuOpcoesOrdemAtual
+                .focus();
+        }
+    }
+
+    menuOpcoesOrdemAtualId =
+        "";
+
+    botaoMenuOpcoesOrdemAtual =
+        null;
+}
+
+function posicionarMenuOpcoesOrdem() {
+    if (
+        !menuOpcoesOrdem ||
+        !botaoMenuOpcoesOrdemAtual ||
+        !menuOpcoesOrdem.classList
+            .contains(
+                "aberto"
+            )
+    ) {
+        return;
+    }
+
+    const margem =
+        12;
+
+    const espacamento =
+        8;
+
+    /*
+     * O sistema usa zoom de 125% no
+     * computador. As coordenadas retornadas
+     * pelo navegador já estão ampliadas,
+     * enquanto left e top precisam receber
+     * valores anteriores à ampliação.
+     */
+
+    const zoomInterface =
+        Number.parseFloat(
+            getComputedStyle(
+                document.documentElement
+            ).zoom
+        );
+
+    const zoom =
+        Number.isFinite(
+            zoomInterface
+        ) &&
+        zoomInterface > 0
+            ? zoomInterface
+            : 1;
+
+    const retanguloBotao =
+        botaoMenuOpcoesOrdemAtual
+            .getBoundingClientRect();
+
+    const larguraMenu =
+        menuOpcoesOrdem.offsetWidth *
+        zoom;
+
+    const alturaMenu =
+        menuOpcoesOrdem.offsetHeight *
+        zoom;
+
+    let esquerda =
+        retanguloBotao.right -
+        larguraMenu;
+
+    let topo =
+        retanguloBotao.bottom +
+        espacamento;
+
+    /*
+     * Quando não houver espaço abaixo,
+     * abre acima do botão.
+     */
+
+    if (
+        topo + alturaMenu >
+        window.innerHeight -
+            margem
+    ) {
+        topo =
+            retanguloBotao.top -
+            alturaMenu -
+            espacamento;
+    }
+
+    esquerda =
+        Math.max(
+            margem,
+            Math.min(
+                esquerda,
+                window.innerWidth -
+                    larguraMenu -
+                    margem
+            )
+        );
+
+    topo =
+        Math.max(
+            margem,
+            Math.min(
+                topo,
+                window.innerHeight -
+                    alturaMenu -
+                    margem
+            )
+        );
+
+    /*
+     * Converte as coordenadas visuais
+     * para as coordenadas anteriores
+     * ao zoom aplicado no HTML.
+     */
+
+    menuOpcoesOrdem.style.left =
+        `${Math.round(
+            esquerda / zoom
+        )}px`;
+
+    menuOpcoesOrdem.style.top =
+        `${Math.round(
+            topo / zoom
+        )}px`;
+}
+
+function criarItemMenuOpcoesOrdem({
+    acao,
+    ordemId,
+    iconeNome,
+    texto,
+    classe = ""
+}) {
+    return `
+        <button
+            class="item-menu-opcoes-ordem ${escaparHtml(
+                classe
+            )}"
+            data-acao-menu-ordem="${escaparHtml(
+                acao
+            )}"
+            data-ordem-id="${escaparHtml(
+                ordemId
+            )}"
+            type="button"
+            role="menuitem"
+        >
+            ${icone(
+                iconeNome
+            )}
+
+            <span>
+                ${escaparHtml(
+                    texto
+                )}
+            </span>
+        </button>
+    `;
+}
+
+function abrirMenuOpcoesOrdem(
+    id,
+    botao
+) {
+    if (
+        !menuOpcoesOrdem ||
+        !botao
+    ) {
+        return;
+    }
+
+    /*
+     * Clicar novamente no mesmo botão
+     * fecha o menu.
+     */
+
+    if (
+        menuOpcoesOrdemAtualId ===
+            id &&
+        menuOpcoesOrdem.classList
+            .contains(
+                "aberto"
+            )
+    ) {
+        fecharMenuOpcoesOrdem();
+
+        return;
+    }
+
+    const ordem =
+        ordens.find(
+            item =>
+                item.id === id
+        );
+
+    if (!ordem) {
+        mostrarNotificacao(
+            "Ordem não encontrada",
+            "Atualize a página e tente novamente.",
+            "erro"
+        );
+
+        return;
+    }
+
+    fecharMenuOpcoesOrdem();
+
+    const podeEditar =
+        possuiPermissaoOrdem(
+            "ordens.editar"
+        );
+
+    const podeDuplicar =
+        possuiPermissaoOrdem(
+            "ordens.criar"
+        );
+
+    const podeExcluir =
+        possuiPermissaoOrdem(
+            "ordens.excluir"
+        );
+
+    const proximaEtapa =
+        podeEditar
+            ? obterProximaEtapaOrdem(
+                ordem
+            )
+            : null;
+
+    const itens = [
+        criarItemMenuOpcoesOrdem({
+            acao:
+                "visualizar",
+
+            ordemId:
+                ordem.id,
+
+            iconeNome:
+                "eye",
+
+            texto:
+                "Visualizar detalhes"
+        })
+    ];
+
+    if (proximaEtapa) {
+        itens.push(
+            criarItemMenuOpcoesOrdem({
+                acao:
+                    "avancar",
+
+                ordemId:
+                    ordem.id,
+
+                iconeNome:
+                    "check",
+
+                texto:
+                    `Avançar para ${proximaEtapa.proximoTexto}`,
+
+                classe:
+                    "avancar"
+            })
+        );
+    }
+
+    if (podeEditar) {
+        itens.push(
+            criarItemMenuOpcoesOrdem({
+                acao:
+                    "editar",
+
+                ordemId:
+                    ordem.id,
+
+                iconeNome:
+                    "edit",
+
+                texto:
+                    "Editar ordem"
+            })
+        );
+    }
+
+    itens.push(
+        criarItemMenuOpcoesOrdem({
+            acao:
+                "imprimir",
+
+            ordemId:
+                ordem.id,
+
+            iconeNome:
+                "file",
+
+            texto:
+                "Imprimir ficha de produção"
+        })
+    );
+
+    if (podeDuplicar) {
+        itens.push(
+            criarItemMenuOpcoesOrdem({
+                acao:
+                    "duplicar",
+
+                ordemId:
+                    ordem.id,
+
+                iconeNome:
+                    "plus",
+
+                texto:
+                    "Duplicar ordem"
+            })
+        );
+    }
+
+    if (podeExcluir) {
+        itens.push(
+            `
+                <div
+                    class="separador-menu-opcoes-ordem"
+                    role="separator"
+                ></div>
+            `,
+
+            criarItemMenuOpcoesOrdem({
+                acao:
+                    "excluir",
+
+                ordemId:
+                    ordem.id,
+
+                iconeNome:
+                    "trash",
+
+                texto:
+                    "Excluir ordem",
+
+                classe:
+                    "excluir"
+            })
+        );
+    }
+
+    menuOpcoesOrdem.innerHTML =
+        itens.join(
+            ""
+        );
+
+    menuOpcoesOrdemAtualId =
+        ordem.id;
+
+    botaoMenuOpcoesOrdemAtual =
+        botao;
+
+    botao.setAttribute(
+        "aria-expanded",
+        "true"
+    );
+
+    menuOpcoesOrdem.classList.add(
+        "aberto"
+    );
+
+    menuOpcoesOrdem.setAttribute(
+        "aria-hidden",
+        "false"
+    );
+
+    posicionarMenuOpcoesOrdem();
+
+    const primeiroItemMenu =
+        menuOpcoesOrdem
+            .querySelector(
+                "[role='menuitem']"
+            );
+
+    primeiroItemMenu
+        ?.focus({
+            preventScroll: true
+        });
+}
+
+function executarAcaoMenuOpcoesOrdem(
+    acao,
+    id
+) {
+    fecharMenuOpcoesOrdem();
+
+    switch (acao) {
+        case "visualizar":
+            abrirDetalhesOrdem(
+                id
+            );
+
+            break;
+
+        case "avancar":
+            avancarEtapaOrdem(
+                id,
+                null
+            );
+
+            break;
+
+        case "editar":
+            editarOrdem(
+                id
+            );
+
+            break;
+
+        case "imprimir":
+            imprimirFichaOrdem(
+                id
+            );
+
+            break;
+
+        case "duplicar":
+            duplicarOrdem(
+                id
+            );
+
+            break;
+
+        case "excluir":
+            excluirOrdem(
+                id
+            );
+
+            break;
+    }
+}
+
+/*
+|--------------------------------------------------------------------------
 | Tabela
 |--------------------------------------------------------------------------
 */
@@ -4849,6 +5338,8 @@ function renderizarOrdens() {
     ) {
         return;
     }
+
+    fecharMenuOpcoesOrdem();
 
     if (carregandoOrdens) {
         quantidadeOrdens.textContent =
@@ -4867,14 +5358,6 @@ function renderizarOrdens() {
 
     const lista =
         filtrarOrdens();
-
-    const podeDuplicarOrdem =
-    typeof possuiPermissaoSistema !==
-        "function" ||
-
-    possuiPermissaoSistema(
-        "ordens.criar"
-    );
 
     quantidadeOrdens.textContent =
         `${lista.length} ${
@@ -5013,99 +5496,27 @@ if (!lista.length) {
                         </td>
 
                         <td class="coluna-acoes-ordem">
-                            <div class="acoes-ordem">
-
-    ${
-        obterProximaEtapaOrdem(
-            ordem
-        )
-            ? `
-                <button
-                    class="botao-acao botao-avancar-ordem"
-                    data-avancar-ordem="${escaparHtml(
-                        ordem.id
-                    )}"
-                    type="button"
-                    title="Avançar para ${escaparHtml(
-                        obterProximaEtapaOrdem(
-                            ordem
-                        ).proximoTexto
-                    )}"
-                    aria-label="Avançar etapa da ordem"
-                >
-                    ${icone("check")}
-                </button>
-            `
-            : ""
-    }
-
     <button
-        class="botao-acao"
-        data-visualizar-ordem="${escaparHtml(
+        class="botao-acao botao-opcoes-ordem"
+        data-opcoes-ordem="${escaparHtml(
             ordem.id
         )}"
         type="button"
-        title="Visualizar ordem"
-        aria-label="Visualizar ordem"
-    >
-        ${icone("eye")}
-    </button>
-
-    ${
-        podeDuplicarOrdem
-            ? `
-                <button
-                    class="botao-acao"
-                    data-duplicar-ordem="${escaparHtml(
-                        ordem.id
-                    )}"
-                    type="button"
-                    title="Duplicar ordem"
-                    aria-label="Duplicar ordem"
-                >
-                    ${icone("plus")}
-                </button>
-            `
-            : ""
-    }
-
-    <button
-        class="botao-acao"
-        data-editar-ordem="${escaparHtml(
-            ordem.id
+        title="Opções da ordem"
+        aria-label="Opções da ordem ${escaparHtml(
+            ordem.codigo
         )}"
-        type="button"
-        title="Editar ordem"
-        aria-label="Editar ordem"
+        aria-haspopup="menu"
+        aria-expanded="false"
     >
-        ${icone("edit")}
+        <span
+            class="pontos-opcoes-ordem"
+            aria-hidden="true"
+        >
+            ⋮
+        </span>
     </button>
-
-    <button
-        class="botao-acao perigo"
-        data-excluir-ordem="${escaparHtml(
-            ordem.id
-        )}"
-        type="button"
-        title="Excluir ordem"
-        aria-label="Excluir ordem"
-    >
-        ${icone("trash")}
-    </button>
-
-    <button
-        class="botao-acao"
-        data-imprimir-ordem="${escaparHtml(
-            ordem.id
-        )}"
-        type="button"
-        title="Imprimir ficha de produção"
-        aria-label="Imprimir ficha de produção"
-    >
-        ${icone("file")}
-    </button>
-</div>
-                        </td>
+</td>
                     </tr>
                 `
             )
@@ -7393,92 +7804,96 @@ corpoTabelaOrdens
     ?.addEventListener(
         "click",
         evento => {
-
-            const botaoVisualizar =
-            evento.target.closest(
-            "[data-visualizar-ordem]"
-            );
-
-            const botaoAvancar =
+            const botaoOpcoes =
                 evento.target.closest(
-                    "[data-avancar-ordem]"
+                    "[data-opcoes-ordem]"
                 );
 
-            const botaoImprimir =
-                evento.target.closest(
-                    "[data-imprimir-ordem]"
-                );
-
-            const botaoDuplicar =
-                evento.target.closest(
-                    "[data-duplicar-ordem]"
-                );
-
-            const botaoEditar =
-                evento.target.closest(
-                    "[data-editar-ordem]"
-                );
-
-            const botaoExcluir =
-                evento.target.closest(
-                    "[data-excluir-ordem]"
-                );
-
-            if (botaoVisualizar) {
-            abrirDetalhesOrdem(
-            botaoVisualizar.dataset
-            .visualizarOrdem
-            );
-
-            return;
-            }
-
-            if (botaoAvancar) {
-                avancarEtapaOrdem(
-                    botaoAvancar.dataset
-                        .avancarOrdem,
-
-                    botaoAvancar
-                );
-
+            if (!botaoOpcoes) {
                 return;
             }
 
-if (botaoImprimir) {
-    imprimirFichaOrdem(
-        botaoImprimir.dataset
-            .imprimirOrdem
-    );
+            abrirMenuOpcoesOrdem(
+                botaoOpcoes.dataset
+                    .opcoesOrdem,
 
-    return;
-}
-
-if (botaoDuplicar) {
-    duplicarOrdem(
-        botaoDuplicar.dataset
-            .duplicarOrdem
-    );
-
-    return;
-}
-
-if (botaoEditar) {
-    editarOrdem(
-        botaoEditar.dataset
-            .editarOrdem
-    );
-
-    return;
-}
-
-if (botaoExcluir) {
-    excluirOrdem(
-        botaoExcluir.dataset
-            .excluirOrdem
-    );
-}
+                botaoOpcoes
+            );
         }
     );
+
+menuOpcoesOrdem
+    ?.addEventListener(
+        "click",
+        evento => {
+            const item =
+                evento.target.closest(
+                    "[data-acao-menu-ordem]"
+                );
+
+            if (!item) {
+                return;
+            }
+
+            executarAcaoMenuOpcoesOrdem(
+                item.dataset
+                    .acaoMenuOrdem,
+
+                item.dataset
+                    .ordemId
+            );
+        }
+    );
+
+document.addEventListener(
+    "pointerdown",
+    evento => {
+        if (
+            !menuOpcoesOrdem
+                ?.classList.contains(
+                    "aberto"
+                )
+        ) {
+            return;
+        }
+
+        if (
+            menuOpcoesOrdem.contains(
+                evento.target
+            ) ||
+            botaoMenuOpcoesOrdemAtual
+                ?.contains(
+                    evento.target
+                )
+        ) {
+            return;
+        }
+
+        fecharMenuOpcoesOrdem();
+    }
+);
+
+window.addEventListener(
+    "resize",
+    fecharMenuOpcoesOrdem
+);
+
+window.addEventListener(
+    "scroll",
+    () => {
+        if (
+            !menuOpcoesOrdem
+                ?.classList.contains(
+                    "aberto"
+                )
+        ) {
+            return;
+        }
+
+        posicionarMenuOpcoesOrdem();
+    },
+    true
+);
 
 $$(
     '.menu-item[data-secao="ordens"]'
@@ -7502,6 +7917,20 @@ document.addEventListener(
             evento.key !==
             "Escape"
         ) {
+            return;
+        }
+
+        if (
+            menuOpcoesOrdem
+                ?.classList.contains(
+                    "aberto"
+                )
+        ) {
+            fecharMenuOpcoesOrdem({
+                devolverFoco:
+                    true
+            });
+
             return;
         }
 
