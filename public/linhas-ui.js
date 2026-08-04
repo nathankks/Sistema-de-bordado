@@ -6,6 +6,10 @@
 
 let linhasCatalogo = [];
 let carregandoLinhasCatalogo = true;
+let linhaMovimentacaoAtualId = "";
+let tipoMovimentacaoLinhaAtual = "entrada";
+let dadosMovimentacaoLinhaAtual = null;
+let salvandoMovimentacaoLinha = false;
 
 /*
 |--------------------------------------------------------------------------
@@ -109,6 +113,15 @@ const linhaUnidade =
 const linhaEstoque =
     $("#linhaEstoque");
 
+const campoEstoqueLinhaCatalogo =
+    $("#campoEstoqueLinhaCatalogo");
+
+const rotuloEstoqueLinhaCatalogo =
+    $("#rotuloEstoqueLinhaCatalogo");
+
+const ajudaEstoqueLinhaCatalogo =
+    $("#ajudaEstoqueLinhaCatalogo");
+
 const linhaEstoqueMinimo =
     $("#linhaEstoqueMinimo");
 
@@ -147,6 +160,72 @@ const totalLinhasEstoqueBaixo =
 
 const totalLinhasZeradas =
     $("#totalLinhasZeradas");
+
+const modalMovimentacaoLinha =
+    $("#modalMovimentacaoLinha");
+
+const tituloMovimentacaoLinha =
+    $("#tituloMovimentacaoLinha");
+
+const subtituloMovimentacaoLinha =
+    $("#subtituloMovimentacaoLinha");
+
+const amostraMovimentacaoLinha =
+    $("#amostraMovimentacaoLinha");
+
+const marcaCodigoMovimentacaoLinha =
+    $("#marcaCodigoMovimentacaoLinha");
+
+const nomeMovimentacaoLinha =
+    $("#nomeMovimentacaoLinha");
+
+const estoqueAtualMovimentacaoLinha =
+    $("#estoqueAtualMovimentacaoLinha");
+
+const formularioMovimentacaoLinha =
+    $("#formularioMovimentacaoLinha");
+
+const movimentacaoLinhaId =
+    $("#movimentacaoLinhaId");
+
+const movimentacaoLinhaTipo =
+    $("#movimentacaoLinhaTipo");
+
+const quantidadeMovimentacaoLinha =
+    $("#quantidadeMovimentacaoLinha");
+
+const rotuloQuantidadeMovimentacaoLinha =
+    $("#rotuloQuantidadeMovimentacaoLinha");
+
+const ajudaQuantidadeMovimentacaoLinha =
+    $("#ajudaQuantidadeMovimentacaoLinha");
+
+const campoOrdemMovimentacaoLinha =
+    $("#campoOrdemMovimentacaoLinha");
+
+const ordemMovimentacaoLinha =
+    $("#ordemMovimentacaoLinha");
+
+const ajudaOrdemMovimentacaoLinha =
+    $("#ajudaOrdemMovimentacaoLinha");
+
+const motivoMovimentacaoLinha =
+    $("#motivoMovimentacaoLinha");
+
+const observacoesMovimentacaoLinha =
+    $("#observacoesMovimentacaoLinha");
+
+const previsaoMovimentacaoLinha =
+    $("#previsaoMovimentacaoLinha");
+
+const botaoSalvarMovimentacaoLinha =
+    $("#botaoSalvarMovimentacaoLinha");
+
+const quantidadeMovimentacoesLinha =
+    $("#quantidadeMovimentacoesLinha");
+
+const listaMovimentacoesLinha =
+    $("#listaMovimentacoesLinha");
 
 /*
 |--------------------------------------------------------------------------
@@ -667,11 +746,22 @@ function renderizarCatalogoLinhas() {
 
                         <td>
                             <div class="acoes-linha-catalogo">
-                                <button
-                                    class="botao-acao"
-                                    data-editar-linha="${escaparHtml(
-                                        linha.id
-                                    )}"
+                                    <button
+                                        class="botao-acao movimentar-estoque"
+                                        data-movimentar-linha="${escaparHtml(
+                                            linha.id
+                                        )}"
+                                        type="button"
+                                        title="Movimentar estoque"
+                                    >
+                                        ${icone("arrow-right")}
+                                    </button>
+
+                                    <button
+                                        class="botao-acao"
+                                        data-editar-linha="${escaparHtml(
+                                            linha.id
+                                        )}"
                                     type="button"
                                     title="Editar linha"
                                 >
@@ -754,6 +844,1060 @@ async function carregarCatalogoLinhas({
 
 /*
 |--------------------------------------------------------------------------
+| Movimentações de estoque
+|--------------------------------------------------------------------------
+*/
+
+function encontrarLinhaCatalogo(
+    id
+) {
+    return linhasCatalogo.find(
+        linha =>
+            String(
+                linha.id
+            ) ===
+            String(
+                id || ""
+            )
+    ) || null;
+}
+
+function formatarDataHoraMovimentacaoLinha(
+    valor
+) {
+    const data =
+        new Date(
+            valor
+        );
+
+    if (
+        !valor ||
+        Number.isNaN(
+            data.getTime()
+        )
+    ) {
+        return "Data não informada";
+    }
+
+    return new Intl.DateTimeFormat(
+        "pt-BR",
+        {
+            dateStyle:
+                "short",
+
+            timeStyle:
+                "short"
+        }
+    ).format(
+        data
+    );
+}
+
+function fecharModalMovimentacaoLinha() {
+    modalMovimentacaoLinha
+        ?.classList.remove(
+            "aberto"
+        );
+
+    modalMovimentacaoLinha
+        ?.setAttribute(
+            "aria-hidden",
+            "true"
+        );
+
+    document.body.style.overflow =
+        "";
+
+    linhaMovimentacaoAtualId =
+        "";
+
+    dadosMovimentacaoLinhaAtual =
+        null;
+
+    formularioMovimentacaoLinha
+        ?.reset();
+}
+
+function obterEstoqueAtualMovimentacaoLinha() {
+    return Number(
+        dadosMovimentacaoLinhaAtual
+            ?.linha
+            ?.estoque ||
+        0
+    );
+}
+
+function atualizarPrevisaoMovimentacaoLinha() {
+    if (
+        !previsaoMovimentacaoLinha ||
+        !quantidadeMovimentacaoLinha
+    ) {
+        return;
+    }
+
+    const estoqueAtual =
+        obterEstoqueAtualMovimentacaoLinha();
+
+    const quantidade =
+        Number(
+            quantidadeMovimentacaoLinha
+                .value
+        );
+
+    const unidade =
+        dadosMovimentacaoLinhaAtual
+            ?.linha
+            ?.unidade ||
+        "unidade";
+
+    if (
+        !Number.isFinite(
+            quantidade
+        ) ||
+        quantidade < 0 ||
+        (
+            tipoMovimentacaoLinhaAtual !==
+                "ajuste" &&
+            quantidade <= 0
+        )
+    ) {
+        previsaoMovimentacaoLinha.className =
+            "previsao-movimentacao-linha";
+
+        previsaoMovimentacaoLinha.innerHTML = `
+            <span>
+                Saldo após a movimentação
+            </span>
+
+            <strong>—</strong>
+        `;
+
+        return;
+    }
+
+    let estoquePosterior =
+        estoqueAtual;
+
+    if (
+        tipoMovimentacaoLinhaAtual ===
+        "entrada"
+    ) {
+        estoquePosterior +=
+            quantidade;
+    } else if (
+        tipoMovimentacaoLinhaAtual ===
+        "saida"
+    ) {
+        estoquePosterior -=
+            quantidade;
+    } else {
+        estoquePosterior =
+            quantidade;
+    }
+
+    const invalida =
+        estoquePosterior < 0;
+
+    previsaoMovimentacaoLinha.className =
+        `previsao-movimentacao-linha${
+            invalida
+                ? " invalida"
+                : " valida"
+        }`;
+
+    previsaoMovimentacaoLinha.innerHTML = `
+        <span>
+            ${
+                invalida
+                    ? "Movimentação inválida"
+                    : "Saldo após a movimentação"
+            }
+        </span>
+
+        <strong>
+            ${
+                invalida
+                    ? "Saída maior que o estoque"
+                    : `${escaparHtml(
+                        formatarQuantidadeLinha(
+                            estoquePosterior
+                        )
+                    )} ${escaparHtml(
+                        formatarUnidadeLinha(
+                            unidade,
+                            estoquePosterior
+                        )
+                    )}`
+            }
+        </strong>
+    `;
+}
+
+function obterOrdemMovimentacaoLinhaSelecionada() {
+    const id =
+        String(
+            ordemMovimentacaoLinha
+                ?.value ||
+            ""
+        );
+
+    return dadosMovimentacaoLinhaAtual
+        ?.ordensDisponiveis
+        ?.find(
+            ordem =>
+                String(
+                    ordem.id
+                ) === id
+        ) ||
+        null;
+}
+
+function renderizarOrdensMovimentacaoLinha(
+    ordens
+) {
+    if (!ordemMovimentacaoLinha) {
+        return;
+    }
+
+    const valorAtual =
+        ordemMovimentacaoLinha.value;
+
+    const lista =
+        Array.isArray(
+            ordens
+        )
+            ? ordens
+            : [];
+
+    ordemMovimentacaoLinha.innerHTML = `
+        <option value="">
+            Saída sem ordem vinculada
+        </option>
+
+        ${lista
+            .map(
+                ordem => {
+                    const consumido =
+                        Number(
+                            ordem
+                                .quantidadeConsumida ||
+                            0
+                        );
+
+                    const complemento =
+                        consumido > 0
+                            ? ` · já retirado ${formatarQuantidadeLinha(
+                                consumido
+                            )}`
+                            : "";
+
+                    return `
+                        <option
+                            value="${escaparHtml(
+                                ordem.id
+                            )}"
+                        >
+                            ${escaparHtml(
+                                `${ordem.numeroTexto} · ${ordem.clienteNome} · ${ordem.statusTexto}${complemento}`
+                            )}
+                        </option>
+                    `;
+                }
+            )
+            .join("")}
+    `;
+
+    if (
+        lista.some(
+            ordem =>
+                String(
+                    ordem.id
+                ) ===
+                String(
+                    valorAtual
+                )
+        )
+    ) {
+        ordemMovimentacaoLinha.value =
+            valorAtual;
+    }
+
+    if (
+        typeof window
+            .atualizarSelectPadraoSistema ===
+        "function"
+    ) {
+        window
+            .atualizarSelectPadraoSistema(
+                ordemMovimentacaoLinha
+            );
+    }
+
+    ajudaOrdemMovimentacaoLinha
+        .textContent =
+            lista.length
+                ? "Selecione a ordem que utilizou esta linha ou deixe sem vínculo."
+                : "Nenhuma ordem de produção utiliza esta linha no momento.";
+}
+
+function atualizarMotivoOrdemMovimentacaoLinha() {
+    if (
+        tipoMovimentacaoLinhaAtual !==
+            "saida" ||
+        !motivoMovimentacaoLinha
+    ) {
+        return;
+    }
+
+    const ordem =
+        obterOrdemMovimentacaoLinhaSelecionada();
+
+    const motivoAtual =
+        String(
+            motivoMovimentacaoLinha
+                .value ||
+            ""
+        ).trim();
+
+    if (!ordem) {
+        if (
+            motivoAtual.startsWith(
+                "Consumo na produção da ordem"
+            )
+        ) {
+            motivoMovimentacaoLinha.value =
+                "";
+        }
+
+        return;
+    }
+
+    if (
+        !motivoAtual ||
+        motivoAtual ===
+            "Uso na produção" ||
+        motivoAtual.startsWith(
+            "Consumo na produção da ordem"
+        )
+    ) {
+        motivoMovimentacaoLinha.value =
+            `Consumo na produção da ordem ${ordem.numeroTexto}`;
+    }
+}
+
+function selecionarTipoMovimentacaoLinha(
+    tipo
+) {
+    const tiposValidos =
+        new Set([
+            "entrada",
+            "saida",
+            "ajuste"
+        ]);
+
+    tipoMovimentacaoLinhaAtual =
+        tiposValidos.has(
+            tipo
+        )
+            ? tipo
+            : "entrada";
+
+    movimentacaoLinhaTipo.value =
+        tipoMovimentacaoLinhaAtual;
+
+    const vinculacaoOrdemDisponivel =
+        tipoMovimentacaoLinhaAtual ===
+        "saida";
+
+    if (campoOrdemMovimentacaoLinha) {
+        campoOrdemMovimentacaoLinha.hidden =
+            !vinculacaoOrdemDisponivel;
+    }
+
+    if (ordemMovimentacaoLinha) {
+        ordemMovimentacaoLinha.disabled =
+            !vinculacaoOrdemDisponivel;
+
+        if (!vinculacaoOrdemDisponivel) {
+            ordemMovimentacaoLinha.value =
+                "";
+        }
+
+        if (
+            typeof window
+                .atualizarSelectPadraoSistema ===
+            "function"
+        ) {
+            window
+                .atualizarSelectPadraoSistema(
+                    ordemMovimentacaoLinha
+                );
+        }
+    }
+
+    if (
+        !vinculacaoOrdemDisponivel &&
+        String(
+            motivoMovimentacaoLinha
+                ?.value ||
+            ""
+        )
+            .trim()
+            .startsWith(
+                "Consumo na produção da ordem"
+            )
+    ) {
+        motivoMovimentacaoLinha.value =
+            "";
+    }
+
+    modalMovimentacaoLinha
+        ?.querySelectorAll(
+            "[data-tipo-movimentacao-linha]"
+        )
+        .forEach(
+            botao => {
+                const ativo =
+                    botao.dataset
+                        .tipoMovimentacaoLinha ===
+                    tipoMovimentacaoLinhaAtual;
+
+                botao.classList.toggle(
+                    "ativo",
+                    ativo
+                );
+
+                botao.setAttribute(
+                    "aria-pressed",
+                    String(
+                        ativo
+                    )
+                );
+            }
+        );
+
+    const configuracoes = {
+        entrada: {
+            rotulo:
+                "Quantidade da entrada",
+
+            ajuda:
+                "O valor será somado ao estoque atual.",
+
+            placeholder:
+                "Ex: 5",
+
+            textoBotao:
+                "Registrar entrada",
+
+            motivo:
+                "Ex: Compra de novo cone"
+        },
+
+        saida: {
+            rotulo:
+                "Quantidade da saída",
+
+            ajuda:
+                "O valor será retirado do estoque atual.",
+
+            placeholder:
+                "Ex: 1",
+
+            textoBotao:
+                "Registrar saída",
+
+            motivo:
+                "Ex: Uso na produção"
+        },
+
+        ajuste: {
+            rotulo:
+                "Novo estoque contado",
+
+            ajuda:
+                "Informe o saldo físico encontrado no inventário.",
+
+            placeholder:
+                "Ex: 8",
+
+            textoBotao:
+                "Registrar ajuste",
+
+            motivo:
+                "Ex: Conferência de inventário"
+        }
+    };
+
+    const configuracao =
+        configuracoes[
+            tipoMovimentacaoLinhaAtual
+        ];
+
+    rotuloQuantidadeMovimentacaoLinha
+        .textContent =
+            configuracao.rotulo;
+
+    ajudaQuantidadeMovimentacaoLinha
+        .textContent =
+            configuracao.ajuda;
+
+    quantidadeMovimentacaoLinha
+        .placeholder =
+            configuracao.placeholder;
+
+    quantidadeMovimentacaoLinha.min =
+        tipoMovimentacaoLinhaAtual ===
+            "ajuste"
+            ? "0"
+            : "0.01";
+
+    motivoMovimentacaoLinha.placeholder =
+        configuracao.motivo;
+
+    const textoBotao =
+        botaoSalvarMovimentacaoLinha
+            ?.querySelector(
+                "span"
+            );
+
+    if (textoBotao) {
+        textoBotao.textContent =
+            configuracao.textoBotao;
+    }
+
+    atualizarPrevisaoMovimentacaoLinha();
+}
+
+function atualizarResumoModalMovimentacaoLinha(
+    linha
+) {
+    if (!linha) {
+        return;
+    }
+
+    tituloMovimentacaoLinha.textContent =
+        `Estoque — ${linha.nome}`;
+
+    subtituloMovimentacaoLinha.textContent =
+        "Registre entradas, saídas e ajustes sem perder o histórico.";
+
+    marcaCodigoMovimentacaoLinha.textContent =
+        `${linha.marca} · Código ${linha.codigo}`;
+
+    nomeMovimentacaoLinha.textContent =
+        linha.nome;
+
+    amostraMovimentacaoLinha.style
+        .setProperty(
+            "--cor-linha",
+            linha.corHex ||
+            "#777777"
+        );
+
+    estoqueAtualMovimentacaoLinha.textContent =
+        `${formatarQuantidadeLinha(
+            linha.estoque
+        )} ${formatarUnidadeLinha(
+            linha.unidade,
+            linha.estoque
+        )}`;
+}
+
+function renderizarHistoricoMovimentacoesLinha(
+    movimentacoes
+) {
+    const lista =
+        Array.isArray(
+            movimentacoes
+        )
+            ? movimentacoes
+            : [];
+
+    quantidadeMovimentacoesLinha.textContent =
+        `${lista.length} ${
+            lista.length === 1
+                ? "registro"
+                : "registros"
+        }`;
+
+    if (!lista.length) {
+        listaMovimentacoesLinha.innerHTML = `
+            <div class="estado-historico-linha">
+                <span class="estado-historico-linha-icone">
+                    ${icone("clock")}
+                </span>
+
+                <strong>
+                    Nenhuma movimentação registrada
+                </strong>
+
+                <small>
+                    A primeira entrada, saída ou ajuste aparecerá aqui.
+                </small>
+            </div>
+        `;
+
+        return;
+    }
+
+    const unidade =
+        dadosMovimentacaoLinhaAtual
+            ?.linha
+            ?.unidade ||
+        "unidade";
+
+    listaMovimentacoesLinha.innerHTML =
+        lista
+            .map(
+                movimentacao => {
+                    const quantidade =
+                        Number(
+                            movimentacao
+                                .quantidadeMovimentada ||
+                            0
+                        );
+
+                    const sinal =
+                        quantidade > 0
+                            ? "+"
+                            : "";
+
+                    const iconeMovimentacao =
+                        movimentacao.tipo ===
+                            "entrada" ||
+                        movimentacao.tipo ===
+                            "estoque-inicial"
+                            ? "plus"
+                            : movimentacao.tipo ===
+                                "saida"
+                                ? "arrow-right"
+                                : "edit";
+
+                    return `
+                        <article
+                            class="item-historico-linha tipo-${escaparHtml(
+                                movimentacao.tipo
+                            )}"
+                        >
+                            <span class="icone-historico-linha">
+                                ${icone(
+                                    iconeMovimentacao
+                                )}
+                            </span>
+
+                            <div class="conteudo-historico-linha">
+                                <div class="topo-historico-linha">
+                                    <div>
+                                        <strong>
+                                            ${escaparHtml(
+                                                movimentacao.tipoTexto
+                                            )}
+                                        </strong>
+
+                                        <span>
+                                            ${escaparHtml(
+                                                formatarDataHoraMovimentacaoLinha(
+                                                    movimentacao.criadoEm
+                                                )
+                                            )}
+                                        </span>
+                                    </div>
+
+                                    <span class="quantidade-historico-linha">
+                                        ${escaparHtml(
+                                            `${sinal}${formatarQuantidadeLinha(
+                                                quantidade
+                                            )}`
+                                        )}
+                                    </span>
+                                </div>
+
+                                <p>
+                                    ${escaparHtml(
+                                        movimentacao.motivo
+                                    )}
+                                </p>
+
+                                ${
+                                    movimentacao.ordemVinculada
+                                        ? `
+                                            <div class="ordem-historico-linha">
+                                                <span>
+                                                    Ordem vinculada
+                                                </span>
+
+                                                <strong>
+                                                    ${escaparHtml(
+                                                        movimentacao
+                                                            .ordemNumeroTexto
+                                                    )}
+                                                    ·
+                                                    ${escaparHtml(
+                                                        movimentacao
+                                                            .ordemClienteNome ||
+                                                        "Cliente não informado"
+                                                    )}
+                                                </strong>
+                                            </div>
+                                        `
+                                        : ""
+                                }
+
+                                ${
+                                    movimentacao.observacoes
+                                        ? `
+                                            <small class="observacao-historico-linha">
+                                                ${escaparHtml(
+                                                    movimentacao.observacoes
+                                                )}
+                                            </small>
+                                        `
+                                        : ""
+                                }
+
+                                <footer class="rodape-historico-linha">
+                                    <span>
+                                        ${escaparHtml(
+                                            formatarQuantidadeLinha(
+                                                movimentacao.estoqueAnterior
+                                            )
+                                        )}
+                                        →
+                                        ${escaparHtml(
+                                            formatarQuantidadeLinha(
+                                                movimentacao.estoquePosterior
+                                            )
+                                        )}
+                                        ${escaparHtml(
+                                            formatarUnidadeLinha(
+                                                unidade,
+                                                movimentacao.estoquePosterior
+                                            )
+                                        )}
+                                    </span>
+
+                                    <span>
+                                        Por
+                                        ${escaparHtml(
+                                            movimentacao.usuarioNome ||
+                                            "Sistema"
+                                        )}
+                                    </span>
+                                </footer>
+                            </div>
+                        </article>
+                    `;
+                }
+            )
+            .join("");
+}
+
+async function carregarMovimentacoesLinha(
+    id,
+    {
+        mostrarErro = true
+    } = {}
+) {
+    listaMovimentacoesLinha.innerHTML = `
+        <div class="estado-historico-linha">
+            ${htmlCarregando()}
+        </div>
+    `;
+
+    try {
+        const resposta =
+            await requisicaoApi(
+                `/api/linhas/${
+                    encodeURIComponent(
+                        id
+                    )
+                }/movimentacoes?limite=150`
+            );
+
+        dadosMovimentacaoLinhaAtual =
+            resposta;
+
+        renderizarOrdensMovimentacaoLinha(
+            resposta.ordensDisponiveis
+        );
+
+        atualizarResumoModalMovimentacaoLinha(
+            resposta.linha
+        );
+
+        renderizarHistoricoMovimentacoesLinha(
+            resposta.movimentacoes
+        );
+
+        atualizarPrevisaoMovimentacaoLinha();
+    } catch (erro) {
+        listaMovimentacoesLinha.innerHTML = `
+            <div class="estado-historico-linha erro">
+                <strong>
+                    Não foi possível carregar o histórico
+                </strong>
+
+                <small>
+                    ${escaparHtml(
+                        erro.message
+                    )}
+                </small>
+            </div>
+        `;
+
+        if (mostrarErro) {
+            mostrarNotificacao(
+                "Não foi possível carregar o estoque",
+                erro.message,
+                "erro"
+            );
+        }
+    }
+}
+
+async function abrirModalMovimentacaoLinha(
+    id
+) {
+    if (
+        typeof possuiPermissaoSistema ===
+            "function" &&
+        !possuiPermissaoSistema(
+            "linhas.editar"
+        )
+    ) {
+        mostrarNotificacao(
+            "Acesso negado",
+            "Você não possui permissão para movimentar o estoque.",
+            "aviso"
+        );
+
+        return;
+    }
+
+    const linha =
+        encontrarLinhaCatalogo(
+            id
+        );
+
+    if (!linha) {
+        mostrarNotificacao(
+            "Linha não encontrada",
+            "Atualize a página e tente novamente.",
+            "erro"
+        );
+
+        return;
+    }
+
+    linhaMovimentacaoAtualId =
+        linha.id;
+
+    dadosMovimentacaoLinhaAtual = {
+        linha: {
+            ...linha
+        },
+
+        movimentacoes: []
+    };
+
+    formularioMovimentacaoLinha.reset();
+
+    renderizarOrdensMovimentacaoLinha(
+        []
+    );
+
+    movimentacaoLinhaId.value =
+        linha.id;
+
+    atualizarResumoModalMovimentacaoLinha(
+        linha
+    );
+
+    selecionarTipoMovimentacaoLinha(
+        "entrada"
+    );
+
+    modalMovimentacaoLinha.classList.add(
+        "aberto"
+    );
+
+    modalMovimentacaoLinha.setAttribute(
+        "aria-hidden",
+        "false"
+    );
+
+    document.body.style.overflow =
+        "hidden";
+
+    await carregarMovimentacoesLinha(
+        linha.id
+    );
+
+    setTimeout(
+        () => {
+            quantidadeMovimentacaoLinha
+                ?.focus();
+        },
+        50
+    );
+}
+
+async function salvarMovimentacaoLinha(
+    evento
+) {
+    evento.preventDefault();
+
+    if (
+        salvandoMovimentacaoLinha ||
+        !formularioMovimentacaoLinha
+            .checkValidity()
+    ) {
+        formularioMovimentacaoLinha
+            ?.reportValidity();
+
+        return;
+    }
+
+    const id =
+        String(
+            movimentacaoLinhaId.value ||
+            linhaMovimentacaoAtualId ||
+            ""
+        ).trim();
+
+    salvandoMovimentacaoLinha =
+        true;
+
+    const textoBotao =
+        botaoSalvarMovimentacaoLinha
+            ?.querySelector(
+                "span"
+            );
+
+    const textoOriginal =
+        textoBotao?.textContent ||
+        "Registrar movimentação";
+
+    botaoSalvarMovimentacaoLinha.disabled =
+        true;
+
+    if (textoBotao) {
+        textoBotao.textContent =
+            "Registrando...";
+    }
+
+    try {
+        const resposta =
+            await requisicaoApi(
+                `/api/linhas/${
+                    encodeURIComponent(
+                        id
+                    )
+                }/movimentacoes`,
+
+                {
+                    method:
+                        "POST",
+
+                    body:
+                        JSON.stringify({
+                            tipo:
+                                tipoMovimentacaoLinhaAtual,
+
+                            quantidade:
+                                quantidadeMovimentacaoLinha.value,
+
+                            motivo:
+                                motivoMovimentacaoLinha.value,
+
+                            observacoes:
+                                observacoesMovimentacaoLinha.value,
+
+                            ordemId:
+                                tipoMovimentacaoLinhaAtual ===
+                                    "saida"
+                                    ? ordemMovimentacaoLinha
+                                        ?.value ||
+                                        ""
+                                    : ""
+
+                            
+                        })
+                }
+            );
+
+        quantidadeMovimentacaoLinha.value =
+            "";
+
+        motivoMovimentacaoLinha.value =
+            "";
+
+        observacoesMovimentacaoLinha.value =
+            "";
+
+        if (ordemMovimentacaoLinha) {
+            ordemMovimentacaoLinha.value =
+                "";
+
+            if (
+                typeof window
+                    .atualizarSelectPadraoSistema ===
+                "function"
+            ) {
+                window
+                    .atualizarSelectPadraoSistema(
+                        ordemMovimentacaoLinha
+                    );
+            }
+        }
+
+        await carregarCatalogoLinhas({
+            mostrarErro:
+                false
+        });
+
+        await carregarMovimentacoesLinha(
+            id,
+            {
+                mostrarErro:
+                    false
+            }
+        );
+
+        mostrarNotificacao(
+            "Estoque atualizado",
+            resposta.mensagem ||
+            "A movimentação foi registrada."
+        );
+
+        quantidadeMovimentacaoLinha.focus();
+    } catch (erro) {
+        mostrarNotificacao(
+            "Não foi possível movimentar o estoque",
+            erro.message,
+            "erro"
+        );
+    } finally {
+        salvandoMovimentacaoLinha =
+            false;
+
+        botaoSalvarMovimentacaoLinha.disabled =
+            false;
+
+        if (textoBotao) {
+            textoBotao.textContent =
+                textoOriginal;
+        }
+
+        selecionarTipoMovimentacaoLinha(
+            tipoMovimentacaoLinhaAtual
+        );
+    }
+}
+
+/*
+|--------------------------------------------------------------------------
 | Modal
 |--------------------------------------------------------------------------
 */
@@ -810,6 +1954,20 @@ linhaValor.value =
         linhaEstoque.value =
             linha.estoque;
 
+        linhaEstoque.readOnly =
+            true;
+
+        campoEstoqueLinhaCatalogo
+            ?.classList.add(
+                "estoque-somente-leitura"
+            );
+
+        rotuloEstoqueLinhaCatalogo.textContent =
+            "Estoque atual";
+
+        ajudaEstoqueLinhaCatalogo.textContent =
+            "Use o botão de movimentação para registrar entrada, saída ou ajuste.";
+
         linhaEstoqueMinimo.value =
             linha.estoqueMinimo;
 
@@ -834,6 +1992,19 @@ linhaValor.value =
         linhaCor.value = "#000000";
         linhaUnidade.value = "cone";
         linhaEstoque.value = 0;
+        linhaEstoque.readOnly = false;
+
+        campoEstoqueLinhaCatalogo
+            ?.classList.remove(
+                "estoque-somente-leitura"
+            );
+
+        rotuloEstoqueLinhaCatalogo.textContent =
+            "Estoque inicial";
+
+        ajudaEstoqueLinhaCatalogo.textContent =
+            "Informe o saldo disponível no primeiro cadastro.";
+
         linhaEstoqueMinimo.value = 0;
         linhaAtiva.checked = true;
     }
@@ -1208,6 +2379,12 @@ corpoTabelaLinhas
     ?.addEventListener(
         "click",
         evento => {
+
+            const botaoMovimentar =
+                evento.target.closest(
+                    "[data-movimentar-linha]"
+                );
+
             const botaoEditar =
                 evento.target.closest(
                     "[data-editar-linha]"
@@ -1217,6 +2394,15 @@ corpoTabelaLinhas
                 evento.target.closest(
                     "[data-excluir-linha]"
                 );
+
+            if (botaoMovimentar) {
+                abrirModalMovimentacaoLinha(
+                    botaoMovimentar.dataset
+                        .movimentarLinha
+                );
+
+                return;
+            }
 
             if (botaoEditar) {
                 editarLinhaCatalogo(
@@ -1237,6 +2423,56 @@ corpoTabelaLinhas
     );
 
 $$(
+    "[data-fechar-movimentacao-linha]"
+).forEach(
+    elemento => {
+        elemento.addEventListener(
+            "click",
+            fecharModalMovimentacaoLinha
+        );
+    }
+);
+
+modalMovimentacaoLinha
+    ?.querySelectorAll(
+        "[data-tipo-movimentacao-linha]"
+    )
+    .forEach(
+        botao => {
+            botao.addEventListener(
+                "click",
+                () => {
+                    selecionarTipoMovimentacaoLinha(
+                        botao.dataset
+                            .tipoMovimentacaoLinha
+                    );
+
+                    quantidadeMovimentacaoLinha
+                        ?.focus();
+                }
+            );
+        }
+    );
+
+formularioMovimentacaoLinha
+    ?.addEventListener(
+        "submit",
+        salvarMovimentacaoLinha
+    );
+
+ordemMovimentacaoLinha
+    ?.addEventListener(
+        "change",
+        atualizarMotivoOrdemMovimentacaoLinha
+    );
+
+quantidadeMovimentacaoLinha
+    ?.addEventListener(
+        "input",
+        atualizarPrevisaoMovimentacaoLinha
+    );
+
+$$(
     '.menu-item[data-secao="linhas"]'
 ).forEach(
     item => {
@@ -1254,8 +2490,22 @@ $$(
 document.addEventListener(
     "keydown",
     evento => {
+        if (evento.key !== "Escape") {
+            return;
+        }
+
         if (
-            evento.key === "Escape" &&
+            modalMovimentacaoLinha
+                ?.classList.contains(
+                    "aberto"
+                )
+        ) {
+            fecharModalMovimentacaoLinha();
+
+            return;
+        }
+
+        if (
             modalLinhaCatalogo
                 ?.classList.contains(
                     "aberto"
