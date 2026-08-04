@@ -13,6 +13,24 @@ const STATUS_ORDENS =
         "cancelado"
     ]);
 
+const PRIORIDADES_ORDENS =
+    new Set([
+        "normal",
+        "alta",
+        "urgente"
+    ]);
+
+const ROTULOS_PRIORIDADE = {
+    normal:
+        "Normal",
+
+    alta:
+        "Alta",
+
+    urgente:
+        "Urgente"
+};
+
 const ROTULOS_STATUS = {
     "aguardando-arquivo":
         "Aguardando arquivo",
@@ -83,12 +101,23 @@ function criarServicoOrdens({
             prazo_entrega TEXT
                 NOT NULL,
 
+            prioridade TEXT
+                NOT NULL
+                DEFAULT 'normal'
+                CHECK (
+                    prioridade IN (
+                        'normal',
+                        'alta',
+                        'urgente'
+                    )
+                ),
+
             valor_centavos INTEGER
                 NOT NULL
                 DEFAULT 0
                 CHECK (valor_centavos >= 0),
 
-            status TEXT
+                        status TEXT
                 NOT NULL
                 CHECK (
                     status IN (
@@ -101,6 +130,10 @@ function criarServicoOrdens({
                         'cancelado'
                     )
                 ),
+
+            matriz_id TEXT
+                REFERENCES matrizes_bordado(id)
+                ON DELETE SET NULL,
 
             arquivo_original_id TEXT
     REFERENCES cliente_arquivos(id)
@@ -173,6 +206,45 @@ arquivo_convertido TEXT
 
     return true;
 }
+
+garantirColunaOrdem(
+    "prioridade",
+    `
+        TEXT
+        NOT NULL
+        DEFAULT 'normal'
+        CHECK (
+            prioridade IN (
+                'normal',
+                'alta',
+                'urgente'
+            )
+        )
+    `
+);
+
+banco.exec(`
+    CREATE INDEX IF NOT EXISTS
+        indice_ordens_prioridade
+
+    ON ordens(prioridade);
+`);
+
+garantirColunaOrdem(
+    "matriz_id",
+    `
+        TEXT
+        REFERENCES matrizes_bordado(id)
+        ON DELETE SET NULL
+    `
+);
+
+banco.exec(`
+    CREATE INDEX IF NOT EXISTS
+        indice_ordens_matriz
+
+    ON ordens(matriz_id);
+`);
 
 const colunaArquivoOriginalCriada =
     garantirColunaOrdem(
@@ -382,8 +454,37 @@ const CAMPOS_ORDEM_SQL = `
     quantidade,
     linha,
     prazo_entrega,
+    prioridade,
     valor_centavos,
-    status,
+        status,
+    matriz_id,
+
+    (
+        SELECT
+            matriz.quantidade_pontos
+
+        FROM matrizes_bordado
+            AS matriz
+
+        WHERE matriz.id =
+            ordens.matriz_id
+
+        LIMIT 1
+    ) AS matriz_quantidade_pontos,
+
+    (
+        SELECT
+            matriz.quantidade_cores
+
+        FROM matrizes_bordado
+            AS matriz
+
+        WHERE matriz.id =
+            ordens.matriz_id
+
+        LIMIT 1
+    ) AS matriz_quantidade_cores,
+
     arquivo_original_id,
     arquivo_original,
     arquivo_convertido_id,
@@ -412,6 +513,82 @@ const CAMPOS_ORDEM_SQL = `
             WHERE id = ?
         `);
 
+    const consultaMatrizPorId =
+    banco.prepare(`
+        SELECT
+            id,
+            cliente_id,
+            nome,
+            versao,
+            status,
+            arquivo_original_id
+
+        FROM matrizes_bordado
+
+        WHERE id = ?
+
+        LIMIT 1
+    `);
+
+const consultaArquivoMaquinaMatrizPorId =
+    banco.prepare(`
+        SELECT
+            arquivo.id,
+            arquivo.cliente_id,
+            arquivo.tipo,
+            arquivo.nome_original,
+            arquivo.caminho_arquivo,
+            arquivo.criado_em
+
+        FROM matriz_arquivos
+            AS vinculo
+
+        INNER JOIN cliente_arquivos
+            AS arquivo
+            ON arquivo.id =
+                vinculo.arquivo_id
+
+        WHERE
+            vinculo.matriz_id = ?
+            AND vinculo.arquivo_id = ?
+            AND vinculo.funcao = 'maquina'
+            AND arquivo.cliente_id = ?
+            AND arquivo.tipo = 'convertido'
+
+        LIMIT 1
+    `);
+
+const consultaPrimeiroArquivoMaquinaMatriz =
+    banco.prepare(`
+        SELECT
+            arquivo.id,
+            arquivo.cliente_id,
+            arquivo.tipo,
+            arquivo.nome_original,
+            arquivo.caminho_arquivo,
+            arquivo.criado_em
+
+        FROM matriz_arquivos
+            AS vinculo
+
+        INNER JOIN cliente_arquivos
+            AS arquivo
+            ON arquivo.id =
+                vinculo.arquivo_id
+
+        WHERE
+            vinculo.matriz_id = ?
+            AND vinculo.funcao = 'maquina'
+            AND arquivo.cliente_id = ?
+            AND arquivo.tipo = 'convertido'
+
+        ORDER BY
+            arquivo.criado_em ASC,
+            arquivo.id ASC
+
+        LIMIT 1
+    `);
+
     const consultaOrdemPorId =
         banco.prepare(`
             SELECT
@@ -431,8 +608,10 @@ const inserirOrdem =
             quantidade,
             linha,
             prazo_entrega,
+            prioridade,
             valor_centavos,
             status,
+            matriz_id,
             arquivo_original_id,
             arquivo_original,
             arquivo_convertido_id,
@@ -442,6 +621,8 @@ const inserirOrdem =
             atualizado_em
         )
         VALUES (
+            ?,
+            ?,
             ?,
             ?,
             ?,
@@ -474,8 +655,10 @@ const atualizarOrdem =
             quantidade = ?,
             linha = ?,
             prazo_entrega = ?,
+            prioridade = ?,
             valor_centavos = ?,
             status = ?,
+            matriz_id = ?,
             arquivo_original_id = ?,
             arquivo_original = ?,
             arquivo_convertido_id = ?,
@@ -662,10 +845,49 @@ function definirStatusInicial(
     return "aguardando-arquivo";
 }
 
+function resolverMatrizOrdem({
+    dados,
+    ordemAtual,
+    cliente
+}) {
+    const matrizId =
+        limparTexto(
+            Object.hasOwn(
+                dados,
+                "matrizId"
+            )
+                ? dados.matrizId
+                : ordemAtual?.matriz_id
+        );
+
+    if (!matrizId) {
+        return null;
+    }
+
+    const matriz =
+        consultaMatrizPorId.get(
+            matrizId
+        );
+
+    if (
+        !matriz ||
+        matriz.cliente_id !==
+            cliente.id
+    ) {
+        throw new ErroHttp(
+            400,
+            "A matriz selecionada não pertence ao cliente."
+        );
+    }
+
+    return matriz;
+}
+
 function resolverArquivoOrdem({
     dados,
     ordemAtual,
     cliente,
+    matriz,
     tipo
 }) {
     const original =
@@ -680,6 +902,146 @@ function resolverArquivoOrdem({
         original
             ? "arquivo_original_id"
             : "arquivo_convertido_id";
+
+    /*
+     * Quando existe uma matriz selecionada,
+     * somente arquivos ligados a ela podem
+     * ser utilizados na ordem.
+     */
+
+    if (matriz) {
+    const campoFoiRecebido =
+        Object.hasOwn(
+            dados,
+            campoRecebido
+        );
+
+    const arquivoIdRecebido =
+        campoFoiRecebido
+            ? limparTexto(
+                dados[
+                    campoRecebido
+                ]
+            )
+            : "";
+
+        if (original) {
+            const arquivoOriginalId =
+                limparTexto(
+                    matriz
+                        .arquivo_original_id
+                );
+
+            if (
+                arquivoIdRecebido &&
+                arquivoIdRecebido !==
+                    arquivoOriginalId
+            ) {
+                throw new ErroHttp(
+                    400,
+                    "A logo original selecionada não pertence à matriz escolhida."
+                );
+            }
+
+            if (!arquivoOriginalId) {
+                return null;
+            }
+
+            const arquivoOriginal =
+                consultaArquivoClientePorId
+                    .get(
+                        arquivoOriginalId,
+                        cliente.id,
+                        "original"
+                    );
+
+            if (!arquivoOriginal) {
+                throw new ErroHttp(
+                    400,
+                    "A matriz selecionada possui uma logo original inválida."
+                );
+            }
+
+            return arquivoOriginal;
+        }
+
+        /*
+         * Quando a matriz possui vários
+         * arquivos de máquina, respeita o
+         * arquivo escolhido no formulário.
+         */
+
+        if (arquivoIdRecebido) {
+            const arquivoMaquina =
+                consultaArquivoMaquinaMatrizPorId
+                    .get(
+                        matriz.id,
+                        arquivoIdRecebido,
+                        cliente.id
+                    );
+
+            if (!arquivoMaquina) {
+                throw new ErroHttp(
+                    400,
+                    "O arquivo de máquina selecionado não pertence à matriz escolhida."
+                );
+            }
+
+            return arquivoMaquina;
+        }
+
+
+        /*
+ * Durante a edição, preserva o arquivo
+ * anteriormente selecionado quando ele
+ * ainda pertence à matriz.
+ */
+
+if (
+    !campoFoiRecebido
+) {
+    const arquivoAtualId =
+        limparTexto(
+            ordemAtual?.[
+                colunaAtual
+            ]
+        );
+
+    if (arquivoAtualId) {
+        const arquivoAtualDaMatriz =
+            consultaArquivoMaquinaMatrizPorId
+                .get(
+                    matriz.id,
+                    arquivoAtualId,
+                    cliente.id
+                );
+
+        if (arquivoAtualDaMatriz) {
+            return arquivoAtualDaMatriz;
+        }
+    }
+}
+
+/*
+ * Em uma nova ordem, ou quando a seleção
+ * foi apagada, utiliza o primeiro arquivo
+ * de máquina vinculado à matriz.
+ */
+
+return (
+    consultaPrimeiroArquivoMaquinaMatriz
+        .get(
+            matriz.id,
+            cliente.id
+        ) ||
+    null
+);
+}
+
+    /*
+     * Fluxo antigo, utilizado quando a
+     * ordem não possui uma matriz.
+     */
 
     if (
         Object.hasOwn(
@@ -772,11 +1134,19 @@ function resolverArquivoOrdem({
             );
         }
 
-        const arquivoOriginal =
+        const matriz =
+    resolverMatrizOrdem({
+        dados,
+        ordemAtual,
+        cliente
+    });
+
+const arquivoOriginal =
     resolverArquivoOrdem({
         dados,
         ordemAtual,
         cliente,
+        matriz,
         tipo:
             "original"
     });
@@ -786,6 +1156,7 @@ const arquivoConvertido =
         dados,
         ordemAtual,
         cliente,
+        matriz,
         tipo:
             "convertido"
     });
@@ -882,6 +1253,24 @@ if (
                     ?.prazo_entrega
             );
 
+        const prioridade =
+            limparTexto(
+                dados.prioridade ??
+                ordemAtual?.prioridade ??
+                "normal"
+            ).toLowerCase();
+
+        if (
+            !PRIORIDADES_ORDENS.has(
+                prioridade
+            )
+        ) {
+            throw new ErroHttp(
+                400,
+                "A prioridade da ordem não é válida."
+            );
+        }
+
         let valorCentavos;
 
         if (
@@ -950,12 +1339,14 @@ if (
 
         return {
         cliente,
+        matriz,
         arquivoOriginal,
         arquivoConvertido,
         descricao,
         quantidade,
         linha,
         prazoEntrega,
+        prioridade,
         valorCentavos,
         status,
         observacoes
@@ -1007,6 +1398,16 @@ if (
             prazoEntrega:
                 ordem.prazo_entrega,
 
+            prioridade:
+                ordem.prioridade ||
+                "normal",
+
+            prioridadeTexto:
+                ROTULOS_PRIORIDADE[
+                    ordem.prioridade
+                ] ||
+                "Normal",
+
             valorCentavos:
                 ordem.valor_centavos,
 
@@ -1019,7 +1420,33 @@ if (
                 ] ||
                 ordem.status,
 
-            arquivoOriginalId:
+            matrizId:
+    ordem.matriz_id ||
+    "",
+
+matrizQuantidadePontos:
+    ordem.matriz_quantidade_pontos ===
+        null ||
+    ordem.matriz_quantidade_pontos ===
+        undefined
+        ? null
+        : Number(
+            ordem
+                .matriz_quantidade_pontos
+        ),
+
+matrizQuantidadeCores:
+    ordem.matriz_quantidade_cores ===
+        null ||
+    ordem.matriz_quantidade_cores ===
+        undefined
+        ? null
+        : Number(
+            ordem
+                .matriz_quantidade_cores
+        ),
+
+arquivoOriginalId:
     ordem.arquivo_original_id ||
     "",
 
@@ -1233,8 +1660,13 @@ arquivoConvertidoUrl:
             dados.quantidade,
             dados.linha,
             dados.prazoEntrega,
+            dados.prioridade,
             dados.valorCentavos,
             dados.status,
+
+            dados.matriz
+                ?.id ||
+                null,
 
             dados.arquivoOriginal
                 ?.id ||
@@ -1360,8 +1792,13 @@ arquivoConvertidoUrl:
             dados.quantidade,
             dados.linha,
             dados.prazoEntrega,
+            dados.prioridade,
             dados.valorCentavos,
             dados.status,
+
+            dados.matriz
+                ?.id ||
+                null,
 
             dados.arquivoOriginal
                 ?.id ||
