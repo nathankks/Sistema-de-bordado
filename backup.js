@@ -215,7 +215,8 @@ function criarServicoBackup({
 
         if (
             partes[0] !== "originais" &&
-            partes[0] !== "convertidos"
+            partes[0] !== "convertidos" &&
+            partes[0] !== "editaveis"
         ) {
             throw new ErroHttp(
                 400,
@@ -914,6 +915,41 @@ function validarBancoRecebido(
     ]
 };
 
+const configuracaoMatrizesBordado = {
+    tabela:
+        "matrizes_bordado",
+
+    colunas: [
+        "id",
+        "cliente_id",
+        "nome",
+        "versao",
+        "arquivo_original_id",
+        "local_aplicacao",
+        "largura_mm",
+        "altura_mm",
+        "quantidade_pontos",
+        "quantidade_cores",
+        "status",
+        "observacoes",
+        "criado_em",
+        "atualizado_em"
+    ]
+};
+
+const configuracaoMatrizArquivos = {
+    tabela:
+        "matriz_arquivos",
+
+    colunas: [
+        "id",
+        "matriz_id",
+        "arquivo_id",
+        "funcao",
+        "criado_em"
+    ]
+};
+
     function protegerIdentificador(
         valor
     ) {
@@ -1192,11 +1228,25 @@ const backupPossuiArquivoConvertidoId =
         "arquivo_convertido_id"
     );
 
+const backupPossuiMatrizId =
+    colunasOrdensBackup.includes(
+        "matriz_id"
+    );
+
 const idsArquivosOrdens =
     bancoRecebido
         .prepare(`
             SELECT
                 id,
+
+                ${
+                    backupPossuiMatrizId
+                        ? protegerIdentificador(
+                            "matriz_id"
+                        )
+                        : "NULL"
+                }
+                    AS matriz_id,
 
                 ${
                     backupPossuiArquivoOriginalId
@@ -1244,6 +1294,11 @@ dadosRecebidos.ordens =
 
             return {
                 ...ordem,
+
+                matriz_id:
+                    ids
+                        ?.matriz_id ||
+                    null,
 
                 arquivo_original_id:
                     ids
@@ -1371,6 +1426,57 @@ if (
     }
 }
 
+/*
+ * Matrizes são opcionais para manter
+ * compatibilidade com backups antigos.
+ *
+ * As duas tabelas precisam existir
+ * juntas. Ter somente uma delas indica
+ * um backup incompleto.
+ */
+
+const backupPossuiMatrizesBordado =
+    tabelaExiste(
+        configuracaoMatrizesBordado
+            .tabela
+    );
+
+const backupPossuiMatrizArquivos =
+    tabelaExiste(
+        configuracaoMatrizArquivos
+            .tabela
+    );
+
+if (
+    backupPossuiMatrizesBordado !==
+    backupPossuiMatrizArquivos
+) {
+    throw new ErroHttp(
+        400,
+        "O backup possui uma estrutura incompleta de matrizes de bordado."
+    );
+}
+
+if (
+    backupPossuiMatrizesBordado
+) {
+    dadosRecebidos.matrizesBordado =
+        lerTabelaObrigatoria(
+            configuracaoMatrizesBordado
+        );
+
+    dadosRecebidos.matrizArquivos =
+        lerTabelaObrigatoria(
+            configuracaoMatrizArquivos
+        );
+} else {
+    dadosRecebidos.matrizesBordado =
+        [];
+
+    dadosRecebidos.matrizArquivos =
+        [];
+}
+
 dadosRecebidos.clientes =
     dadosRecebidos.clientes.map(
         cliente => ({
@@ -1432,6 +1538,405 @@ const arquivosClientesPorId =
                     arquivo
                 ]
             )
+    );
+
+/*
+|--------------------------------------------------------------------------
+| Validação das matrizes recebidas
+|--------------------------------------------------------------------------
+*/
+
+const clientesPorId =
+    new Map(
+        dadosRecebidos
+            .clientes
+            .map(
+                cliente => [
+                    cliente.id,
+                    cliente
+                ]
+            )
+    );
+
+const matrizesPorId =
+    new Map();
+
+const chavesMatrizes =
+    new Set();
+
+const statusMatrizesPermitidos =
+    new Set([
+        "rascunho",
+        "teste",
+        "aprovada",
+        "arquivada"
+    ]);
+
+for (
+    const matriz
+    of dadosRecebidos
+        .matrizesBordado
+) {
+    const id =
+        String(
+            matriz.id || ""
+        ).trim();
+
+    const clienteId =
+        String(
+            matriz.cliente_id || ""
+        ).trim();
+
+    const nome =
+        String(
+            matriz.nome || ""
+        ).trim();
+
+    const versao =
+        Number(
+            matriz.versao
+        );
+
+    const status =
+        String(
+            matriz.status || ""
+        )
+            .trim()
+            .toLowerCase();
+
+    if (
+        !id ||
+        matrizesPorId.has(
+            id
+        )
+    ) {
+        throw new ErroHttp(
+            400,
+            "O backup possui matrizes com identificadores inválidos ou duplicados."
+        );
+    }
+
+    if (
+        !clientesPorId.has(
+            clienteId
+        )
+    ) {
+        throw new ErroHttp(
+            400,
+            "O backup possui uma matriz vinculada a um cliente inexistente."
+        );
+    }
+
+    if (
+        nome.length < 2 ||
+        nome.length > 120
+    ) {
+        throw new ErroHttp(
+            400,
+            "O backup possui uma matriz com nome inválido."
+        );
+    }
+
+    if (
+        !Number.isInteger(
+            versao
+        ) ||
+        versao < 1 ||
+        versao > 9999
+    ) {
+        throw new ErroHttp(
+            400,
+            "O backup possui uma matriz com versão inválida."
+        );
+    }
+
+    if (
+        !statusMatrizesPermitidos.has(
+            status
+        )
+    ) {
+        throw new ErroHttp(
+            400,
+            "O backup possui uma matriz com status inválido."
+        );
+    }
+
+    const chaveNomeVersao =
+        `${
+            clienteId
+        }\u0000${
+            nome.toLowerCase()
+        }\u0000${
+            versao
+        }`;
+
+    if (
+        chavesMatrizes.has(
+            chaveNomeVersao
+        )
+    ) {
+        throw new ErroHttp(
+            400,
+            "O backup possui matrizes duplicadas para o mesmo cliente, nome e versão."
+        );
+    }
+
+    chavesMatrizes.add(
+        chaveNomeVersao
+    );
+
+    const arquivoOriginalId =
+        String(
+            matriz
+                .arquivo_original_id ||
+            ""
+        ).trim();
+
+    if (arquivoOriginalId) {
+        const arquivoOriginal =
+            arquivosClientesPorId.get(
+                arquivoOriginalId
+            );
+
+        if (
+            !arquivoOriginal ||
+            arquivoOriginal.cliente_id !==
+                clienteId ||
+            arquivoOriginal.tipo !==
+                "original"
+        ) {
+            throw new ErroHttp(
+                400,
+                "O backup possui uma matriz vinculada a uma logo original inválida."
+            );
+        }
+    }
+
+    matrizesPorId.set(
+        id,
+        {
+            ...matriz,
+
+            id,
+
+            cliente_id:
+                clienteId
+        }
+    );
+}
+
+const vinculosMatrizesPorId =
+    new Set();
+
+const arquivosJaVinculados =
+    new Set();
+
+const matrizesComEditavel =
+    new Set();
+
+const arquivosMaquinaPorMatriz =
+    new Map();
+
+for (
+    const vinculo
+    of dadosRecebidos
+        .matrizArquivos
+) {
+    const id =
+        String(
+            vinculo.id || ""
+        ).trim();
+
+    const matrizId =
+        String(
+            vinculo.matriz_id || ""
+        ).trim();
+
+    const arquivoId =
+        String(
+            vinculo.arquivo_id || ""
+        ).trim();
+
+    const funcao =
+        String(
+            vinculo.funcao || ""
+        )
+            .trim()
+            .toLowerCase();
+
+    if (
+        !id ||
+        vinculosMatrizesPorId.has(
+            id
+        )
+    ) {
+        throw new ErroHttp(
+            400,
+            "O backup possui vínculos de matrizes com identificadores inválidos ou duplicados."
+        );
+    }
+
+    vinculosMatrizesPorId.add(
+        id
+    );
+
+    const matriz =
+        matrizesPorId.get(
+            matrizId
+        );
+
+    const arquivo =
+        arquivosClientesPorId.get(
+            arquivoId
+        );
+
+    if (
+        !matriz ||
+        !arquivo
+    ) {
+        throw new ErroHttp(
+            400,
+            "O backup possui um vínculo de matriz apontando para um registro inexistente."
+        );
+    }
+
+    if (
+        funcao !== "editavel" &&
+        funcao !== "maquina"
+    ) {
+        throw new ErroHttp(
+            400,
+            "O backup possui um vínculo de matriz com função inválida."
+        );
+    }
+
+    const tipoEsperado =
+        funcao === "editavel"
+            ? "editavel"
+            : "convertido";
+
+    if (
+        arquivo.cliente_id !==
+            matriz.cliente_id ||
+        arquivo.tipo !==
+            tipoEsperado
+    ) {
+        throw new ErroHttp(
+            400,
+            funcao === "editavel"
+                ? "O backup possui uma matriz vinculada a um arquivo editável inválido."
+                : "O backup possui uma matriz vinculada a um arquivo de máquina inválido."
+        );
+    }
+
+    /*
+     * Cada editável ou arquivo de máquina
+     * pode pertencer somente a uma matriz.
+     */
+
+    if (
+        arquivosJaVinculados.has(
+            arquivoId
+        )
+    ) {
+        throw new ErroHttp(
+            400,
+            "O backup possui um arquivo vinculado a mais de uma matriz."
+        );
+    }
+
+    arquivosJaVinculados.add(
+        arquivoId
+    );
+
+    if (
+    funcao ===
+        "maquina"
+) {
+    const arquivosDaMatriz =
+        arquivosMaquinaPorMatriz.get(
+            matrizId
+        ) ||
+        new Set();
+
+    arquivosDaMatriz.add(
+        arquivoId
+    );
+
+    arquivosMaquinaPorMatriz.set(
+        matrizId,
+        arquivosDaMatriz
+    );
+}
+
+    /*
+     * Cada matriz pode possuir somente
+     * um arquivo editável.
+     */
+
+    if (
+        funcao === "editavel"
+    ) {
+        if (
+            matrizesComEditavel.has(
+                matrizId
+            )
+        ) {
+            throw new ErroHttp(
+                400,
+                "O backup possui uma matriz com mais de um arquivo editável."
+            );
+        }
+
+        matrizesComEditavel.add(
+            matrizId
+        );
+    }
+}
+
+dadosRecebidos.ordens =
+    dadosRecebidos.ordens.map(
+        ordem => {
+            const matrizId =
+                String(
+                    ordem.matriz_id ||
+                    ""
+                ).trim();
+
+            /*
+             * Backups antigos não possuíam
+             * matriz nas ordens.
+             */
+
+            if (!matrizId) {
+                return {
+                    ...ordem,
+                    matriz_id: null
+                };
+            }
+
+            const matriz =
+                matrizesPorId.get(
+                    matrizId
+                );
+
+            if (
+                !matriz ||
+                matriz.cliente_id !==
+                    ordem.cliente_id
+            ) {
+                throw new ErroHttp(
+                    400,
+                    "O backup possui uma ordem vinculada a uma matriz inválida."
+                );
+            }
+
+            return {
+                ...ordem,
+                matriz_id:
+                    matrizId
+            };
+        }
     );
 
 const arquivosPorClienteTipo =
@@ -1617,6 +2122,91 @@ dadosRecebidos.ordens =
     );
 
     /*
+ * Quando a ordem possui uma matriz,
+ * os arquivos selecionados precisam
+ * pertencer àquela matriz.
+ */
+
+dadosRecebidos.ordens =
+    dadosRecebidos.ordens.map(
+        ordem => {
+            const matrizId =
+                String(
+                    ordem.matriz_id ||
+                    ""
+                ).trim();
+
+            if (!matrizId) {
+                return ordem;
+            }
+
+            const matriz =
+                matrizesPorId.get(
+                    matrizId
+                );
+
+            if (!matriz) {
+                throw new ErroHttp(
+                    400,
+                    "O backup possui uma ordem vinculada a uma matriz inexistente."
+                );
+            }
+
+            const arquivoOriginalId =
+                String(
+                    ordem
+                        .arquivo_original_id ||
+                    ""
+                ).trim();
+
+            const originalDaMatrizId =
+                String(
+                    matriz
+                        .arquivo_original_id ||
+                    ""
+                ).trim();
+
+            if (
+                arquivoOriginalId &&
+                arquivoOriginalId !==
+                    originalDaMatrizId
+            ) {
+                throw new ErroHttp(
+                    400,
+                    "O backup possui uma ordem usando uma logo original que não pertence à matriz selecionada."
+                );
+            }
+
+            const arquivoConvertidoId =
+                String(
+                    ordem
+                        .arquivo_convertido_id ||
+                    ""
+                ).trim();
+
+            const arquivosMaquina =
+                arquivosMaquinaPorMatriz.get(
+                    matrizId
+                ) ||
+                new Set();
+
+            if (
+                arquivoConvertidoId &&
+                !arquivosMaquina.has(
+                    arquivoConvertidoId
+                )
+            ) {
+                throw new ErroHttp(
+                    400,
+                    "O backup possui uma ordem usando um arquivo de máquina que não pertence à matriz selecionada."
+                );
+            }
+
+            return ordem;
+        }
+    );
+
+    /*
      * Impede restaurar um banco que
      * deixaria o sistema sem acesso.
      */
@@ -1677,6 +2267,16 @@ dadosRecebidos.ordens =
             path.join(
                 pastaPreparacao,
                 "convertidos"
+            ),
+            {
+                recursive: true
+            }
+        );
+
+        await fsPromises.mkdir(
+            path.join(
+                pastaPreparacao,
+                "editaveis"
             ),
             {
                 recursive: true
@@ -1898,6 +2498,49 @@ for (
             .clienteArquivos
 },
 
+{
+    tabela:
+        "matrizes_bordado",
+
+    colunas: [
+        "id",
+        "cliente_id",
+        "nome",
+        "versao",
+        "arquivo_original_id",
+        "local_aplicacao",
+        "largura_mm",
+        "altura_mm",
+        "quantidade_pontos",
+        "quantidade_cores",
+        "status",
+        "observacoes",
+        "criado_em",
+        "atualizado_em"
+    ],
+
+    registros:
+        dadosRecebidos
+            .matrizesBordado
+},
+
+{
+    tabela:
+        "matriz_arquivos",
+
+    colunas: [
+        "id",
+        "matriz_id",
+        "arquivo_id",
+        "funcao",
+        "criado_em"
+    ],
+
+    registros:
+        dadosRecebidos
+            .matrizArquivos
+},
+
             {
                 tabela: "catalogo_linhas",
                 colunas: [
@@ -1933,6 +2576,7 @@ for (
                     "prazo_entrega",
                     "valor_centavos",
                     "status",
+                    "matriz_id",
                     "arquivo_original_id",
                     "arquivo_original",
                     "arquivo_convertido_id",
@@ -2011,16 +2655,22 @@ for (
              * novamente com os usuários do backup.
              */
             banco.exec(`
-            DELETE FROM sessoes;
-            DELETE FROM tentativas_login;
-            DELETE FROM ordens;
-            DELETE FROM cliente_arquivos;
-            DELETE FROM clientes;
-            DELETE FROM catalogo_linhas;
-            DELETE FROM usuarios;
+                DELETE FROM sessoes;
+                DELETE FROM tentativas_login;
 
-            DELETE FROM sqlite_sequence
-            WHERE name = 'ordens';
+                DELETE FROM ordens;
+
+                DELETE FROM matriz_arquivos;
+                DELETE FROM matrizes_bordado;
+
+                DELETE FROM cliente_arquivos;
+                DELETE FROM clientes;
+
+                DELETE FROM catalogo_linhas;
+                DELETE FROM usuarios;
+
+                DELETE FROM sqlite_sequence
+                WHERE name = 'ordens';
             `);
 
             for (
@@ -2163,6 +2813,16 @@ async function garantirPastasUploads(
         path.join(
             pasta,
             "convertidos"
+        ),
+        {
+            recursive: true
+        }
+    );
+
+    await fsPromises.mkdir(
+        path.join(
+            pasta,
+            "editaveis"
         ),
         {
             recursive: true
@@ -2519,12 +3179,24 @@ async function restaurarBackup(
                         dadosRecebidos.usuarios.length,
 
                     clientes:
-                    dadosRecebidos.clientes.length,
+                        dadosRecebidos
+                            .clientes
+                            .length,
 
                     arquivosClientes:
-                    dadosRecebidos
-                    .clienteArquivos
-                    .length,
+                        dadosRecebidos
+                            .clienteArquivos
+                            .length,
+
+                    matrizes:
+                        dadosRecebidos
+                            .matrizesBordado
+                            .length,
+
+                    arquivosMatrizes:
+                        dadosRecebidos
+                            .matrizArquivos
+                            .length,
 
                     linhas:
                         dadosRecebidos.linhas.length,
