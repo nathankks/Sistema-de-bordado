@@ -658,6 +658,117 @@
     </button>
 </article>
 
+<!-- PRIMEIROS PASSOS -->
+
+<article
+    class="primeiros-passos-dashboard"
+    id="primeirosPassosDashboard"
+>
+    <header class="primeiros-passos-cabecalho">
+        <div class="primeiros-passos-apresentacao">
+            <span class="primeiros-passos-icone-principal">
+                <svg aria-hidden="true">
+                    <use href="#icon-check-file"></use>
+                </svg>
+            </span>
+
+            <div>
+                <span class="primeiros-passos-etiqueta">
+                    Guia de configuração
+                </span>
+
+                <h2 id="tituloPrimeirosPassos">
+                    Prepare o sistema para produzir
+                </h2>
+
+                <p id="descricaoPrimeirosPassos">
+                    Conclua as etapas abaixo e acompanhe
+                    seu progresso automaticamente.
+                </p>
+            </div>
+        </div>
+
+        <div class="primeiros-passos-progresso-circular">
+            <div class="primeiros-passos-progresso-centro">
+                <strong id="percentualPrimeirosPassos">
+                    0%
+                </strong>
+
+                <span>
+                    concluído
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <div class="primeiros-passos-progresso">
+        <div class="primeiros-passos-progresso-texto">
+            <strong>
+                Progresso da configuração
+            </strong>
+
+            <span id="quantidadePrimeirosPassos">
+                0 de 5 etapas
+            </span>
+        </div>
+
+        <div class="primeiros-passos-trilho">
+            <div
+                class="primeiros-passos-barra"
+                id="barraPrimeirosPassos"
+            ></div>
+        </div>
+    </div>
+
+    <div
+        class="lista-primeiros-passos"
+        id="listaPrimeirosPassos"
+        aria-live="polite"
+    ></div>
+
+    <footer class="primeiros-passos-rodape">
+        <div class="primeiros-passos-informacao">
+            <svg aria-hidden="true">
+                <use href="#icon-check"></use>
+            </svg>
+
+            <span>
+                Seu progresso é atualizado e salvo automaticamente.
+            </span>
+        </div>
+
+        <div class="primeiros-passos-acoes">
+            <button
+                class="botao botao-secundario"
+                id="botaoAbrirTutorialSistema"
+                type="button"
+            >
+                <svg aria-hidden="true">
+                    <use href="#icon-eye"></use>
+                </svg>
+
+                <span>
+                    Iniciar tour guiado
+                </span>
+            </button>
+
+            <button
+                class="botao botao-principal"
+                id="botaoContinuarPrimeirosPassos"
+                type="button"
+            >
+                <span>
+                    Continuar configuração
+                </span>
+
+                <svg aria-hidden="true">
+                    <use href="#icon-arrow-right"></use>
+                </svg>
+            </button>
+        </div>
+    </footer>
+</article>
+
                 <!-- RESUMO DAS ORDENS -->
 
 <div class="resumo-ordens-dashboard">
@@ -6386,6 +6497,277 @@
     </section>
 </div>
 
+<!-- TOUR GUIADO INTERATIVO -->
+
+<div
+    class="tour-guiado-sistema"
+    id="tourGuiadoSistema"
+    aria-hidden="true"
+    hidden
+>
+    <div
+        class="tour-guiado-mascara"
+        id="mascaraTopoTourGuiado"
+        aria-hidden="true"
+    ></div>
+
+    <div
+        class="tour-guiado-mascara"
+        id="mascaraDireitaTourGuiado"
+        aria-hidden="true"
+    ></div>
+
+    <div
+        class="tour-guiado-mascara"
+        id="mascaraBaixoTourGuiado"
+        aria-hidden="true"
+    ></div>
+
+    <div
+        class="tour-guiado-mascara"
+        id="mascaraEsquerdaTourGuiado"
+        aria-hidden="true"
+    ></div>
+
+    <div
+        class="tour-guiado-destaque"
+        id="destaqueTourGuiado"
+        aria-hidden="true"
+    ></div>
+
+    <aside
+        class="tour-guiado-balao"
+        id="balaoTourGuiado"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="tituloTourGuiado"
+        aria-describedby="descricaoTourGuiado"
+        tabindex="-1"
+    >
+        <header class="tour-guiado-cabecalho">
+            <div class="tour-guiado-cabecalho-topo">
+                <span
+                    class="tour-guiado-categoria"
+                    id="categoriaTourGuiado"
+                >
+                    Visão geral
+                </span>
+
+                <button
+                    class="botao-icone tour-guiado-fechar"
+                    data-fechar-tour-guiado
+                    type="button"
+                    aria-label="Fechar tour e continuar depois"
+                >
+                    <svg aria-hidden="true">
+                        <use href="#icon-x"></use>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="tour-guiado-progresso">
+                <div class="tour-guiado-trilho">
+                    <span
+                        class="tour-guiado-barra"
+                        id="barraTourGuiado"
+                    ></span>
+                </div>
+
+                <span id="numeroTourGuiado">
+                    1 de 1
+                </span>
+            </div>
+        </header>
+
+        <main class="tour-guiado-conteudo">
+            <div class="tour-guiado-apresentacao">
+                <span class="tour-guiado-icone">
+                    <svg aria-hidden="true">
+                        <use
+                            id="iconeTourGuiadoUse"
+                            href="#icon-home"
+                        ></use>
+                    </svg>
+                </span>
+
+                <div class="tour-guiado-texto">
+                    <span>
+                        Conheça esta área
+                    </span>
+
+                    <h2 id="tituloTourGuiado">
+                        Visão geral do sistema
+                    </h2>
+
+                    <p id="descricaoTourGuiado">
+                        Acompanhe as principais informações da operação.
+                    </p>
+                </div>
+            </div>
+
+            <ul
+                class="tour-guiado-detalhes"
+                id="detalhesTourGuiado"
+            ></ul>
+        </main>
+
+        <footer class="tour-guiado-rodape">
+            <button
+                class="tour-guiado-continuar-depois"
+                data-fechar-tour-guiado
+                type="button"
+            >
+                Continuar depois
+            </button>
+
+            <div class="tour-guiado-navegacao">
+                <button
+                    class="botao botao-secundario"
+                    id="botaoAnteriorTourGuiado"
+                    type="button"
+                >
+                    Anterior
+                </button>
+
+                <button
+                    class="botao botao-principal"
+                    id="botaoProximoTourGuiado"
+                    type="button"
+                >
+                    <span>
+                        Próximo
+                    </span>
+
+                    <svg aria-hidden="true">
+                        <use href="#icon-arrow-right"></use>
+                    </svg>
+                </button>
+            </div>
+        </footer>
+    </aside>
+</div>
+
+<!-- TUTORIAL DO SISTEMA -->
+
+<div
+    class="modal modal-tutorial-sistema"
+    id="modalTutorialSistema"
+    aria-hidden="true"
+>
+    <div
+        class="modal-fundo"
+        data-fechar-tutorial-sistema
+    ></div>
+
+    <section
+        class="modal-conteudo tutorial-sistema-dialogo"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="tituloTutorialSistema"
+        aria-describedby="descricaoTutorialSistema"
+    >
+        <header class="tutorial-sistema-cabecalho">
+            <div class="tutorial-sistema-cabecalho-topo">
+                <span
+                    class="tutorial-sistema-categoria"
+                    id="categoriaTutorialSistema"
+                >
+                    Primeiros passos
+                </span>
+
+                <button
+                    class="botao-icone tutorial-sistema-fechar"
+                    data-fechar-tutorial-sistema
+                    type="button"
+                    aria-label="Fechar tutorial e continuar depois"
+                >
+                    <svg aria-hidden="true">
+                        <use href="#icon-x"></use>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="tutorial-sistema-progresso">
+                <div class="tutorial-sistema-trilho">
+                    <div
+                        class="tutorial-sistema-barra"
+                        id="barraTutorialSistema"
+                    ></div>
+                </div>
+
+                <span id="numeroTutorialSistema">
+                    1 de 5
+                </span>
+            </div>
+        </header>
+
+        <main class="tutorial-sistema-conteudo">
+            <span class="tutorial-sistema-icone">
+                <svg aria-hidden="true">
+                    <use
+                        id="iconeTutorialSistemaUse"
+                        href="#icon-users"
+                    ></use>
+                </svg>
+            </span>
+
+            <div class="tutorial-sistema-texto">
+                <span>
+                    Conheça esta etapa
+                </span>
+
+                <h2 id="tituloTutorialSistema">
+                    Cadastre o primeiro cliente
+                </h2>
+
+                <p id="descricaoTutorialSistema">
+                    Comece organizando os dados e arquivos
+                    utilizados no atendimento.
+                </p>
+            </div>
+
+            <ul
+                class="tutorial-sistema-detalhes"
+                id="detalhesTutorialSistema"
+            ></ul>
+        </main>
+
+        <footer class="tutorial-sistema-rodape">
+            <button
+                class="botao botao-secundario"
+                id="botaoAbrirAreaTutorialSistema"
+                type="button"
+            >
+                Abrir esta área
+            </button>
+
+            <div class="tutorial-sistema-navegacao">
+                <button
+                    class="botao botao-secundario"
+                    id="botaoAnteriorTutorialSistema"
+                    type="button"
+                >
+                    Anterior
+                </button>
+
+                <button
+                    class="botao botao-principal"
+                    id="botaoProximoTutorialSistema"
+                    type="button"
+                >
+                    <span>
+                        Próximo
+                    </span>
+
+                    <svg aria-hidden="true">
+                        <use href="#icon-arrow-right"></use>
+                    </svg>
+                </button>
+            </div>
+        </footer>
+    </section>
+</div>
+
 <!-- CENTRAL DE NOVIDADES DO SISTEMA -->
 
 <div
@@ -6693,6 +7075,8 @@
         <script src="linhas-ui.js"></script>
         <script src="atividades-ui.js"></script>
         <script src="usuarios-ui.js"></script>
+        <script src="primeiros-passos-ui.js"></script>
+        <script src="tour-guiado-ui.js"></script>
     
 </body>
 </html>
