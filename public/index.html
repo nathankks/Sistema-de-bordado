@@ -44,6 +44,38 @@
         </symbol>
 
         <symbol
+            id="icon-download"
+            viewBox="0 0 24 24"
+        >
+            <path
+                d="M12 3v11"
+                fill="none"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+            ></path>
+
+            <path
+                d="M7 10l5 5 5-5"
+                fill="none"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+            ></path>
+
+            <path
+                d="M5 19h14"
+                fill="none"
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+            ></path>
+        </symbol>
+
+        <symbol
             id="icon-users"
             viewBox="0 0 24 24"
         >
@@ -369,6 +401,19 @@
 
                 <button
                     class="menu-item"
+                    data-secao="producao"
+                    data-permissao-exigida="ordens.visualizar"
+                    type="button"
+                >
+                    <svg aria-hidden="true">
+                        <use href="#icon-check"></use>
+                    </svg>
+
+                    <span>Produção</span>
+                </button>
+
+                <button
+                    class="menu-item"
                     data-secao="linhas"
                     data-permissao-exigida="linhas.visualizar"
                     type="button"
@@ -398,6 +443,22 @@
     <span class="menu-grupo-titulo">
         Administração
     </span>
+
+    <button
+    class="menu-item"
+    id="menuAtividades"
+    data-secao="atividades"
+    data-permissao-exigida="usuarios.gerenciar"
+    type="button"
+>
+    <svg aria-hidden="true">
+        <use href="#icon-clock"></use>
+    </svg>
+
+    <span>
+        Atividades
+    </span>
+</button>
 
     <button
         class="menu-item"
@@ -558,6 +619,44 @@
                         </svg>
                     </button>
                 </section>
+
+                <article
+    class="alerta-backup-dashboard"
+    id="alertaBackupDashboard"
+    hidden
+    data-nivel-backup="aviso"
+    data-permissao-exigida="backup.criar"
+>
+    <div class="alerta-backup-dashboard-icone">
+        <svg aria-hidden="true">
+            <use href="#icon-alert"></use>
+        </svg>
+    </div>
+
+    <div class="alerta-backup-dashboard-conteudo">
+        <strong id="tituloAlertaBackupDashboard">
+            Backup recomendado
+        </strong>
+
+        <p id="mensagemAlertaBackupDashboard">
+            Faça um backup para manter os dados do sistema protegidos.
+        </p>
+    </div>
+
+    <button
+        class="botao botao-secundario"
+        id="botaoCriarBackupDashboard"
+        type="button"
+    >
+        <svg aria-hidden="true">
+            <use href="#icon-download"></use>
+        </svg>
+
+        <span>
+            Criar backup agora
+        </span>
+    </button>
+</article>
 
                 <!-- RESUMO DAS ORDENS -->
 
@@ -1104,6 +1203,28 @@
                 </select>
             </label>
 
+            <label class="filtro-ordens">
+    <span>Prioridade</span>
+
+    <select id="filtroPrioridadeOrdens">
+        <option value="todas">
+            Todas as prioridades
+        </option>
+
+        <option value="urgente">
+            Urgente
+        </option>
+
+        <option value="alta">
+            Alta
+        </option>
+
+        <option value="normal">
+            Normal
+        </option>
+    </select>
+</label>
+
             <span id="quantidadeOrdens">
                 0 ordens
             </span>
@@ -1117,6 +1238,8 @@
                 <th>Cliente</th>
                 <th>Serviço</th>
                 <th>Prazo</th>
+                <th>Prioridade</th>
+                <th>Tempo estimado</th>
                 <th>Status</th>
                 <th>Ações</th>
             </tr>
@@ -1126,6 +1249,184 @@
     </table>
 </div>
 
+    </article>
+</section>
+
+<!-- PAINEL DE PRODUÇÃO -->
+
+<section
+    class="secao"
+    id="secao-producao"
+    data-permissao-exigida="ordens.visualizar"
+>
+    <article class="painel painel-kanban-producao">
+        <div class="painel-cabecalho painel-kanban-producao-cabecalho">
+            <div>
+                <span class="rotulo">
+                    Fluxo de trabalho
+                </span>
+
+                <h2>
+                    Painel de produção
+                </h2>
+
+                <p>
+                    Visualize as ordens por etapa e acompanhe
+                    o andamento da produção em tempo real.
+                </p>
+            </div>
+
+            <div class="acoes-kanban-producao">
+
+                <button
+    class="botao botao-secundario"
+    id="botaoConfigurarMaquina"
+    data-permissao-exigida="ordens.editar"
+    type="button"
+>
+    <svg aria-hidden="true">
+        <use href="#icon-settings"></use>
+    </svg>
+
+    <span>
+        Configurar máquina
+    </span>
+</button>
+
+                <button
+                    class="botao botao-secundario"
+                    id="botaoMostrarEntreguesKanban"
+                    type="button"
+                    aria-pressed="false"
+                >
+                    <svg aria-hidden="true">
+                        <use href="#icon-check"></use>
+                    </svg>
+
+                    <span>
+                        Mostrar entregues
+                    </span>
+                </button>
+
+                <button
+                    class="botao botao-secundario"
+                    id="botaoAtualizarKanbanProducao"
+                    type="button"
+                >
+                    <svg aria-hidden="true">
+                        <use href="#icon-clock"></use>
+                    </svg>
+
+                    <span>
+                        Atualizar
+                    </span>
+                </button>
+            </div>
+        </div>
+
+<div class="resumo-capacidade-maquina">
+    <article class="cartao-capacidade-maquina">
+        <span>Máquina</span>
+
+        <strong id="nomeMaquinaCapacidade">
+            Carregando...
+        </strong>
+
+        <small>
+            Configuração usada nos cálculos
+        </small>
+    </article>
+
+    <article class="cartao-capacidade-maquina">
+        <span>Capacidade diária</span>
+
+        <strong id="capacidadeDiariaMaquina">
+            —
+        </strong>
+
+        <small>
+            Horas produtivas configuradas
+        </small>
+    </article>
+
+    <article class="cartao-capacidade-maquina">
+        <span>Tempo da fila</span>
+
+        <strong id="tempoFilaProducao">
+            —
+        </strong>
+
+        <small>
+            Ordens prontas e em produção
+        </small>
+    </article>
+
+    <article class="cartao-capacidade-maquina">
+        <span>Dias para concluir</span>
+
+        <strong id="diasFilaProducao">
+            —
+        </strong>
+
+        <small>
+            Considerando a capacidade diária
+        </small>
+    </article>
+</div>
+
+<div class="capacidade-maquina-progresso">
+    <div class="capacidade-maquina-progresso-cabecalho">
+        <div>
+            <strong id="statusCapacidadeMaquina">
+                Calculando capacidade...
+            </strong>
+
+            <small id="observacaoCapacidadeMaquina">
+                Aguarde o carregamento das ordens.
+            </small>
+        </div>
+
+        <span id="percentualCapacidadeMaquina">
+            0% de um dia
+        </span>
+    </div>
+
+    <div class="trilho-capacidade-maquina">
+        <span id="barraCapacidadeMaquina"></span>
+    </div>
+</div>
+
+<div class="controles-kanban-producao">
+    <label class="busca-kanban-producao">
+        <svg aria-hidden="true">
+            <use href="#icon-search"></use>
+        </svg>
+
+        <input
+            id="buscaKanbanProducao"
+            type="search"
+            placeholder="Buscar ordem, cliente ou serviço"
+            autocomplete="off"
+        >
+    </label>
+
+    <span
+        class="quantidade-kanban-producao"
+        id="quantidadeKanbanProducao"
+    >
+        Carregando ordens...
+    </span>
+
+    <small id="ajudaKanbanProducao">
+        Arraste os cartões entre as colunas para alterar a etapa.
+    </small>
+</div>
+
+<div
+    class="kanban-producao"
+    id="kanbanProducao"
+    aria-live="polite"
+></div>
     </article>
 </section>
 
@@ -1316,36 +1617,495 @@
     </article>
 </section>
 
-            <!-- ARQUIVOS -->
+<section
+    class="secao"
+    id="secao-arquivos"
+>
+    <!-- Matrizes organizadas -->
 
-            <section
-                class="secao"
-                id="secao-arquivos"
+    <article class="painel painel-matrizes">
+        <div class="painel-cabecalho painel-matrizes-cabecalho">
+            <div>
+                <span class="rotulo">
+                    Produção
+                </span>
+
+                <h2>
+                    Matrizes de bordado
+                </h2>
+
+                <p>
+                    Organize o arquivo editável e os arquivos de máquina
+                    utilizados em cada conversão.
+                </p>
+            </div>
+
+            <button
+                class="botao botao-principal"
+                id="botaoNovaMatriz"
+                data-permissao-exigida="clientes.editar"
+                type="button"
             >
-                <article class="painel">
-                    <div class="painel-cabecalho">
-                        <div>
-                            <span class="rotulo">
-                                Biblioteca
-                            </span>
+                <svg aria-hidden="true">
+                    <use href="#icon-plus"></use>
+                </svg>
 
-                            <h2>
-                                Arquivos de bordado
-                            </h2>
+                <span>
+                    Nova matriz
+                </span>
+            </button>
+        </div>
 
-                            <p>
-                                Visualize os nomes das logos originais
-                                e dos arquivos convertidos.
-                            </p>
-                        </div>
-                    </div>
+        <div class="controles-matrizes">
+            <label class="busca-matrizes">
+                <svg aria-hidden="true">
+                    <use href="#icon-search"></use>
+                </svg>
 
-                    <div
-                        class="grade-arquivos"
-                        id="gradeArquivos"
-                    ></div>
-                </article>
-            </section>
+                <input
+                    id="buscaMatrizes"
+                    type="search"
+                    placeholder="Buscar matriz, cliente ou aplicação"
+                    autocomplete="off"
+                >
+            </label>
+
+            <select
+                id="filtroClienteMatrizes"
+                aria-label="Filtrar matrizes por cliente"
+            >
+                <option value="">
+                    Todos os clientes
+                </option>
+            </select>
+
+            <select
+                id="filtroStatusMatrizes"
+                aria-label="Filtrar matrizes por status"
+            >
+                <option value="todos">
+                    Todos os status
+                </option>
+
+                <option value="rascunho">
+                    Rascunho
+                </option>
+
+                <option value="teste">
+                    Em teste
+                </option>
+
+                <option value="aprovada">
+                    Aprovada
+                </option>
+
+                <option value="arquivada">
+                    Arquivada
+                </option>
+            </select>
+
+            <span
+                class="quantidade-matrizes"
+                id="quantidadeMatrizes"
+            >
+                0 matrizes
+            </span>
+        </div>
+
+        <div
+            class="grade-matrizes"
+            id="gradeMatrizes"
+        ></div>
+    </article>
+
+<!-- Biblioteca completa de arquivos -->
+
+<article class="painel painel-biblioteca-clientes">
+    <div class="painel-cabecalho">
+        <div>
+            <span class="rotulo">
+                Biblioteca
+            </span>
+
+            <h2>
+                Biblioteca de arquivos
+            </h2>
+
+            <p>
+                Consulte e organize todos os arquivos originais,
+                editáveis e de máquina dos clientes.
+            </p>
+        </div>
+    </div>
+
+    <!-- Resumo -->
+
+    <div class="resumo-biblioteca">
+        <div class="indicador-biblioteca">
+            <span class="indicador-biblioteca-icone">
+                <svg aria-hidden="true">
+                    <use href="#icon-folder"></use>
+                </svg>
+            </span>
+
+            <div>
+                <small>
+                    Todos os arquivos
+                </small>
+
+                <strong id="totalArquivosBiblioteca">
+                    0
+                </strong>
+            </div>
+        </div>
+
+        <div class="indicador-biblioteca">
+            <span class="indicador-biblioteca-icone">
+                <svg aria-hidden="true">
+                    <use href="#icon-file"></use>
+                </svg>
+            </span>
+
+            <div>
+                <small>
+                    Originais
+                </small>
+
+                <strong id="totalOriginaisBiblioteca">
+                    0
+                </strong>
+            </div>
+        </div>
+
+        <div class="indicador-biblioteca">
+            <span class="indicador-biblioteca-icone">
+                <svg aria-hidden="true">
+                    <use href="#icon-edit"></use>
+                </svg>
+            </span>
+
+            <div>
+                <small>
+                    Editáveis
+                </small>
+
+                <strong id="totalEditaveisBiblioteca">
+                    0
+                </strong>
+            </div>
+        </div>
+
+        <div class="indicador-biblioteca">
+            <span class="indicador-biblioteca-icone">
+                <svg aria-hidden="true">
+                    <use href="#icon-check-file"></use>
+                </svg>
+            </span>
+
+            <div>
+                <small>
+                    Arquivos de máquina
+                </small>
+
+                <strong id="totalMaquinaBiblioteca">
+                    0
+                </strong>
+            </div>
+        </div>
+
+        <div class="indicador-biblioteca indicador-biblioteca-alerta">
+            <span class="indicador-biblioteca-icone">
+                <svg aria-hidden="true">
+                    <use href="#icon-clock"></use>
+                </svg>
+            </span>
+
+            <div>
+                <small>
+                    Sem matriz
+                </small>
+
+                <strong id="totalSemMatrizBiblioteca">
+                    0
+                </strong>
+            </div>
+        </div>
+    </div>
+
+    <!-- Controles -->
+
+    <div class="controles-biblioteca">
+        <label class="busca-biblioteca">
+            <svg aria-hidden="true">
+                <use href="#icon-search"></use>
+            </svg>
+
+            <input
+                id="buscaBiblioteca"
+                type="search"
+                placeholder="Buscar cliente, arquivo ou matriz"
+                autocomplete="off"
+            >
+        </label>
+
+        <select
+            id="filtroClienteBiblioteca"
+            aria-label="Filtrar biblioteca por cliente"
+        >
+            <option value="">
+                Todos os clientes
+            </option>
+        </select>
+
+        <select
+            id="filtroTipoBiblioteca"
+            aria-label="Filtrar biblioteca por tipo"
+        >
+            <option value="todos">
+                Todos os tipos
+            </option>
+
+            <option value="original">
+                Arquivos originais
+            </option>
+
+            <option value="editavel">
+                Arquivos editáveis
+            </option>
+
+            <option value="convertido">
+                Arquivos de máquina
+            </option>
+        </select>
+
+        <select
+            id="filtroVinculoBiblioteca"
+            aria-label="Filtrar biblioteca por vínculo"
+        >
+            <option value="todos">
+                Todos os vínculos
+            </option>
+
+            <option value="vinculados">
+                Vinculados a matrizes
+            </option>
+
+            <option value="disponiveis">
+                Disponíveis sem matriz
+            </option>
+        </select>
+
+        <div class="acoes-pastas-biblioteca">
+    <span
+        class="quantidade-biblioteca"
+        id="quantidadeArquivosBiblioteca"
+    >
+        0 arquivos
+    </span>
+
+    <button
+    class="botao-pastas-biblioteca botao-limpar-filtros-biblioteca"
+    id="botaoLimparFiltrosBiblioteca"
+    type="button"
+    disabled
+>
+    <svg aria-hidden="true">
+        <use href="#icon-x"></use>
+    </svg>
+
+    <span>
+        Limpar filtros
+    </span>
+</button>
+
+    <button
+        class="botao-pastas-biblioteca"
+        id="botaoExpandirPastasBiblioteca"
+        type="button"
+    >
+        Expandir tudo
+    </button>
+
+    <button
+        class="botao-pastas-biblioteca"
+        id="botaoRecolherPastasBiblioteca"
+        type="button"
+    >
+        Recolher tudo
+    </button>
+</div>
+    </div>
+
+    <!-- Pastas dos clientes -->
+
+<div
+    class="grade-biblioteca-arquivos"
+    id="gradeArquivos"
+></div>
+</article>
+</section>
+
+<!-- HISTÓRICO DE ATIVIDADES -->
+
+<section
+    class="secao"
+    id="secao-atividades"
+    data-permissao-exigida="usuarios.gerenciar"
+>
+    <article class="painel painel-atividades">
+        <div class="painel-cabecalho painel-atividades-cabecalho">
+            <div>
+                <span class="rotulo">
+                    Administração
+                </span>
+
+                <h2>
+                    Histórico de atividades
+                </h2>
+
+                <p>
+                    Acompanhe quem criou, editou, arquivou,
+                    restaurou ou excluiu informações do sistema.
+                </p>
+            </div>
+
+            <button
+                class="botao botao-secundario"
+                id="botaoAtualizarAtividades"
+                type="button"
+            >
+                <svg aria-hidden="true">
+                    <use href="#icon-clock"></use>
+                </svg>
+
+                <span>
+                    Atualizar
+                </span>
+            </button>
+        </div>
+
+        <div class="controles-atividades">
+            <label class="busca-atividades">
+                <svg aria-hidden="true">
+                    <use href="#icon-search"></use>
+                </svg>
+
+                <input
+                    id="buscaAtividades"
+                    type="search"
+                    placeholder="Buscar usuário, ação ou código"
+                    autocomplete="off"
+                >
+            </label>
+
+            <select
+                id="filtroAcaoAtividades"
+                aria-label="Filtrar histórico por ação"
+            >
+                <option value="todas">
+                    Todas as ações
+                </option>
+
+                <option value="criar">
+                    Criações
+                </option>
+
+                <option value="editar">
+                    Edições
+                </option>
+
+                <option value="arquivar">
+                    Arquivamentos
+                </option>
+
+                <option value="restaurar">
+                    Restaurações
+                </option>
+
+                <option value="excluir">
+                    Exclusões
+                </option>
+
+                <option value="alterar_senha">
+                    Alterações de senha
+                </option>
+
+                <option value="entrar">
+                    Entradas
+                </option>
+
+                <option value="sair">
+                    Saídas
+                </option>
+            </select>
+
+            <select
+                id="filtroEntidadeAtividades"
+                aria-label="Filtrar histórico por área"
+            >
+                <option value="todas">
+                    Todas as áreas
+                </option>
+
+                <option value="cliente">
+                    Clientes
+                </option>
+
+                <option value="ordem">
+                    Ordens
+                </option>
+
+                <option value="matriz">
+                    Matrizes
+                </option>
+
+                <option value="linha">
+                    Linhas
+                </option>
+
+                <option value="arquivo">
+                    Arquivos
+                </option>
+
+                <option value="usuário">
+                    Usuários
+                </option>
+
+                <option value="backup">
+                    Backup
+                </option>
+
+                <option value="conta">
+                    Conta
+                </option>
+            </select>
+
+            <span
+                class="quantidade-atividades"
+                id="quantidadeAtividades"
+            >
+                0 atividades
+            </span>
+        </div>
+
+        <div
+            class="lista-atividades"
+            id="listaAtividades"
+        >
+            <div class="estado-vazio estado-vazio-atividades">
+                <div class="estado-vazio-icone">
+                    <svg aria-hidden="true">
+                        <use href="#icon-clock"></use>
+                    </svg>
+                </div>
+
+                <p>
+                    Carregando atividades...
+                </p>
+            </div>
+        </div>
+    </article>
+</section>
 
 <!-- GERENCIAMENTO DE USUÁRIOS -->
 
@@ -2292,6 +3052,83 @@
         >
     </label>
 
+    <div class="campo campo-largo campo-matriz-ordem">
+    <div class="campo-matriz-ordem-cabecalho">
+        <span>
+            Matriz de bordado
+        </span>
+
+        <small>
+            A matriz preenche automaticamente a logo original
+            e o arquivo de máquina.
+        </small>
+    </div>
+
+    <div
+        class="select-arquivo-custom"
+        data-select-custom
+    >
+        <select
+            id="ordemMatrizId"
+            class="select-arquivo-nativo"
+            disabled
+        >
+            <option value="">
+                Selecione um cliente
+            </option>
+        </select>
+
+        <button
+            class="select-arquivo-gatilho"
+            type="button"
+            aria-haspopup="listbox"
+            aria-expanded="false"
+        >
+            <span class="select-arquivo-valor">
+                Selecione um cliente
+            </span>
+
+            <span
+                class="select-arquivo-seta"
+                aria-hidden="true"
+            ></span>
+        </button>
+
+        <div
+            class="select-arquivo-menu"
+            role="listbox"
+            hidden
+        ></div>
+    </div>
+
+    <small id="mensagemMatrizOrdem">
+        Selecione primeiro o cliente da ordem.
+    </small>
+</div>
+
+<aside
+    class="estimativa-tempo-ordem"
+    id="estimativaTempoOrdem"
+>
+    <span class="estimativa-tempo-ordem-icone">
+        <svg aria-hidden="true">
+            <use href="#icon-clock"></use>
+        </svg>
+    </span>
+
+    <div>
+        <span>Tempo estimado de produção</span>
+
+        <strong>
+            Selecione uma matriz com quantidade de pontos
+        </strong>
+
+        <small>
+            O cálculo considera quantidade, cabeças, velocidade e eficiência.
+        </small>
+    </div>
+</aside>
+
 <div class="campo campo-largo campo-logo-ordem">
     <div class="campo-logo-ordem-cabecalho">
         <span>
@@ -2539,6 +3376,27 @@
             required
         >
     </label>
+
+    <label class="campo">
+    <span>Prioridade</span>
+
+    <select
+        id="ordemPrioridade"
+        required
+    >
+        <option value="normal">
+            Normal
+        </option>
+
+        <option value="alta">
+            Alta
+        </option>
+
+        <option value="urgente">
+            Urgente
+        </option>
+    </select>
+</label>
 
     <label class="campo campo-largo">
         <span>Status</span>
@@ -3110,104 +3968,218 @@
     ></small>
 </div>
 
-<!-- Arquivo convertido -->
-<div class="campo campo-largo campo-logo-convertida">
-    <div class="campo-arquivo-cabecalho">
-        <span>Arquivo convertido</span>
-    </div>
-
-    <input
-    id="logoConvertida"
-    name="logoConvertida"
-    type="file"
-    accept=".dst,.pes,.jef,.exp,.vp3,.zip"
-    multiple
-    hidden
-    >
-
-    <div class="cartao-arquivo-convertido">
-        <span class="arquivo-cliente-icone">
-            <svg aria-hidden="true">
-                <use href="#icon-check-file"></use>
-            </svg>
-        </span>
-
-        <div class="arquivo-cliente-textos">
-            <strong id="nomeArquivoConvertido">
-                Nenhum arquivo selecionado
+<!-- Arquivos da conversão -->
+<section
+    class="campo campo-largo grupo-arquivos-conversao"
+>
+    <div class="cabecalho-grupo-arquivos">
+        <div>
+            <strong>
+                Arquivos da conversão
             </strong>
 
-            <p id="descricaoArquivoConvertido">
-                Selecione o arquivo pronto para bordado
-            </p>
-
             <small>
-                DST, PES, JEF, EXP, VP3 ou ZIP
+                Guarde o arquivo editável e o arquivo utilizado na máquina
             </small>
         </div>
     </div>
 
-    <div
-    class="lista-arquivos-cliente"
-    id="listaArquivosConvertidosCliente"
-    hidden
-    ></div>
-
-    <div class="acoes-arquivo-cliente">
-        <button
-            class="botao-arquivo-cliente"
-            id="botaoSelecionarLogoConvertida"
-            type="button"
+    <div class="grade-arquivos-conversao">
+        <!-- Arquivo editável -->
+        <div
+            class="campo-arquivo-conversao campo-arquivo-editavel"
         >
-            <svg aria-hidden="true">
-                <use href="#icon-folder"></use>
-            </svg>
+            <div class="campo-arquivo-cabecalho">
+                <span>
+                    Arquivo editável
+                </span>
 
-            <span>
-                Escolher arquivos
-            </span>
-        </button>
+                <small class="etiqueta-tipo-arquivo">
+                    EMB
+                </small>
+            </div>
 
-        <button
-            class="botao-arquivo-cliente botao-remover-arquivo"
-            id="botaoRemoverLogoConvertida"
-            type="button"
-            hidden
+            <input
+                id="arquivoEditavel"
+                name="arquivoEditavel"
+                type="file"
+                accept=".emb,.zip"
+                multiple
+                hidden
+            >
+
+            <div
+                class="cartao-arquivo-convertido cartao-arquivo-editavel"
+            >
+                <span class="arquivo-cliente-icone">
+                    <svg aria-hidden="true">
+                        <use href="#icon-edit"></use>
+                    </svg>
+                </span>
+
+                <div class="arquivo-cliente-textos">
+                    <strong id="nomeArquivoEditavel">
+                        Nenhum arquivo selecionado
+                    </strong>
+
+                    <p id="descricaoArquivoEditavel">
+                        Selecione o arquivo que poderá ser editado.
+                    </p>
+
+                    <small>
+                        EMB ou ZIP · máximo de 30 MB
+                    </small>
+                </div>
+            </div>
+
+            <div
+                class="lista-arquivos-cliente"
+                id="listaArquivosEditaveisCliente"
+                hidden
+            ></div>
+
+            <div class="acoes-arquivo-cliente">
+                <button
+                    class="botao-arquivo-cliente"
+                    id="botaoSelecionarArquivoEditavel"
+                    type="button"
+                >
+                    <svg aria-hidden="true">
+                        <use href="#icon-folder"></use>
+                    </svg>
+
+                    <span>
+                        Escolher arquivos
+                    </span>
+                </button>
+
+                <button
+                    class="botao-arquivo-cliente botao-remover-arquivo"
+                    id="botaoRemoverArquivoEditavel"
+                    type="button"
+                    hidden
+                >
+                    <svg aria-hidden="true">
+                        <use href="#icon-trash"></use>
+                    </svg>
+
+                    <span>
+                        Limpar novos
+                    </span>
+                </button>
+            </div>
+
+            <small
+                class="mensagem-arquivo-cliente"
+                id="mensagemArquivoEditavel"
+                hidden
+            ></small>
+        </div>
+
+        <!-- Arquivo de máquina -->
+        <div
+            class="campo-arquivo-conversao campo-logo-convertida"
         >
-            <svg aria-hidden="true">
-                <use href="#icon-trash"></use>
-            </svg>
+            <div class="campo-arquivo-cabecalho">
+                <span>
+                    Arquivo de máquina
+                </span>
 
-            <span>
-                Remover
-            </span>
-        </button>
+                <small class="etiqueta-tipo-arquivo">
+                    Produção
+                </small>
+            </div>
+
+            <input
+                id="logoConvertida"
+                name="logoConvertida"
+                type="file"
+                accept=".dst,.pes,.jef,.exp,.vp3,.zip"
+                multiple
+                hidden
+            >
+
+            <div class="cartao-arquivo-convertido">
+                <span class="arquivo-cliente-icone">
+                    <svg aria-hidden="true">
+                        <use href="#icon-check-file"></use>
+                    </svg>
+                </span>
+
+                <div class="arquivo-cliente-textos">
+                    <strong id="nomeArquivoConvertido">
+                        Nenhum arquivo selecionado
+                    </strong>
+
+                    <p id="descricaoArquivoConvertido">
+                        Selecione o arquivo pronto para a máquina.
+                    </p>
+
+                    <small>
+                        DST, PES, JEF, EXP, VP3 ou ZIP · máximo de 20 MB
+                    </small>
+                </div>
+            </div>
+
+            <div
+                class="lista-arquivos-cliente"
+                id="listaArquivosConvertidosCliente"
+                hidden
+            ></div>
+
+            <div class="acoes-arquivo-cliente">
+                <button
+                    class="botao-arquivo-cliente"
+                    id="botaoSelecionarLogoConvertida"
+                    type="button"
+                >
+                    <svg aria-hidden="true">
+                        <use href="#icon-folder"></use>
+                    </svg>
+
+                    <span>
+                        Escolher arquivos
+                    </span>
+                </button>
+
+                <button
+                    class="botao-arquivo-cliente botao-remover-arquivo"
+                    id="botaoRemoverLogoConvertida"
+                    type="button"
+                    hidden
+                >
+                    <svg aria-hidden="true">
+                        <use href="#icon-trash"></use>
+                    </svg>
+
+                    <span>
+                        Limpar novos
+                    </span>
+                </button>
+            </div>
+
+            <small
+                class="mensagem-arquivo-cliente"
+                id="mensagemLogoConvertida"
+                hidden
+            ></small>
+        </div>
     </div>
+</section>
 
-    <small
-        class="mensagem-arquivo-cliente"
-        id="mensagemLogoConvertida"
-    >
-    </small>
-</div>
+                    <label class="campo campo-largo">
+                        <span>
+                            Informações adicionais
+                        </span>
 
-<label class="campo campo-largo">
-    <span>
-        Informações adicionais
-    </span>
-
-    <textarea
-        id="observacoes"
-        name="observacoes"
-        rows="4"
-        maxlength="3000"
-        placeholder="Preferências do cliente, instruções, informações comerciais ou outros detalhes importantes"
-    ></textarea>
-
-    <small>
-         · Máximo de 3.000 caracteres
-    </small>
-</label>
+                        <textarea
+                            id="observacoes"
+                            name="observacoes"
+                            rows="4"
+                            maxlength="2000"
+                            placeholder="Informações importantes sobre o cliente"
+                        ></textarea>
+                    </label>
 
                 </div>
 
@@ -3619,18 +4591,27 @@
                     </select>
                 </label>
 
-                <label class="campo">
-                    <span>Estoque atual</span>
+                <label
+    class="campo"
+    id="campoEstoqueLinhaCatalogo"
+>
+    <span id="rotuloEstoqueLinhaCatalogo">
+        Estoque inicial
+    </span>
 
-                    <input
-                        id="linhaEstoque"
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value="0"
-                        required
-                    >
-                </label>
+    <input
+        id="linhaEstoque"
+        type="number"
+        min="0"
+        step="0.01"
+        value="0"
+        required
+    >
+
+    <small id="ajudaEstoqueLinhaCatalogo">
+        Informe o saldo disponível no primeiro cadastro.
+    </small>
+</label>
 
                 <label class="campo">
                     <span>Estoque mínimo</span>
@@ -3694,6 +4675,252 @@
             </div>
         </form>
     </div>
+</div>
+
+<!-- MOVIMENTAÇÃO E HISTÓRICO DE ESTOQUE -->
+
+<div
+    class="modal"
+    id="modalMovimentacaoLinha"
+    aria-hidden="true"
+>
+    <div
+        class="modal-fundo"
+        data-fechar-movimentacao-linha
+    ></div>
+
+    <section
+        class="modal-conteudo modal-movimentacao-linha"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="tituloMovimentacaoLinha"
+    >
+        <header class="modal-cabecalho">
+            <div>
+                <span class="rotulo">
+                    Controle de estoque
+                </span>
+
+                <h2 id="tituloMovimentacaoLinha">
+                    Movimentar linha
+                </h2>
+
+                <p id="subtituloMovimentacaoLinha">
+                    Registre entradas, saídas e ajustes de inventário.
+                </p>
+            </div>
+
+            <button
+                class="botao-icone"
+                data-fechar-movimentacao-linha
+                type="button"
+                aria-label="Fechar"
+            >
+                <svg aria-hidden="true">
+                    <use href="#icon-x"></use>
+                </svg>
+            </button>
+        </header>
+
+        <div class="resumo-movimentacao-linha">
+            <span
+                class="amostra-movimentacao-linha"
+                id="amostraMovimentacaoLinha"
+            ></span>
+
+            <div class="identificacao-movimentacao-linha">
+                <span id="marcaCodigoMovimentacaoLinha">
+                    Linha
+                </span>
+
+                <strong id="nomeMovimentacaoLinha">
+                    Carregando...
+                </strong>
+            </div>
+
+            <div class="saldo-movimentacao-linha">
+                <span>Estoque atual</span>
+
+                <strong id="estoqueAtualMovimentacaoLinha">
+                    —
+                </strong>
+            </div>
+        </div>
+
+        <div class="conteudo-movimentacao-linha">
+            <form
+                class="formulario-movimentacao-linha"
+                id="formularioMovimentacaoLinha"
+                novalidate
+            >
+                <input
+                    id="movimentacaoLinhaId"
+                    type="hidden"
+                >
+
+                <input
+                    id="movimentacaoLinhaTipo"
+                    type="hidden"
+                    value="entrada"
+                >
+
+                <div
+                    class="tipos-movimentacao-linha"
+                    role="group"
+                    aria-label="Tipo da movimentação"
+                >
+                    <button
+                        class="tipo-movimentacao-linha ativo entrada"
+                        data-tipo-movimentacao-linha="entrada"
+                        type="button"
+                        aria-pressed="true"
+                    >
+                        <svg aria-hidden="true">
+                            <use href="#icon-plus"></use>
+                        </svg>
+
+                        <span>Entrada</span>
+                    </button>
+
+                    <button
+                        class="tipo-movimentacao-linha saida"
+                        data-tipo-movimentacao-linha="saida"
+                        type="button"
+                        aria-pressed="false"
+                    >
+                        <svg aria-hidden="true">
+                            <use href="#icon-arrow-right"></use>
+                        </svg>
+
+                        <span>Saída</span>
+                    </button>
+
+                    <button
+                        class="tipo-movimentacao-linha ajuste"
+                        data-tipo-movimentacao-linha="ajuste"
+                        type="button"
+                        aria-pressed="false"
+                    >
+                        <svg aria-hidden="true">
+                            <use href="#icon-edit"></use>
+                        </svg>
+
+                        <span>Ajuste</span>
+                    </button>
+                </div>
+
+                <label class="campo">
+                    <span id="rotuloQuantidadeMovimentacaoLinha">
+                        Quantidade da entrada
+                    </span>
+
+                    <input
+                        id="quantidadeMovimentacaoLinha"
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        placeholder="0"
+                        required
+                    >
+
+                    <small id="ajudaQuantidadeMovimentacaoLinha">
+                        O valor será somado ao estoque atual.
+                    </small>
+                </label>
+
+                <label
+                    class="campo campo-ordem-movimentacao-linha"
+                    id="campoOrdemMovimentacaoLinha"
+                    hidden
+                >
+                    <span>Ordem relacionada</span>
+
+                    <select id="ordemMovimentacaoLinha">
+                        <option value="">
+                            Saída sem ordem vinculada
+                        </option>
+                    </select>
+
+                    <small id="ajudaOrdemMovimentacaoLinha">
+                        Selecione a ordem que utilizou esta linha.
+                    </small>
+                </label>
+
+                <label class="campo">
+                    <span>Motivo</span>
+
+                    <input
+                        id="motivoMovimentacaoLinha"
+                        type="text"
+                        minlength="2"
+                        maxlength="160"
+                        placeholder="Ex: Compra de novo cone"
+                        required
+                    >
+                </label>
+
+                <label class="campo">
+                    <span>Observações</span>
+
+                    <textarea
+                        id="observacoesMovimentacaoLinha"
+                        rows="3"
+                        maxlength="1000"
+                        placeholder="Lote, fornecedor ou outras informações"
+                    ></textarea>
+                </label>
+
+                <div
+                    class="previsao-movimentacao-linha"
+                    id="previsaoMovimentacaoLinha"
+                >
+                    <span>Saldo após a movimentação</span>
+
+                    <strong>—</strong>
+                </div>
+
+                <button
+                    class="botao botao-principal botao-confirmar-movimentacao"
+                    id="botaoSalvarMovimentacaoLinha"
+                    type="submit"
+                >
+                    <svg aria-hidden="true">
+                        <use href="#icon-check"></use>
+                    </svg>
+
+                    <span>Registrar entrada</span>
+                </button>
+            </form>
+
+            <section class="historico-movimentacoes-linha">
+                <header class="historico-movimentacoes-cabecalho">
+                    <div>
+                        <span class="rotulo">
+                            Rastreabilidade
+                        </span>
+
+                        <h3>
+                            Histórico de movimentações
+                        </h3>
+                    </div>
+
+                    <span id="quantidadeMovimentacoesLinha">
+                        0 registros
+                    </span>
+                </header>
+
+                <div
+                    class="lista-movimentacoes-linha"
+                    id="listaMovimentacoesLinha"
+                    aria-live="polite"
+                >
+                    <div class="estado-historico-linha">
+                        Carregando histórico...
+                    </div>
+                </div>
+            </section>
+        </div>
+    </section>
 </div>
 
 <!-- MODAL DE USUÁRIO -->
@@ -4461,6 +5688,191 @@
     </div>
 </div>
 
+<!-- CONFIGURAÇÃO DA MÁQUINA -->
+
+<div
+    class="modal"
+    id="modalConfiguracaoMaquina"
+    aria-hidden="true"
+>
+    <div
+        class="modal-fundo"
+        data-fechar-configuracao-maquina
+    ></div>
+
+    <section
+        class="modal-conteudo modal-configuracao-maquina"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="tituloConfiguracaoMaquina"
+    >
+        <div class="modal-cabecalho">
+            <div>
+                <span class="rotulo">
+                    Capacidade de produção
+                </span>
+
+                <h2 id="tituloConfiguracaoMaquina">
+                    Configurar máquina
+                </h2>
+
+                <p>
+                    Estes dados serão usados para estimar o tempo das ordens.
+                </p>
+            </div>
+
+            <button
+                class="botao-icone"
+                data-fechar-configuracao-maquina
+                type="button"
+                aria-label="Fechar"
+            >
+                <svg aria-hidden="true">
+                    <use href="#icon-x"></use>
+                </svg>
+            </button>
+        </div>
+
+        <form id="formularioConfiguracaoMaquina">
+            <div class="grade-formulario grade-configuracao-maquina">
+                <label class="campo campo-largo">
+                    <span>Nome da máquina</span>
+
+                    <input
+                        id="maquinaNome"
+                        type="text"
+                        minlength="2"
+                        maxlength="100"
+                        placeholder="Ex: ELO Industrial"
+                        required
+                    >
+                </label>
+
+                <label class="campo">
+                    <span>Quantidade de cabeças</span>
+
+                    <input
+                        id="maquinaCabecas"
+                        type="number"
+                        min="1"
+                        max="100"
+                        step="1"
+                        required
+                    >
+
+                    <small>
+                        Peças produzidas ao mesmo tempo.
+                    </small>
+                </label>
+
+                <label class="campo">
+                    <span>Velocidade em pontos/minuto</span>
+
+                    <input
+                        id="maquinaVelocidade"
+                        type="number"
+                        min="100"
+                        max="3000"
+                        step="1"
+                        required
+                    >
+                </label>
+
+                <label class="campo">
+                    <span>Eficiência média (%)</span>
+
+                    <input
+                        id="maquinaEficiencia"
+                        type="number"
+                        min="10"
+                        max="100"
+                        step="1"
+                        required
+                    >
+
+                    <small>
+                        Desconta paradas, cortes e ajustes.
+                    </small>
+                </label>
+
+                <label class="campo">
+                    <span>Horas produtivas por dia</span>
+
+                    <input
+                        id="maquinaHorasDia"
+                        type="number"
+                        min="0.5"
+                        max="24"
+                        step="0.5"
+                        required
+                    >
+                </label>
+
+                <label class="campo">
+                    <span>Preparação por ordem (min)</span>
+
+                    <input
+                        id="maquinaPreparacao"
+                        type="number"
+                        min="0"
+                        max="240"
+                        step="1"
+                        required
+                    >
+                </label>
+
+                <label class="campo">
+                    <span>Troca de cor (segundos)</span>
+
+                    <input
+                        id="maquinaTrocaCor"
+                        type="number"
+                        min="0"
+                        max="300"
+                        step="1"
+                        required
+                    >
+                </label>
+            </div>
+
+            <div class="aviso-calculo-producao">
+                <svg aria-hidden="true">
+                    <use href="#icon-alert"></use>
+                </svg>
+
+                <p>
+                    A estimativa depende da quantidade de pontos e cores
+                    cadastradas na matriz vinculada à ordem.
+                </p>
+            </div>
+
+            <div class="modal-acoes">
+                <button
+                    class="botao botao-secundario"
+                    data-fechar-configuracao-maquina
+                    type="button"
+                >
+                    Cancelar
+                </button>
+
+                <button
+                    class="botao botao-principal"
+                    id="botaoSalvarConfiguracaoMaquina"
+                    type="submit"
+                >
+                    <svg aria-hidden="true">
+                        <use href="#icon-check"></use>
+                    </svg>
+
+                    <span>
+                        Salvar configuração
+                    </span>
+                </button>
+            </div>
+        </form>
+    </section>
+</div>
+
 <!-- ALERTA CENTRAL DE PRAZOS DAS ORDENS -->
 
 <div
@@ -4488,7 +5900,7 @@
 
             <div class="alerta-prazos-titulos">
                 <span>
-                    Controle de prazos
+                    Prazos e prioridades
                 </span>
 
                 <h2 id="tituloAlertaPrazos">
@@ -4496,7 +5908,7 @@
                 </h2>
 
                 <p>
-                    Algumas ordens precisam da sua atenção.
+                    Ordens atrasadas, próximas do prazo ou urgentes precisam da sua atenção.
                 </p>
             </div>
 
@@ -4534,6 +5946,17 @@
                     0
                 </strong>
             </article>
+
+            <article class="alerta-prazo-resumo-item alerta-prioridade-resumo-item">
+    <span>
+        Prioridade urgente
+    </span>
+
+    <strong id="quantidadeOrdensUrgentes">
+        0
+    </strong>
+</article>
+
         </div>
 
         <div
@@ -4557,9 +5980,420 @@
     </section>
 </div>
 
+<!-- MODAL DA MATRIZ DE BORDADO -->
+
+<div
+    class="modal"
+    id="modalMatriz"
+    aria-hidden="true"
+>
+    <div
+        class="modal-fundo"
+        data-fechar-matriz
+    ></div>
+
+    <section
+        class="modal-conteudo modal-matriz"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="tituloModalMatriz"
+    >
+        <header class="modal-cabecalho">
+            <div>
+                <span class="rotulo">
+                    Matriz de bordado
+                </span>
+
+                <h2 id="tituloModalMatriz">
+                    Nova matriz
+                </h2>
+
+                <p>
+                    Relacione o arquivo editável com os arquivos utilizados
+                    na máquina.
+                </p>
+            </div>
+
+            <button
+                class="botao-icone"
+                data-fechar-matriz
+                type="button"
+                aria-label="Fechar matriz"
+            >
+                <svg aria-hidden="true">
+                    <use href="#icon-x"></use>
+                </svg>
+            </button>
+        </header>
+
+        <form
+            id="formularioMatriz"
+            novalidate
+        >
+            <input
+                id="matrizId"
+                type="hidden"
+            >
+
+            <div class="grade-formulario">
+                <div
+    class="campo campo-largo campo-cliente-matriz"
+>
+    <span>
+        Cliente
+    </span>
+
+    <!--
+        Continua existindo para armazenar
+        o ID usado pela API.
+    -->
+
+    <select
+        id="matrizCliente"
+        required
+        hidden
+        tabindex="-1"
+        aria-hidden="true"
+    >
+        <option value="">
+            Selecione um cliente
+        </option>
+    </select>
+
+    <div
+        class="seletor-linha-cliente seletor-cliente-matriz"
+        id="seletorClienteMatriz"
+    >
+        <button
+            class="botao-seletor-linha"
+            id="botaoClienteMatriz"
+            type="button"
+            aria-haspopup="listbox"
+            aria-expanded="false"
+            aria-controls="menuClienteMatriz"
+        >
+            <span
+                class="avatar-cliente avatar-cliente-matriz"
+                id="avatarClienteMatriz"
+                hidden
+            >
+                CL
+            </span>
+
+            <span class="resumo-linha-selecionada">
+                <strong id="textoClienteMatriz">
+                    Selecione um cliente
+                </strong>
+
+                <span id="subtextoClienteMatriz">
+                    Pesquise pelo nome do cliente
+                </span>
+            </span>
+
+            <svg
+                class="icone-seta-seletor-linha"
+                aria-hidden="true"
+            >
+                <use href="#icon-arrow-right"></use>
+            </svg>
+        </button>
+
+        <div
+            class="menu-linha-cliente"
+            id="menuClienteMatriz"
+            hidden
+        >
+            <div class="busca-menu-linha">
+                <svg aria-hidden="true">
+                    <use href="#icon-search"></use>
+                </svg>
+
+                <input
+                    id="buscaClienteMatriz"
+                    type="search"
+                    placeholder="Digite o nome do cliente"
+                    autocomplete="off"
+                >
+            </div>
+
+            <div
+                class="lista-menu-linhas"
+                id="listaClientesMatriz"
+                role="listbox"
+                aria-label="Clientes cadastrados"
+            ></div>
+        </div>
+    </div>
+
+    <button
+        class="botao-cadastrar-cliente-ordem botao-cadastrar-cliente-matriz"
+        id="botaoCadastrarClienteMatriz"
+        data-permissao-exigida="clientes.criar"
+        type="button"
+    >
+        <svg aria-hidden="true">
+            <use href="#icon-plus"></use>
+        </svg>
+
+        <span>
+            Cadastrar novo cliente
+        </span>
+    </button>
+
+    <small id="mensagemClienteMatriz">
+        Selecione o cliente responsável pela matriz.
+    </small>
+</div>
+
+                <label class="campo">
+                    <span>
+                        Nome da matriz
+                    </span>
+
+                    <input
+                        id="matrizNome"
+                        type="text"
+                        minlength="2"
+                        maxlength="120"
+                        placeholder="Ex: Logo peito"
+                        required
+                    >
+                </label>
+
+                <label class="campo">
+                    <span>
+                        Versão
+                    </span>
+
+                    <input
+                        id="matrizVersao"
+                        type="number"
+                        min="1"
+                        max="9999"
+                        step="1"
+                        value="1"
+                        required
+                    >
+                </label>
+
+                <label class="campo">
+                    <span>
+                        Status
+                    </span>
+
+                    <select id="matrizStatus">
+                        <option value="rascunho">
+                            Rascunho
+                        </option>
+
+                        <option value="teste">
+                            Em teste
+                        </option>
+
+                        <option value="aprovada">
+                            Aprovada
+                        </option>
+
+                        <option value="arquivada">
+                            Arquivada
+                        </option>
+                    </select>
+                </label>
+
+                <label class="campo">
+                    <span>
+                        Local de aplicação
+                    </span>
+
+                    <input
+                        id="matrizLocalAplicacao"
+                        type="text"
+                        maxlength="100"
+                        placeholder="Ex: Peito esquerdo"
+                    >
+                </label>
+
+                <div class="campo campo-largo">
+                    <div class="matriz-subtitulo">
+                        <div>
+                            <strong>
+                                Arquivos vinculados
+                            </strong>
+
+                            <small>
+                                Os arquivos precisam estar cadastrados no cliente selecionado.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <label class="campo">
+                    <span>
+                        Logo original
+                    </span>
+
+                    <select id="matrizArquivoOriginalId">
+                        <option value="">
+                            Nenhuma logo selecionada
+                        </option>
+                    </select>
+                </label>
+
+                <label class="campo">
+                    <span>
+                        Arquivo editável
+                    </span>
+
+                    <select id="matrizArquivoEditavelId">
+                        <option value="">
+                            Nenhum EMB selecionado
+                        </option>
+                    </select>
+                </label>
+
+                <div class="campo campo-largo">
+                    <span>
+                        Arquivos de máquina
+                    </span>
+
+                    <div
+                        class="lista-selecao-arquivos-matriz"
+                        id="listaArquivosMaquinaMatriz"
+                    >
+                        <div class="estado-arquivos-matriz">
+                            Selecione primeiro um cliente.
+                        </div>
+                    </div>
+
+                    <small
+                        class="mensagem-arquivos-matriz"
+                        id="mensagemArquivosMatriz"
+                    ></small>
+                </div>
+
+                <div class="campo campo-largo">
+                    <div class="matriz-subtitulo">
+                        <div>
+                            <strong>
+                                Informações técnicas
+                            </strong>
+
+                            <small>
+                                Esses dados ajudam a repetir a produção corretamente.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <label class="campo">
+                    <span>
+                        Largura em milímetros
+                    </span>
+
+                    <input
+                        id="matrizLarguraMm"
+                        type="number"
+                        min="0.01"
+                        max="10000"
+                        step="0.01"
+                        placeholder="90"
+                    >
+                </label>
+
+                <label class="campo">
+                    <span>
+                        Altura em milímetros
+                    </span>
+
+                    <input
+                        id="matrizAlturaMm"
+                        type="number"
+                        min="0.01"
+                        max="10000"
+                        step="0.01"
+                        placeholder="42"
+                    >
+                </label>
+
+                <label class="campo">
+                    <span>
+                        Quantidade de pontos
+                    </span>
+
+                    <input
+                        id="matrizQuantidadePontos"
+                        type="number"
+                        min="0"
+                        max="100000000"
+                        step="1"
+                        placeholder="12995"
+                    >
+                </label>
+
+                <label class="campo">
+                    <span>
+                        Quantidade de cores
+                    </span>
+
+                    <input
+                        id="matrizQuantidadeCores"
+                        type="number"
+                        min="0"
+                        max="1000"
+                        step="1"
+                        placeholder="3"
+                    >
+                </label>
+
+                <label class="campo campo-largo">
+                    <span>
+                        Observações
+                    </span>
+
+                    <textarea
+                        id="matrizObservacoes"
+                        rows="4"
+                        maxlength="2000"
+                        placeholder="Ex: reduzir a densidade antes da aprovação"
+                    ></textarea>
+                </label>
+            </div>
+
+            <footer class="modal-acoes">
+                <button
+                    class="botao botao-secundario"
+                    data-fechar-matriz
+                    type="button"
+                >
+                    Cancelar
+                </button>
+
+                <button
+                    class="botao botao-principal"
+                    id="botaoSalvarMatriz"
+                    type="submit"
+                >
+                    <svg aria-hidden="true">
+                        <use href="#icon-check"></use>
+                    </svg>
+
+                    <span>
+                        Salvar matriz
+                    </span>
+                </button>
+            </footer>
+        </form>
+    </section>
+</div>
+
         <script src="app.js"></script>
+        <script src="matrizes-ui.js"></script>
+        <script src="biblioteca-ui.js"></script>
         <script src="ordens-ui.js"></script>
+        <script src="capacidade-ui.js"></script>
+        <script src="kanban-ui.js"></script>
         <script src="linhas-ui.js"></script>
+        <script src="atividades-ui.js"></script>
         <script src="usuarios-ui.js"></script>
     
 </body>
