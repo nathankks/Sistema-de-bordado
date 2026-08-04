@@ -296,6 +296,9 @@ function aplicarPermissoesNaInterface() {
             "usuarios.gerenciar"
         );
 
+    const podeVisualizarAtividades =
+        podeGerenciarUsuarios;
+
     aplicarPermissoesDeclarativas(
         document
         );
@@ -321,6 +324,16 @@ function aplicarPermissoesNaInterface() {
 
     alterarVisibilidadePermissao(
         "#secao-ordens",
+        podeVisualizarOrdens
+    );
+
+    alterarVisibilidadePermissao(
+        '.menu-item[data-secao="producao"]',
+        podeVisualizarOrdens
+    );
+
+    alterarVisibilidadePermissao(
+        "#secao-producao",
         podeVisualizarOrdens
     );
 
@@ -355,6 +368,16 @@ function aplicarPermissoesNaInterface() {
         "#secao-usuarios",
         podeGerenciarUsuarios
     );
+
+    alterarVisibilidadePermissao(
+    "#menuAtividades",
+    podeVisualizarAtividades
+);
+
+alterarVisibilidadePermissao(
+    "#secao-atividades",
+    podeVisualizarAtividades
+);
 
     /*
      * Cadastro de clientes.
@@ -484,6 +507,21 @@ window.possuiPermissaoSistema =
 
 window.exigirPermissaoInterface =
     exigirPermissaoInterface;
+
+window.obterClientesSistema =
+    function () {
+        return [
+            ...clientes
+        ];
+    };
+
+window.recarregarClientesSistema =
+    async function () {
+        await carregarClientesDoServidor({
+            mostrarErro:
+                false
+        });
+    };
 
 const observadorPermissoes =
     new MutationObserver(
@@ -781,6 +819,27 @@ const mensagemLogoConvertida =
 const listaArquivosConvertidosCliente =
     $("#listaArquivosConvertidosCliente");
 
+const campoArquivoEditavel =
+    $("#arquivoEditavel");
+
+const nomeArquivoEditavel =
+    $("#nomeArquivoEditavel");
+
+const descricaoArquivoEditavel =
+    $("#descricaoArquivoEditavel");
+
+const botaoSelecionarArquivoEditavel =
+    $("#botaoSelecionarArquivoEditavel");
+
+const botaoRemoverArquivoEditavel =
+    $("#botaoRemoverArquivoEditavel");
+
+const mensagemArquivoEditavel =
+    $("#mensagemArquivoEditavel");
+
+const listaArquivosEditaveisCliente =
+    $("#listaArquivosEditaveisCliente");
+
 /*
 |--------------------------------------------------------------------------
 | Elementos da área Minha conta
@@ -829,6 +888,18 @@ const ultimoRestauro =
 const botaoCriarBackup =
     $("#botaoCriarBackup");
 
+const alertaBackupDashboard =
+    $("#alertaBackupDashboard");
+
+const tituloAlertaBackupDashboard =
+    $("#tituloAlertaBackupDashboard");
+
+const mensagemAlertaBackupDashboard =
+    $("#mensagemAlertaBackupDashboard");
+
+const botaoCriarBackupDashboard =
+    $("#botaoCriarBackupDashboard");
+
 const inputBackup =
     $("#inputBackup");
 
@@ -845,8 +916,10 @@ const titulosSecoes = {
     dashboard: "Visão geral",
     clientes: "Clientes",
     ordens: "Ordens",
+    producao: "Painel de produção",
     arquivos: "Arquivos",
     linhas: "Catálogo de linhas",
+    atividades: "Histórico de atividades",
     usuarios: "Gerenciamento de usuários",
     configuracoes: "Configurações"
 };
@@ -994,10 +1067,23 @@ async function carregarClientesDoServidor(
             );
         }
     } finally {
-        carregandoClientes = false;
+    carregandoClientes = false;
 
-        renderizarTudo();
-    }
+    renderizarTudo();
+
+    window.dispatchEvent(
+        new CustomEvent(
+            "clientes-atualizados",
+            {
+                detail: {
+                    clientes: [
+                        ...clientes
+                    ]
+                }
+            }
+        )
+    );
+}
 }
 
 /*
@@ -1654,101 +1740,134 @@ function obterExtensao(nome) {
 }
 
 function validarArquivosSelecionados() {
-    const arquivosOriginais =
-        Array.from(
-            campoLogoOriginal?.files || []
-        );
+    const grupos = [
+        {
+            arquivos:
+                Array.from(
+                    campoLogoOriginal
+                        ?.files ||
+                    []
+                ),
 
-    const arquivosConvertidos =
-        Array.from(
-            campoLogoConvertida?.files || []
-        );
+            extensoes: [
+                ".png",
+                ".jpg",
+                ".jpeg",
+                ".webp",
+                ".svg",
+                ".pdf"
+            ],
 
-    if (arquivosOriginais.length > 10) {
-        throw new Error(
-            "Selecione no máximo 10 logos originais."
-        );
-    }
+            limite:
+                12 * 1024 * 1024,
 
-    if (arquivosConvertidos.length > 10) {
-        throw new Error(
-            "Selecione no máximo 10 arquivos convertidos."
-        );
-    }
+            quantidadeMaxima:
+                10,
 
-    const extensoesOriginais = [
-        ".png",
-        ".jpg",
-        ".jpeg",
-        ".webp",
-        ".svg",
-        ".pdf"
-    ];
+            rotulo:
+                "logo original"
+        },
 
-    const extensoesConvertidas = [
-        ".dst",
-        ".pes",
-        ".jef",
-        ".exp",
-        ".vp3",
-        ".zip"
+        {
+            arquivos:
+                Array.from(
+                    campoLogoConvertida
+                        ?.files ||
+                    []
+                ),
+
+            extensoes: [
+                ".dst",
+                ".pes",
+                ".jef",
+                ".exp",
+                ".vp3",
+                ".zip"
+            ],
+
+            limite:
+                20 * 1024 * 1024,
+
+            quantidadeMaxima:
+                10,
+
+            rotulo:
+                "arquivo de máquina"
+        },
+
+        {
+            arquivos:
+                Array.from(
+                    campoArquivoEditavel
+                        ?.files ||
+                    []
+                ),
+
+            extensoes: [
+                ".emb",
+                ".zip"
+            ],
+
+            limite:
+                30 * 1024 * 1024,
+
+            quantidadeMaxima:
+                10,
+
+            rotulo:
+                "arquivo editável"
+        }
     ];
 
     for (
-        const arquivo
-        of arquivosOriginais
+        const grupo
+        of grupos
     ) {
-        const extensao =
-            obterExtensao(
-                arquivo.name
-            );
-
         if (
-            !extensoesOriginais.includes(
-                extensao
-            )
+            grupo.arquivos.length >
+            grupo.quantidadeMaxima
         ) {
             throw new Error(
-                `O arquivo ${arquivo.name} não possui um formato original permitido.`
+                `Selecione no máximo ${
+                    grupo.quantidadeMaxima
+                } arquivos em cada campo.`
             );
         }
 
-        if (
-            arquivo.size >
-            12 * 1024 * 1024
+        for (
+            const arquivo
+            of grupo.arquivos
         ) {
-            throw new Error(
-                `A logo ${arquivo.name} deve ter no máximo 12 MB.`
-            );
-        }
-    }
+            const extensao =
+                obterExtensao(
+                    arquivo.name
+                );
 
-    for (
-        const arquivo
-        of arquivosConvertidos
-    ) {
-        const extensao =
-            obterExtensao(
-                arquivo.name
-            );
+            if (
+                !grupo.extensoes.includes(
+                    extensao
+                )
+            ) {
+                throw new Error(
+                    `O arquivo ${arquivo.name} não possui um formato permitido para ${grupo.rotulo}.`
+                );
+            }
 
-        if (
-            !extensoesConvertidas.includes(
-                extensao
-            )
-        ) {
-            throw new Error(
-                `O arquivo ${arquivo.name} não possui um formato convertido permitido.`
-            );
-        }
+            if (
+                arquivo.size >
+                grupo.limite
+            ) {
+                const limiteMb =
+                    grupo.limite /
+                    (
+                        1024 *
+                        1024
+                    );
 
-        if (
-            arquivo.size >
-            20 * 1024 * 1024
-        ) {
-            throw new Error(
-                `O arquivo ${arquivo.name} deve ter no máximo 20 MB.`
-            );
+                throw new Error(
+                    `O arquivo ${arquivo.name} deve ter no máximo ${limiteMb} MB.`
+                );
+            }
         }
     }
 }
@@ -1769,6 +1888,7 @@ const TIPOS_IMAGEM_COLADA = {
 let urlPreviewLogoOriginal = "";
 let logosOriginaisPendentes = [];
 let arquivosConvertidosPendentes = [];
+let arquivosEditaveisPendentes = [];
 let urlsTemporariasLogos =
     [];
 
@@ -1918,13 +2038,27 @@ function obterArquivosSalvosCliente(
         return [];
     }
 
-    const lista =
-        tipo === "original"
-            ? cliente.arquivosOriginais
-            : cliente.arquivosConvertidos;
+    let lista = [];
+
+    if (tipo === "original") {
+        lista =
+            cliente.arquivosOriginais;
+    } else if (
+        tipo === "convertido"
+    ) {
+        lista =
+            cliente.arquivosConvertidos;
+    } else if (
+        tipo === "editavel"
+    ) {
+        lista =
+            cliente.arquivosEditaveis;
+    }
 
     if (
-        Array.isArray(lista) &&
+        Array.isArray(
+            lista
+        ) &&
         lista.length
     ) {
         return lista;
@@ -1932,7 +2066,7 @@ function obterArquivosSalvosCliente(
 
     /*
      * Compatibilidade com clientes
-     * cadastrados antes da alteração.
+     * cadastrados antes das listas.
      */
 
     if (
@@ -2335,6 +2469,156 @@ function renderizarConvertidosModal(
             itens.join("");
 
     listaArquivosConvertidosCliente.hidden =
+        !itens.length;
+}
+
+function renderizarEditaveisModal(
+    cliente =
+        obterClienteAtualDoModal()
+) {
+    if (
+        !listaArquivosEditaveisCliente
+    ) {
+        return;
+    }
+
+    const arquivosSalvos =
+        obterArquivosSalvosCliente(
+            cliente,
+            "editavel"
+        );
+
+    const itensSalvos =
+        arquivosSalvos.map(
+            arquivo => `
+                <article
+                    class="item-arquivo-cliente item-convertido-cliente"
+                >
+                    <a
+                        class="icone-item-convertido"
+                        href="${escaparHtml(
+                            arquivo.url
+                        )}?download=1"
+                        aria-label="Baixar ${escaparHtml(
+                            arquivo.nome
+                        )}"
+                    >
+                        <svg aria-hidden="true">
+                            <use href="#icon-edit"></use>
+                        </svg>
+                    </a>
+
+                    <div class="informacoes-item-arquivo">
+                        <strong
+                            title="${escaparHtml(
+                                arquivo.nome
+                            )}"
+                        >
+                            ${escaparHtml(
+                                arquivo.nome
+                            )}
+                        </strong>
+
+                        <small>
+                            Editável salvo
+                        </small>
+                    </div>
+
+                    ${
+                        arquivo.id &&
+                        possuiPermissaoSistema(
+                            "arquivos.remover"
+                        )
+
+                            ? `
+                                <button
+                                    class="botao-remover-item-arquivo"
+                                    data-remover-arquivo-salvo="${escaparHtml(
+                                        arquivo.id
+                                    )}"
+                                    data-tipo-arquivo-salvo="editavel"
+                                    data-cliente-arquivo-salvo="${escaparHtml(
+                                        cliente.id
+                                    )}"
+                                    data-nome-arquivo-salvo="${escaparHtml(
+                                        arquivo.nome
+                                    )}"
+                                    type="button"
+                                    aria-label="Remover ${escaparHtml(
+                                        arquivo.nome
+                                    )}"
+                                >
+                                    <svg aria-hidden="true">
+                                        <use href="#icon-trash"></use>
+                                    </svg>
+                                </button>
+                            `
+
+                            : ""
+                    }
+                </article>
+            `
+        );
+
+    const itensPendentes =
+        arquivosEditaveisPendentes.map(
+            arquivo => `
+                <article
+                    class="item-arquivo-cliente item-convertido-cliente item-arquivo-pendente"
+                >
+                    <span class="icone-item-convertido">
+                        <svg aria-hidden="true">
+                            <use href="#icon-edit"></use>
+                        </svg>
+                    </span>
+
+                    <div class="informacoes-item-arquivo">
+                        <strong
+                            title="${escaparHtml(
+                                arquivo.name
+                            )}"
+                        >
+                            ${escaparHtml(
+                                arquivo.name
+                            )}
+                        </strong>
+
+                        <small>
+                            Novo · será salvo
+                        </small>
+                    </div>
+
+                    <button
+                        class="botao-remover-item-arquivo"
+                        data-remover-arquivo-pendente="editavel"
+                        data-chave-arquivo-pendente="${escaparHtml(
+                            criarChaveArquivo(
+                                arquivo
+                            )
+                        )}"
+                        type="button"
+                        aria-label="Remover ${escaparHtml(
+                            arquivo.name
+                        )} da seleção"
+                    >
+                        <svg aria-hidden="true">
+                            <use href="#icon-x"></use>
+                        </svg>
+                    </button>
+                </article>
+            `
+        );
+
+    const itens = [
+        ...itensSalvos,
+        ...itensPendentes
+    ];
+
+    listaArquivosEditaveisCliente
+        .innerHTML =
+            itens.join("");
+
+    listaArquivosEditaveisCliente.hidden =
         !itens.length;
 }
 
@@ -2986,22 +3270,31 @@ function mostrarArquivoConvertido(
 function limparLogoConvertidaSelecionada(
     limparCampo = true
 ) {
-    if (
-        limparCampo &&
-        campoLogoConvertida
-    ) {
-        campoLogoConvertida.value =
-            "";
+    if (limparCampo) {
+        arquivosConvertidosPendentes =
+            [];
+
+        if (campoLogoConvertida) {
+            campoLogoConvertida.value =
+                "";
+        }
+
+        colocarArquivosNoCampo(
+            campoLogoConvertida,
+            arquivosConvertidosPendentes
+        );
+
+        renderizarConvertidosModal();
     }
 
     if (nomeArquivoConvertido) {
         nomeArquivoConvertido.textContent =
-            "Nenhum arquivo selecionado.";
+            "Nenhum arquivo selecionado";
     }
 
     if (descricaoArquivoConvertido) {
         descricaoArquivoConvertido.textContent =
-            "Selecione o arquivo pronto para bordado";
+            "Selecione o arquivo pronto para a máquina";
     }
 
     if (botaoRemoverLogoConvertida) {
@@ -3010,7 +3303,128 @@ function limparLogoConvertidaSelecionada(
     }
 
     definirMensagemLogoConvertida(
-        "O arquivo convertido será enviado ao salvar o cliente."
+        ""
+    );
+}
+
+function definirMensagemArquivoEditavel(
+    mensagem,
+    estado = ""
+) {
+    if (!mensagemArquivoEditavel) {
+        return;
+    }
+
+    mensagemArquivoEditavel.hidden =
+        !mensagem;
+
+    mensagemArquivoEditavel.textContent =
+        mensagem;
+
+    mensagemArquivoEditavel
+        .classList
+        .remove(
+            "erro",
+            "sucesso"
+        );
+
+    if (estado) {
+        mensagemArquivoEditavel
+            .classList
+            .add(
+                estado
+            );
+    }
+}
+
+function mostrarArquivosEditaveisSalvos(
+    cliente
+) {
+    const arquivos =
+        obterArquivosSalvosCliente(
+            cliente,
+            "editavel"
+        );
+
+    renderizarEditaveisModal(
+        cliente
+    );
+
+    if (nomeArquivoEditavel) {
+        nomeArquivoEditavel.textContent =
+            arquivos.length
+                ? `${arquivos.length} ${
+                    arquivos.length === 1
+                        ? "editável salvo"
+                        : "editáveis salvos"
+                }`
+                : "Nenhum arquivo selecionado";
+    }
+
+    if (descricaoArquivoEditavel) {
+        descricaoArquivoEditavel.textContent =
+            arquivos.length
+                ? "Os editáveis aparecem na lista abaixo."
+                : "Selecione o arquivo que poderá ser alterado no Wilcom.";
+    }
+
+    if (botaoRemoverArquivoEditavel) {
+        botaoRemoverArquivoEditavel.hidden =
+            !arquivosEditaveisPendentes.length;
+    }
+
+    definirMensagemArquivoEditavel(
+        arquivos.length
+            ? `${arquivos.length} ${
+                arquivos.length === 1
+                    ? "arquivo editável salvo"
+                    : "arquivos editáveis salvos"
+            }.`
+            : "",
+
+        arquivos.length
+            ? "sucesso"
+            : ""
+    );
+}
+
+function limparArquivoEditavelSelecionado(
+    limparCampo = true
+) {
+    if (limparCampo) {
+        arquivosEditaveisPendentes =
+            [];
+
+        if (campoArquivoEditavel) {
+            campoArquivoEditavel.value =
+                "";
+        }
+
+        colocarArquivosNoCampo(
+            campoArquivoEditavel,
+            arquivosEditaveisPendentes
+        );
+
+        renderizarEditaveisModal();
+    }
+
+    if (nomeArquivoEditavel) {
+        nomeArquivoEditavel.textContent =
+            "Nenhum arquivo selecionado";
+    }
+
+    if (descricaoArquivoEditavel) {
+        descricaoArquivoEditavel.textContent =
+            "Selecione o arquivo que poderá ser editado no Wilcom";
+    }
+
+    if (botaoRemoverArquivoEditavel) {
+        botaoRemoverArquivoEditavel.hidden =
+            true;
+    }
+
+    definirMensagemArquivoEditavel(
+        ""
     );
 }
 
@@ -3536,13 +3950,19 @@ function navegarPara(secao) {
         "clientes.visualizar",
 
     ordens:
+    "ordens.visualizar",
+
+    producao:
         "ordens.visualizar",
 
     linhas:
         "linhas.visualizar",
 
     arquivos:
-        "arquivos.baixar",
+    "arquivos.baixar",
+
+    atividades:
+        "usuarios.gerenciar",
 
     usuarios:
         "usuarios.gerenciar"
@@ -3585,6 +4005,24 @@ if (
     fecharMenuMobile();
 
     renderizarTudo();
+
+    if (
+        secao ===
+            "producao"
+    ) {
+        window
+            .renderizarKanbanProducao
+            ?.();
+    }
+
+    if (
+        secao ===
+            "atividades"
+    ) {
+        window
+            .carregarAtividadesSistema
+            ?.();
+    }
 
     window.scrollTo({
         top: 0,
@@ -4440,10 +4878,17 @@ if (
     false
 );
 
+limparArquivoEditavelSelecionado(
+    false
+);
+
 logosOriginaisPendentes =
     [];
 
 arquivosConvertidosPendentes =
+    [];
+
+arquivosEditaveisPendentes =
     [];
 
 liberarUrlsTemporariasLogos();
@@ -4461,6 +4906,14 @@ if (listaArquivosConvertidosCliente) {
         "";
 
     listaArquivosConvertidosCliente.hidden =
+        true;
+}
+
+if (listaArquivosEditaveisCliente) {
+    listaArquivosEditaveisCliente.innerHTML =
+        "";
+
+    listaArquivosEditaveisCliente.hidden =
         true;
 }
 
@@ -4525,6 +4978,10 @@ mostrarLogoOriginalSalva(
 );
 
 mostrarLogoConvertidaSalva(
+    cliente
+);
+
+mostrarArquivosEditaveisSalvos(
     cliente
 );
 
@@ -4969,9 +5426,11 @@ const confirmou =
             "perigo",
 
         titulo:
-        tipo === "original"
-        ? "Remover logo original?"
-        : "Remover arquivo convertido?",
+            tipo === "original"
+                ? "Remover esta logo?"
+                : tipo === "editavel"
+                    ? "Remover este arquivo editável?"
+                    : "Remover este arquivo de máquina?",
 
         mensagem:
             [
@@ -6136,7 +6595,11 @@ function renderizarTudo() {
     atualizarResumo();
     renderizarRecentes();
     renderizarClientes();
-    renderizarArquivos();
+
+    /*
+     * A biblioteca agora é controlada
+     * pelo arquivo biblioteca-ui.js.
+     */
 }
 
 /*
@@ -6570,6 +7033,171 @@ const confirmou =
 |--------------------------------------------------------------------------
 */
 
+/*
+|--------------------------------------------------------------------------
+| Alerta de backup no painel
+|--------------------------------------------------------------------------
+*/
+
+function atualizarAlertaBackupDashboard(
+    ultimoBackupRealizado,
+    consultaFalhou = false
+) {
+    if (
+        !alertaBackupDashboard ||
+        !tituloAlertaBackupDashboard ||
+        !mensagemAlertaBackupDashboard
+    ) {
+        return;
+    }
+
+    alertaBackupDashboard
+        .removeAttribute(
+            "data-nivel-backup"
+        );
+
+    if (consultaFalhou) {
+    alertaBackupDashboard.hidden =
+        false;
+
+    alertaBackupDashboard.dataset
+        .nivelBackup =
+            "aviso";
+
+    tituloAlertaBackupDashboard
+        .textContent =
+            "Não foi possível verificar o backup";
+
+    mensagemAlertaBackupDashboard
+        .textContent =
+            "O servidor não conseguiu consultar a data do último backup. Tente atualizar novamente.";
+
+    return;
+}
+
+    /*
+     * Nenhum backup foi realizado.
+     */
+
+    if (!ultimoBackupRealizado) {
+        alertaBackupDashboard.hidden =
+            false;
+
+        alertaBackupDashboard.dataset
+            .nivelBackup =
+                "perigo";
+
+        tituloAlertaBackupDashboard
+            .textContent =
+                "Nenhum backup realizado";
+
+        mensagemAlertaBackupDashboard
+            .textContent =
+                "Os dados do sistema ainda não possuem uma cópia de segurança. Crie o primeiro backup agora.";
+
+        return;
+    }
+
+    const dataBackup =
+        new Date(
+            ultimoBackupRealizado
+        );
+
+    if (
+        Number.isNaN(
+            dataBackup.getTime()
+        )
+    ) {
+        alertaBackupDashboard.hidden =
+            false;
+
+        alertaBackupDashboard.dataset
+            .nivelBackup =
+                "aviso";
+
+        tituloAlertaBackupDashboard
+            .textContent =
+                "Não foi possível verificar o backup";
+
+        mensagemAlertaBackupDashboard
+            .textContent =
+                "Crie um novo backup para garantir que os dados estejam protegidos.";
+
+        return;
+    }
+
+    const agora =
+        new Date();
+
+    const diferenca =
+        agora.getTime() -
+        dataBackup.getTime();
+
+    const diasSemBackup =
+        Math.max(
+            0,
+            Math.floor(
+                diferenca /
+                (
+                    1000 *
+                    60 *
+                    60 *
+                    24
+                )
+            )
+        );
+
+    /*
+     * Backup recente:
+     * não precisa mostrar alerta.
+     */
+
+    if (diasSemBackup <= 7) {
+        alertaBackupDashboard.hidden =
+            true;
+
+        return;
+    }
+
+    alertaBackupDashboard.hidden =
+        false;
+
+    const descricaoDias =
+        diasSemBackup === 1
+
+            ? "há 1 dia"
+
+            : `há ${diasSemBackup} dias`;
+
+    if (diasSemBackup > 14) {
+        alertaBackupDashboard.dataset
+            .nivelBackup =
+                "perigo";
+
+        tituloAlertaBackupDashboard
+            .textContent =
+                "Backup muito atrasado";
+
+        mensagemAlertaBackupDashboard
+            .textContent =
+                `O último backup foi realizado ${descricaoDias}. Crie uma nova cópia de segurança o quanto antes.`;
+
+        return;
+    }
+
+    alertaBackupDashboard.dataset
+        .nivelBackup =
+            "aviso";
+
+    tituloAlertaBackupDashboard
+        .textContent =
+            "Está na hora de criar um backup";
+
+    mensagemAlertaBackupDashboard
+        .textContent =
+            `O último backup foi realizado ${descricaoDias}. Recomendamos fazer backups pelo menos uma vez por semana.`;
+}
+
 function formatarDataHoraBackup(
     valor,
     mensagemVazia
@@ -6624,6 +7252,11 @@ async function carregarStatusBackup(
                 "Nenhum backup realizado"
             );
 
+        atualizarAlertaBackupDashboard(
+            resposta.backup
+                ?.ultimoBackup
+        );
+
         ultimoRestauro.textContent =
             formatarDataHoraBackup(
                 resposta.backup
@@ -6637,6 +7270,11 @@ async function carregarStatusBackup(
 
         ultimoRestauro.textContent =
             "Não foi possível consultar";
+
+        atualizarAlertaBackupDashboard(
+            null,
+            true
+        );
 
         if (mostrarErro) {
             mostrarNotificacao(
@@ -6721,6 +7359,11 @@ async function criarBackupSistema() {
 
     botaoCriarBackup.disabled =
         true;
+
+    if (botaoCriarBackupDashboard) {
+        botaoCriarBackupDashboard.disabled =
+            true;
+    }
 
     botaoCriarBackup.classList.add(
         "backup-processando"
@@ -6811,6 +7454,11 @@ async function criarBackupSistema() {
     } finally {
         botaoCriarBackup.disabled =
             false;
+
+        if (botaoCriarBackupDashboard) {
+            botaoCriarBackupDashboard.disabled =
+                false;
+        }
 
         botaoCriarBackup.classList.remove(
             "backup-processando"
@@ -8254,6 +8902,144 @@ botaoRemoverLogoConvertida
         }
     );
 
+campoArquivoEditavel
+    ?.addEventListener(
+        "change",
+        () => {
+            const novosArquivos =
+                Array.from(
+                    campoArquivoEditavel
+                        .files ||
+                    []
+                );
+
+            if (!novosArquivos.length) {
+                return;
+            }
+
+            try {
+                for (
+                    const arquivo
+                    of novosArquivos
+                ) {
+                    const extensao =
+                        obterExtensao(
+                            arquivo.name
+                        );
+
+                    if (
+                        ![
+                            ".emb",
+                            ".zip"
+                        ].includes(
+                            extensao
+                        )
+                    ) {
+                        throw new Error(
+                            `O arquivo ${arquivo.name} deve estar no formato EMB ou ZIP.`
+                        );
+                    }
+
+                    if (
+                        arquivo.size >
+                        30 * 1024 * 1024
+                    ) {
+                        throw new Error(
+                            `O arquivo ${arquivo.name} deve ter no máximo 30 MB.`
+                        );
+                    }
+                }
+
+                arquivosEditaveisPendentes =
+                    mesclarArquivos(
+                        arquivosEditaveisPendentes,
+                        novosArquivos
+                    );
+
+                if (
+                    arquivosEditaveisPendentes
+                        .length >
+                    10
+                ) {
+                    throw new Error(
+                        "Selecione no máximo 10 novos arquivos editáveis por vez."
+                    );
+                }
+
+                colocarArquivosNoCampo(
+                    campoArquivoEditavel,
+                    arquivosEditaveisPendentes
+                );
+
+                renderizarEditaveisModal();
+
+                const quantidade =
+                    arquivosEditaveisPendentes
+                        .length;
+
+                if (nomeArquivoEditavel) {
+                    nomeArquivoEditavel.textContent =
+                        `${quantidade} ${
+                            quantidade === 1
+                                ? "novo editável"
+                                : "novos editáveis"
+                        }`;
+                }
+
+                if (descricaoArquivoEditavel) {
+                    descricaoArquivoEditavel.textContent =
+                        "Os arquivos serão enviados ao salvar o cliente.";
+                }
+
+                definirMensagemArquivoEditavel(
+                    `${quantidade} ${
+                        quantidade === 1
+                            ? "arquivo editável selecionado"
+                            : "arquivos editáveis selecionados"
+                    }.`,
+                    "sucesso"
+                );
+
+                if (
+                    botaoRemoverArquivoEditavel
+                ) {
+                    botaoRemoverArquivoEditavel.hidden =
+                        false;
+                }
+            } catch (erro) {
+                mostrarNotificacao(
+                    "Arquivo editável inválido",
+                    erro.message,
+                    "erro"
+                );
+            }
+        }
+    );
+
+botaoSelecionarArquivoEditavel
+    ?.addEventListener(
+        "click",
+        () => {
+            if (campoArquivoEditavel) {
+                campoArquivoEditavel.value =
+                    "";
+
+                campoArquivoEditavel.click();
+            }
+        }
+    );
+
+botaoRemoverArquivoEditavel
+    ?.addEventListener(
+        "click",
+        () => {
+            limparArquivoEditavelSelecionado();
+
+            botaoSelecionarArquivoEditavel
+                ?.focus();
+        }
+    );
+
 buscaGlobal
     ?.addEventListener(
         "input",
@@ -8588,6 +9374,12 @@ botaoCriarBackup
         criarBackupSistema
     );
 
+botaoCriarBackupDashboard
+    ?.addEventListener(
+        "click",
+        criarBackupSistema
+    );
+
 botaoSelecionarBackup
     ?.addEventListener(
         "click",
@@ -8852,6 +9644,10 @@ async function removerArquivoSalvoModal(
         clienteAtualizado
         );
 
+        mostrarArquivosEditaveisSalvos(
+            clienteAtualizado
+        );
+        
         mostrarNotificacao(
             "Arquivo removido",
             `${nome} foi removido com sucesso.`
@@ -8867,7 +9663,8 @@ async function removerArquivoSalvoModal(
 
 [
     listaLogosOriginaisCliente,
-    listaArquivosConvertidosCliente
+    listaArquivosConvertidosCliente,
+    listaArquivosEditaveisCliente
 ]
 
     .filter(Boolean)
@@ -8917,40 +9714,110 @@ async function removerArquivoSalvoModal(
                             .chaveArquivoPendente;
 
                     if (
-                        tipo === "original"
-                    ) {
-                        logosOriginaisPendentes =
-                            logosOriginaisPendentes.filter(
-                                arquivo =>
-                                    criarChaveArquivo(
-                                        arquivo
-                                    ) !== chave
-                            );
+    tipo === "original"
+) {
+    logosOriginaisPendentes =
+        logosOriginaisPendentes.filter(
+            arquivo =>
+                criarChaveArquivo(
+                    arquivo
+                ) !== chave
+        );
 
-                        colocarArquivosNoCampo(
-                            campoLogoOriginal,
-                            logosOriginaisPendentes
-                        );
+    colocarArquivosNoCampo(
+        campoLogoOriginal,
+        logosOriginaisPendentes
+    );
 
-                        renderizarLogosOriginaisModal();
+    renderizarLogosOriginaisModal();
 
-                        return;
-                    }
+    return;
+}
 
-                    arquivosConvertidosPendentes =
-                        arquivosConvertidosPendentes.filter(
-                            arquivo =>
-                                criarChaveArquivo(
-                                    arquivo
-                                ) !== chave
-                        );
+if (
+    tipo === "convertido"
+) {
+    arquivosConvertidosPendentes =
+        arquivosConvertidosPendentes.filter(
+            arquivo =>
+                criarChaveArquivo(
+                    arquivo
+                ) !== chave
+        );
 
-                    colocarArquivosNoCampo(
-                        campoLogoConvertida,
-                        arquivosConvertidosPendentes
-                    );
+    colocarArquivosNoCampo(
+        campoLogoConvertida,
+        arquivosConvertidosPendentes
+    );
 
-                    renderizarConvertidosModal();
+    renderizarConvertidosModal();
+
+    if (
+        botaoRemoverLogoConvertida
+    ) {
+        botaoRemoverLogoConvertida.hidden =
+            !arquivosConvertidosPendentes
+                .length;
+    }
+
+    return;
+}
+
+if (
+    tipo === "editavel"
+) {
+    arquivosEditaveisPendentes =
+        arquivosEditaveisPendentes.filter(
+            arquivo =>
+                criarChaveArquivo(
+                    arquivo
+                ) !== chave
+        );
+
+    colocarArquivosNoCampo(
+        campoArquivoEditavel,
+        arquivosEditaveisPendentes
+    );
+
+    renderizarEditaveisModal();
+
+    const quantidade =
+        arquivosEditaveisPendentes.length;
+
+    if (
+        botaoRemoverArquivoEditavel
+    ) {
+        botaoRemoverArquivoEditavel.hidden =
+            !quantidade;
+    }
+
+    if (quantidade) {
+        nomeArquivoEditavel.textContent =
+            `${quantidade} ${
+                quantidade === 1
+                    ? "novo editável"
+                    : "novos editáveis"
+            }`;
+
+        descricaoArquivoEditavel.textContent =
+            "Os arquivos serão enviados ao salvar o cliente.";
+
+        definirMensagemArquivoEditavel(
+            `${quantidade} ${
+                quantidade === 1
+                    ? "arquivo editável selecionado"
+                    : "arquivos editáveis selecionados"
+            }.`,
+            "sucesso"
+        );
+    } else {
+        mostrarArquivosEditaveisSalvos(
+            obterClienteAtualDoModal()
+        );
+    }
+
+    return;
+}
                 }
             );
         }
@@ -8970,3 +9837,56 @@ async function removerArquivoSalvoModal(
 }
 
 inicializarSistema();
+
+/*
+|--------------------------------------------------------------------------
+| Selects personalizados das listagens
+|--------------------------------------------------------------------------
+*/
+
+function inicializarSelectsDasListagens() {
+    [
+        "#filtroStatusCliente",
+        "#ordenacaoClientes",
+        "#filtroStatusOrdens",
+        "#filtroPrioridadeOrdens",
+        "#filtroEstoqueLinhas",
+        "#filtroAtivoLinhas",
+        "#ordemMovimentacaoLinha",
+
+        /*
+         * Campos do modal de ordens.
+         */
+
+        "#ordemPrioridade",
+        "#ordemStatus"
+    ].forEach(
+        seletor => {
+            const campo =
+                document.querySelector(
+                    seletor
+                );
+
+            window
+                .inicializarSelectPadraoSistema
+                ?.(
+                    campo
+                );
+        }
+    );
+}
+
+window.addEventListener(
+    "load",
+    inicializarSelectsDasListagens
+);
+
+window.addEventListener(
+    "permissoes-carregadas",
+    inicializarSelectsDasListagens
+);
+
+setTimeout(
+    inicializarSelectsDasListagens,
+    700
+);
